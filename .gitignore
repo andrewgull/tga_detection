@@ -5,6 +5,12 @@ resources/**
 figures/**
 examples/**
 *.html
+.Rhistory
+.Rproj.user
+.snakemake
+
+# PyCharm
+.idea
 
 
 # Byte-compiled / optimized / DLL files
