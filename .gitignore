@@ -1,3 +1,12 @@
+# pipeline work files
+config.yaml
+results/**
+resources/**
+figures/**
+examples/**
+*.html
+
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
