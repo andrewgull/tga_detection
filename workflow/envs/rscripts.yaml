@@ -1,0 +1,9 @@
+name: r-env
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - r-ggplot2=3.3.5
+  - r-dplyr=1.0.8
+  - r-readr=2.1.2
+  - r-optparse=1.7.1
