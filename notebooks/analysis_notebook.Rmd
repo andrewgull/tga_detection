@@ -301,7 +301,7 @@ blast.fr <- bind_rows(fr1, fr2)
 
 ```{r}
 blast.fr %>% group_by(region) %>% 
-  summarise(N = n())
+  count()
 ```
 
 
@@ -340,7 +340,7 @@ min len 250
 ```{r}
 blast.fr %>% filter(length >= 250) %>% 
   group_by(region) %>% 
-  summarise(N = n())
+  count()
 ```
 
 
