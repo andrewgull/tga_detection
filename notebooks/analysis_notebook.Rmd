@@ -301,7 +301,7 @@ blast.fr <- bind_rows(fr1, fr2)
 
 ```{r}
 blast.fr %>% group_by(region) %>% 
-  summarise(N=n())
+  summarise(N = n())
 ```
 
 
@@ -309,9 +309,9 @@ blast.fr %>% group_by(region) %>%
 
 ```{r}
 ggplot(blast.fr, aes(identity)) +
-  geom_histogram(fill="steelblue", bins=100 ) +
+  geom_histogram(fill = "steelblue", bins = 100 ) +
   geom_rug() +
-  coord_trans(y="sqrt")+
+  coord_trans(y = "sqrt") +
   facet_grid(rows = vars(region))
 ```
 
@@ -319,16 +319,16 @@ ggplot(blast.fr, aes(identity)) +
 
 ```{r}
 ggplot(blast.fr, aes(length)) +
-  geom_histogram(fill="steelblue", bins=100 ) +
+  geom_histogram(fill = "steelblue", bins = 100 ) +
   geom_rug() +
-  coord_trans(y="sqrt")+
+  coord_trans(y = "sqrt") +
   facet_grid(rows = vars(region))
 ```
 #### Identity v Length
 
 ```{r}
 ggplot(blast.fr, aes(length, identity)) +
-  geom_point(color="steelblue", alpha=0.2, size=0.4) +
+  geom_point(color = "steelblue", alpha = 0.2, size = 0.4) +
   facet_grid(rows = vars(region))
 ```
 
@@ -340,7 +340,7 @@ min len 250
 ```{r}
 blast.fr %>% filter(length >= 250) %>% 
   group_by(region) %>% 
-  summarise(N=n())
+  summarise(N = n())
 ```
 
 
@@ -348,9 +348,9 @@ blast.fr %>% filter(length >= 250) %>%
 
 ```{r}
 ggplot(blast.fr %>% filter(length >= 250), aes(identity)) +
-  geom_histogram(fill="steelblue", bins=100 ) +
+  geom_histogram(fill = "steelblue", bins = 100 ) +
   geom_rug() +
-  coord_trans(y="sqrt")+
+  coord_trans(y = "sqrt") +
   facet_grid(rows = vars(region))
 ```
 
@@ -358,9 +358,9 @@ ggplot(blast.fr %>% filter(length >= 250), aes(identity)) +
 
 ```{r}
 ggplot(blast.fr %>% filter(length >= 250), aes(length)) +
-  geom_histogram(fill="steelblue", bins=100 ) +
+  geom_histogram(fill = "steelblue", bins = 100 ) +
   geom_rug() +
-  coord_trans(y="sqrt")+
+  coord_trans(y = "sqrt") +
   facet_grid(rows = vars(region))
 ```
 
@@ -368,7 +368,7 @@ ggplot(blast.fr %>% filter(length >= 250), aes(length)) +
 
 ```{r}
 ggplot(blast.fr %>% filter(length >= 250), aes(length, identity)) +
-  geom_point(color="steelblue", alpha=0.2, size=0.4) +
+  geom_point(color = "steelblue", alpha = 0.2, size = 0.4) +
   facet_grid(rows = vars(region))
 ```
 
@@ -377,7 +377,7 @@ ggplot(blast.fr %>% filter(length >= 250), aes(length, identity)) +
 ```{r}
 parse_blast_df <- function(df, filter_on_positive=TRUE){
   # add column indicating that the hit is on positive strain or not
-  df <- df %>% mutate(pos_strand = (end.subject - start.subject) > 0, .keep="all") 
+  df <- df %>% mutate(pos_strand = (end.subject - start.subject) > 0, .keep = "all") 
   # find such positive strand rows that have both FR, and negative strand rows that have both FR
   if (filter_on_positive){
     df_strand <- df %>% filter(pos_strand)
@@ -392,22 +392,22 @@ join_filtered_blast <- function(df1, df2, on_pos){
   parsed_list <- lapply(c(df1, df2), function(x){
     parse_blast_df(x, filter_on_positive=on_pos)
     })
-  df12_joined <- inner_join(parsed_list[[1]], parsed_list[[2]], by="subject")
+  df12_joined <- inner_join(parsed_list[[1]], parsed_list[[2]], by = "subject")
   return(df12_joined)
 }
 
 # COLLECT POS STRAND ROWS W BOTH FR
-fr1.filt <- fr1 %>% filter(length>=250)
-fr2.filt <- fr2 %>% filter(length>=250)
+fr1.filt <- fr1 %>% filter(length >= 250)
+fr2.filt <- fr2 %>% filter(length >= 250)
 
 fr1_pos <- parse_blast_df(fr1.filt, filter_on_positive = T)
 fr2_pos <- parse_blast_df(fr2.filt, filter_on_positive = T)
-fr12_pos <- inner_join(fr1_pos, fr2_pos, by="subject")
+fr12_pos <- inner_join(fr1_pos, fr2_pos, by = "subject")
 
 # COLLECT NEG STRAND ROWS W BOTH FR
 fr1_neg <- parse_blast_df(fr1.filt, filter_on_positive = F)
 fr2_neg <- parse_blast_df(fr2.filt, filter_on_positive = F)
-fr12_neg <- inner_join(fr1_neg, fr2_neg, by="subject")
+fr12_neg <- inner_join(fr1_neg, fr2_neg, by = "subject")
 
 # BIND ROWS
 fr12_all <- bind_rows(fr12_pos, fr12_neg)
@@ -418,20 +418,20 @@ n_copies <- fr12_all %>%
 
 # PLOT
 ggplot(n_copies, aes(n.copies)) + 
-  geom_histogram(binwidth = 0.5, fill="steelblue") + 
-  coord_trans(y="sqrt") +
+  geom_histogram(binwidth = 0.5, fill = "steelblue") + 
+  coord_trans(y = "sqrt") +
   xlab("AU") +
   ggtitle("BL-genes copy number distribution", subtitle = paste0("N total spanning reads ", nrow(n_copies)))
 ```
 
 ```{r}
-n_copies %>% group_by(n.copies) %>% summarize(counts=n())
+n_copies %>% group_by(n.copies) %>% summarize(counts = n())
 #fr12_all %>% transmute(n.cop = abs((start.subject.y - end.subject.x) / 3500)) %>% filter(n.cop > 0.2, n.cop < 0.5) %>% arrange(n.cop)
 ```
 
 
 ```{r}
-x <- n_copies %>% group_by(n.copies) %>% summarize(counts=n())
+x <- n_copies %>% group_by(n.copies) %>% summarize(counts = n())
 write.csv(x, "../results/CNV/FAU50052_cnv_counts.csv", row.names = F, quote = F)
 ```
 
