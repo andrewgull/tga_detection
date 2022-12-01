@@ -13,28 +13,33 @@ option_list <- list(
               default = NULL,
               help = "input file 1",
               metavar = "character"),
+
   make_option(c("-e", "--input2"),
               type = "character",
               default = NULL,
               help = "input file 2",
               metavar = "character"),
-  make_option(c("-h", "--output_hist"),
+
+  make_option(c("-s", "--output_hist"),
               type = "character",
               default = NULL,
               help = "output histogram",
               metavar = "character"),
+
   make_option(c("-t", "--output_table"),
               type = "character",
               default = NULL,
               help = "output table",
               metavar = "character"),
+
   make_option(c("-l", "--hit_len"),
-              type = "character",
+              type = "integer",
               default = 250,
               help = "minimal length of a hit",
               metavar = "integer"),
+
   make_option(c("-u", "--unit_len"),
-              type = "character",
+              type = "integer",
               default = 3500,
               help = "length of an amplified unit",
               metavar = "integer")
@@ -58,6 +63,14 @@ if (is.null(opt$output_hist)){
 if (is.null(opt$output_table)){
   print_help(opt_parser)
   stop("Output file (csv) must be provided", call. = FALSE)
+}
+if (is.null(opt$hit_len)){
+  print_help(opt_parser)
+  stop("Minimal hit length must be provided", call. = FALSE)
+}
+if (is.null(opt$unit_len)){
+  print_help(opt_parser)
+  stop("Length of an amplified unit must beprovided", call. = FALSE)
 }
 
 # READ THE DATA
