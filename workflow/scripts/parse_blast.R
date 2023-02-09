@@ -1,10 +1,6 @@
 # script to parse blast tables
 # and make histogram of 
 
-# libraries
-library(dplyr)
-library(readr)
-library(ggplot2)
 library(optparse)
 
 # CLI parsing
@@ -12,37 +8,37 @@ option_list <- list(
   make_option(c("-i", "--input1"),
               type = "character",
               default = NULL,
-              help = "input file 1",
+              help = "blast hits table for FR1",
               metavar = "character"),
 
   make_option(c("-e", "--input2"),
               type = "character",
               default = NULL,
-              help = "input file 2",
+              help = "blast hits table for FR2",
               metavar = "character"),
 
   make_option(c("-s", "--output_hist"),
               type = "character",
               default = NULL,
-              help = "output histogram",
+              help = "histogram with BL copy number distribution",
               metavar = "character"),
 
   make_option(c("-t", "--output_table"),
               type = "character",
               default = NULL,
-              help = "output table",
+              help = "table with BL copy number distribution",
               metavar = "character"),
 
   make_option(c("-l", "--hit_len"),
               type = "integer",
               default = 250,
-              help = "minimal length of a hit",
+              help = "minimal length of a hit (default=250)",
               metavar = "integer"),
 
   make_option(c("-u", "--unit_len"),
               type = "integer",
               default = 3500,
-              help = "length of an amplified unit",
+              help = "length of an amplified unit (default=3500)",
               metavar = "integer")
 )
 
@@ -65,16 +61,13 @@ if (is.null(opt$output_table)){
   print_help(opt_parser)
   stop("Output file (csv) must be provided", call. = FALSE)
 }
-if (is.null(opt$hit_len)){
-  print_help(opt_parser)
-  stop("Minimal hit length must be provided", call. = FALSE)
-}
-if (is.null(opt$unit_len)){
-  print_help(opt_parser)
-  stop("Length of an amplified unit must beprovided", call. = FALSE)
-}
 
 # READ THE DATA
+
+# libraries
+suppressPackageStartupMessages(library(dplyr))
+library(readr)
+library(ggplot2)
 
 # a function to process BLAST output
 parse_blast_df <-
@@ -85,7 +78,8 @@ parse_blast_df <-
     df <-
       read_delim(df_name,
                  col_names = FALSE,
-                 col_select = c(X1, X2, X3, X4, X9, X10))
+                 col_select = c(X1, X2, X3, X4, X9, X10),
+                 show_col_types = FALSE)
     names(df) <-
       c("query",
         "subject",
@@ -140,7 +134,7 @@ fr12_all <- bind_rows(fr12_pos, fr12_neg)
 
 # FIND CNV
 n_copies <- fr12_all %>%
-  transmute(n.copies = round(abs(start.subject.y - end.subject.x) / opt$unit_len))
+  mutate(n.copies = round(abs(start.subject.y - end.subject.x) / opt$unit_len))
 n_copies_counts <-
   n_copies %>% group_by(n.copies) %>% summarize(counts = n())
 
