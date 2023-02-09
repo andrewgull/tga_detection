@@ -8,7 +8,7 @@ rule all:
     input:
         "results/CNV/FAU50052_cnv_histogram.pdf"
 
-rule filter:
+rule filter_reads:
     input:
         "resources/reads/FAU50052_pass_all.fastq.gz"
     output:
@@ -20,7 +20,7 @@ rule filter:
     shell:
         "filtlong --min_length {params.min_len} {input} 2> {log} | pigz -c -p {threads} > {output}"
 
-rule convert:
+rule fq2fasta:
     input:
         "results/reads/FAU50052_pass_all_filt.fastq.gz"
     output:
@@ -69,7 +69,7 @@ rule blast_fr2:
         "blastn -query {input.fr} -db {input.db}/FAU50052 -outfmt {params.fmt} -num_threads {threads} "
         "-num_alignments {params.nalns} 1> {output} 2> {log}"
 
-rule parse_tables:
+rule make_histogram:
     input:
         script="workflow/scripts/parse_blast.R",
         tables=expand("results/tables/FAU50052_FR{fr}_blast.tsv", fr=flanking_region)
