@@ -1,42 +1,41 @@
-from snakemake.io import expand, multiext
+from snakemake.io import expand, directory
 
-#SAMPLES = ["FAU50052"]
-#config = "config.yaml"
+config = "config.yaml"
 flanking_region = [1, 2]
 
 rule all:
     input:
-        "results/CNV/FAU50052_cnv_histogram.pdf"
+        expand("results/CNV/{replicate}_cnv_histogram.pdf", replicate=config['replicates'])
 
 rule filter_reads:
     input:
-        "resources/reads/FAU50052_pass_all.fastq.gz"
+        "resources/reads/{replicate}/CNV_reads_all.fastq.gz"
     output:
-        "results/reads/FAU50052_pass_all_filt.fastq.gz"
+        "results/reads/{replicate}/CNV_reads_all.fastq.gz"
     params: min_len=3500
     threads: 10
-    log: "results/logs/filtering.log"
+    log: "results/logs/{replicate}_filtering.log"
     conda: "envs/filtlong.yaml"
     shell:
         "filtlong --min_length {params.min_len} {input} 2> {log} | pigz -c -p {threads} > {output}"
 
 rule fq2fasta:
     input:
-        "results/reads/FAU50052_pass_all_filt.fastq.gz"
+        "results/reads/{replicate}/CNV_reads_all.fastq.gz"
     output:
-        "results/reads/FAU50052_pass_all_filt.fasta"
+        "results/reads/{replicate}/CNV_reads_all.fasta"
     threads: 10
-    log: "results/logs/converting.log"
+    log: "results/logs/{replicate}_converting.log"
     conda: "envs/seqkit.yaml"
     shell:
         "seqkit fq2fa -j {threads} {input} 1> {output} 2> {log}"
 
 rule blast_db:
     input:
-        "results/reads/FAU50052_pass_all_filt.fasta"
+        "results/reads/{replicate}/CNV_reads_all.fasta"
     output:
-        directory("results/blastdb")
-    log: "results/logs/makeblastdb.log"
+        directory("results/blastdb_{replicate}")
+    log: "results/logs/{replicate}_makeblastdb.log"
     conda: "envs/blast.yaml"
     shell:
         "makeblastdb -in {input} -dbtype nucl -out {output}/FAU50052 -logfile {log}"
@@ -44,12 +43,12 @@ rule blast_db:
 rule blast_fr1:
     input: 
         fr="resources/reads/flanking_region_1.fasta",
-        db="results/blastdb"
+        db="results/blastdb_{replicate}"
     output: 
-        "results/tables/FAU50052_FR1_blast.tsv"
+        "results/tables/{replicate}_FR1_blast.tsv"
     params: fmt=6, nalns=1000000
     threads: 10
-    log: "results/logs/blast_fr1.log"
+    log: "results/logs/{replicate}_blast_fr1.log"
     conda: "envs/blast.yaml"
     shell:
         "blastn -query {input.fr} -db {input.db}/FAU50052 -outfmt {params.fmt} -num_threads {threads} "
@@ -58,12 +57,12 @@ rule blast_fr1:
 rule blast_fr2:
     input:
         fr="resources/reads/flanking_region_2.fasta",
-        db="results/blastdb"
+        db="results/blastdb_{replicate}"
     output:
-        "results/tables/FAU50052_FR2_blast.tsv"
+        "results/tables/{replicate}_FR2_blast.tsv"
     params: fmt=6, nalns=1000000
     threads: 10
-    log: "results/logs/blast_fr2.log"
+    log: "results/logs/{replicate}_blast_fr2.log"
     conda: "envs/blast.yaml"
     shell:
         "blastn -query {input.fr} -db {input.db}/FAU50052 -outfmt {params.fmt} -num_threads {threads} "
@@ -72,12 +71,12 @@ rule blast_fr2:
 rule make_histogram:
     input:
         script="workflow/scripts/parse_blast.R",
-        tables=expand("results/tables/FAU50052_FR{fr}_blast.tsv", fr=flanking_region)
+        tables=expand("results/tables/{replicate}_FR{fr}_blast.tsv", fr=flanking_region)
     output: 
-        hist="results/CNV/FAU50052_cnv_histogram.pdf",
-        table="results/CNV/FAU50052_cnv_counts.csv"
+        hist="results/CNV/{replicate}_cnv_histogram.pdf",
+        table="results/CNV/{replicate}_cnv_counts.csv"
     params: hit_len=250, unit_len=3500
-    log: "results/logs/parse_tables.log"
+    log: "results/logs/{replicate}_parse_tables.log"
     conda: "envs/rscripts.yaml"
     shell:
         "Rscript {input.script} -i {input.tables[0]} -e {input.tables[1]} -s {output.hist} -t {output.table} -l {params.hit_len} -u {params.unit_len} &> {log}"
