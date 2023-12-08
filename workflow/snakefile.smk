@@ -42,7 +42,7 @@ rule blast_db:
 
 rule blast_fr1:
     input: 
-        fr="resources/reads/flanking_region_1.fasta",
+        fr="resources/flanking_regions/region_1.fasta",
         db="results/blastdb_{replicate}"
     output: 
         "results/tables/{replicate}_FR1_blast.tsv"
@@ -56,7 +56,7 @@ rule blast_fr1:
 
 rule blast_fr2:
     input:
-        fr="resources/reads/flanking_region_2.fasta",
+        fr="resources/flanking_regions/region_2.fasta",
         db="results/blastdb_{replicate}"
     output:
         "results/tables/{replicate}_FR2_blast.tsv"
