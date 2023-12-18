@@ -1,0 +1,311 @@
+---
+title: "BL-CNV analysis, part II"
+author: "AG"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: yes
+    df_print: paged
+    code_folding: hide
+    fig_width: 10
+    fig_height: 6
+    theme: cerulean
+    highlight: kate
+    toc_float: yes
+  pdf_document:
+    toc: yes
+    toc_depth: 2
+editor_options:
+  markdown:
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+## Scheme of the region of interest
+
+Compared to part II, here I use longer both red and green regions. 
+For the red one I will use all available length (1677 bp). 
+The green region will have the same length.
+
+![scheme](figures/pDA61218-116_long_flanking_regions.png)
+
+## Overview of reads
+
+replicate E
+
+### length distribution
+
+```{bash, eval=F}
+conda activate snakemake
+seqkit watch resources/reads/replicate_e/CNV_reads_all.fastq.gz -O results/reads_stat/replicate_e.png -j 8
+```
+
+![histogram raw](../results/reads_stat/replicate_e.png)
+
+Filter out all reads shorter than 7k
+
+```{bash, eval=FALSE}
+# filter out too short reads
+conda activate /home/andrei/mambaforge/envs/filtlong-env 
+LENGTH="7000"
+filtlong --min_length $LENGTH resources/reads/replicate_e/CNV_reads_all.fastq.gz > results/reads_filtered/replicate_e/CNV_reads_all_7k.fastq && pigz -p 12 results/reads_filtered/replicate_e/CNV_reads_all_7k.fastq
+
+# histogram
+seqkit watch results/reads_filtered/replicate_e/CNV_reads_all_7k.fastq.gz -O results/reads_stat/replicate_e_min_7k.png -j 8
+
+# convert fastq to fasta
+seqkit fq2fa results/reads_filtered/replicate_e/CNV_reads_all_7k.fastq.gz > results/reads_filtered/replicate_e/CNV_reads_all_7k.fasta
+```
+
+![histogram 7k](../results/reads_stat/replicate_e_min_7k.png)
+
+### Quality distribution
+
+```{bash, eval=F}
+seqkit watch results/reads_filtered/replicate_e/CNV_reads_all_7k.fastq.gz -O results/reads_stat/replicate_e_qual.png -j 8 -f MeanQual
+```
+
+![quality](../results/reads_stat/replicate_e_qual.png)
+## Blast the flankig regions 
+
+left = red; right = green
+
+```{bash, eval=F}
+# RUN BLAST
+#
+# -sorthsps <Integer, (>=0 and =<4)>
+#   Sorting option for hps:
+#     0 = Sort by hsp evalue,
+#     1 = Sort by hsp score,
+#     2 = Sort by hsp query start,
+#     3 = Sort by hsp percent identity,
+#     4 = Sort by hsp subject start
+#   Not applicable for outfmt != 0
+#
+# -num_alignments <Integer, >=0>
+#   Number of database sequences to show alignments for
+#   Default = `250'
+#    * Incompatible with:  max_target_seqs
+
+# num_alignments should be high enough, depending on the total number of reads
+blastn -query resources/flanking_regions/flanking_region_red_1677.fa -subject results/reads_filtered/replicate_e/CNV_reads_all_7k.fasta -outfmt 6 -num_alignments 333000 -num_threads 10 > results/tables/blast_flanking_region_red.tsv
+
+blastn -query resources/flanking_regions/flanking_region_green_1677.fa -subject results/reads_filtered/replicate_e/CNV_reads_all_7k.fasta -outfmt 6 -num_alignments 333000 -num_threads 10 > results/tables/blast_flanking_region_green.tsv
+```
+
+## Parse BLAST results
+
+### Red
+
+reads of interest should contain 'red' segment at their start
+
+```{r, message=FALSE, warning=FALSE}
+blast_red <- read_delim("../results/tables/blast_flanking_region_red.tsv", col_names = F)
+
+names(blast_red) <- c("query", "subject", "identity", "length", "mismatch", 
+                        "gaps", "start.query", "end.query", "start.subject", 
+                        "end.subject", "e.value", "bit.score")
+
+blast_red$query <- "FR_red"
+
+blast_red
+```
+
+#### Length
+
+```{r}
+blast_red %>%
+  ggplot(aes(length)) +
+  geom_histogram(bins = 150) 
+```
+
+Number of query hits shorter than 1500: `r blast_red %>% filter(length < 1500) %>% nrow()`
+
+Number of query hits longer than 1500: `r blast_red %>% filter(length > 1500) %>% nrow()`
+
+#### Identity
+
+```{r}
+blast_red %>%
+  ggplot(aes(identity)) +
+  geom_histogram(bins = 150) 
+```
+
+Number of query hits with identity below 75%: `r blast_red %>% filter(identity < 75) %>% nrow()`
+
+Number of query hits with identity above 75%: `r blast_red %>% filter(identity >= 75) %>% nrow()`
+
+#### E-value
+
+```{r}
+blast_red %>%
+  ggplot(aes(e.value)) +
+  geom_histogram(bins = 150) 
+```
+
+```{r}
+blast_red %>%
+  filter(e.value != 0) %>% 
+  ggplot(aes(e.value)) +
+  geom_histogram(bins = 150) +
+  ggtitle("e-value = 0 excluded")
+```
+
+Query hits with e-value above $ 10^-5$
+
+```{r}
+blast_red %>% 
+  filter(e.value > 10**-5) %>% 
+  nrow()
+```
+
+Also, these have very short lengths
+
+```{r}
+blast_red %>% 
+  filter(e.value > 10**-5) %>% 
+  select(length)
+```
+
+
+Remaining hits are reliable
+
+#### Length vs Identity vs E-value
+
+```{r}
+blast_red %>% 
+  ggplot(aes(length, identity)) +
+  geom_point(aes(color=e.value)) +
+  ggtitle("query hits raw")
+```
+
+After filtering: 
+
+- length > 1500
+- e-value < 10**-5
+- identity >= 75%
+
+```{r}
+blast_red %>% 
+  filter(length > 1500,
+         e.value < 10**-5,
+         identity >= 75) %>% 
+  ggplot(aes(length, identity)) +
+  geom_point(aes(color=e.value)) +
+  ggtitle("query hits filtered")
+```
+
+### Green
+
+```{r, message=FALSE, warning=FALSE}
+blast_green <- read_delim("../results/tables/blast_flanking_region_green.tsv", col_names = F)
+
+names(blast_green) <- c("query", "subject", "identity", "length", "mismatch", 
+                        "gaps", "start.query", "end.query", "start.subject", 
+                        "end.subject", "e.value", "bit.score")
+
+blast_green$query <- "FR_green"
+
+blast_green
+```
+
+#### Length
+
+```{r}
+blast_green %>%
+  ggplot(aes(length)) +
+  geom_histogram(bins = 150) 
+```
+
+Number of query hits shorter than 1500: `r blast_green %>% filter(length < 1500) %>% nrow()`
+
+Number of query hits longer than 1500: `r blast_green %>% filter(length > 1500) %>% nrow()`
+
+```{r}
+blast_green %>% filter(length < 1500)
+```
+
+#### Identity
+
+```{r}
+blast_green %>%
+  ggplot(aes(identity)) +
+  geom_histogram(bins = 150) 
+```
+
+Number of query hits with identity below 75%: `r blast_green %>% filter(identity < 75) %>% nrow()`
+
+Number of query hits with identity above 75%: `r blast_green %>% filter(identity >= 75) %>% nrow()`
+
+#### E-value
+
+```{r}
+blast_green %>%
+  ggplot(aes(e.value)) +
+  geom_histogram(bins = 150) 
+```
+
+```{r}
+blast_green %>%
+  filter(e.value != 0) %>% 
+  ggplot(aes(e.value)) +
+  geom_histogram(bins = 150) +
+  ggtitle("e-value = 0 excluded")
+```
+
+Query hits with e-value above $ 10^-5$
+
+```{r}
+blast_green %>% 
+  filter(e.value > 10**-5) %>% 
+  nrow()
+```
+
+Also, these have very short lengths
+
+```{r}
+blast_green %>% 
+  filter(e.value > 10**-5) %>% 
+  select(length)
+```
+
+
+Remaining hits are reliable
+
+#### Length vs Identity vs E-value
+
+```{r}
+blast_green %>% 
+  ggplot(aes(length, identity)) +
+  geom_point(aes(color=e.value)) +
+  ggtitle("query hits raw")
+```
+
+After filtering: 
+
+- length > 1500
+- e-value < 10**-5
+- identity >= 75%
+
+```{r}
+blast_green %>% 
+  filter(length > 1500,
+         e.value < 10**-5,
+         identity >= 75) %>% 
+  ggplot(aes(length, identity)) +
+  geom_point(aes(color=e.value)) +
+  ggtitle("query hits filtered")
+```
+
+The plot looks very similar to the one with 'red' query hits
+
+## Filtering and joining
+
+```{r}
+
+```
+
