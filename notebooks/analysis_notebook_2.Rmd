@@ -115,10 +115,36 @@ names(blast_red) <- c("query", "subject", "identity", "length", "mismatch",
                         "end.subject", "e.value", "bit.score")
 
 blast_red %>%
+  filter(length > 450) %>% 
   ggplot(aes(start.subject)) +
   geom_histogram(bins = 150) +
   geom_rug()
 ```
+
+Look at the 'bump' around 116k
+
+```{r}
+blast_red %>% filter(start.subject < 130000, start.subject > 100000) 
+```
+
+```{r}
+blast_red %>% filter(e.value != 0) %>% arrange(-e.value) %>% filter(length > 400)
+```
+
+
+```{r}
+blast_red %>%
+  filter(length > 450) %>% 
+  ggplot(aes(query, start.subject)) +
+  geom_boxplot(alpha=0.5, outlier.size = 0.0001) +
+  geom_violin(alpha=0.5) +
+  coord_trans(y = "log") 
+  #geom_jitter(size=0.01)
+  
+  
+```
+
+The bump in the tail represents full plasmids
 
 ```{r}
 blast_red %>%
@@ -422,21 +448,49 @@ n_copies %>%
   count()
 ```
 
-## Blasting the blaSHV gene itself
+## Blasting blaSHV
 
 I can blast the gene and count hits.
 
 To test this approach, I will take several reads individually - those that contain multiple copies of *blaSHV*
 
+### Reads with 5 copies
+
+```{r}
+n_copies %>% filter(n.copies == 5)
+```
+
+#### Extract one read and blast
+
+```{bash, eval=F}
+# extract the read
+seqkit grep -p cf14f1cd-68b2-4993-9bd1-3098614683a1 -o notebooks/fasta/read_cnv_5.fa  results/reads_filtered/replicate_e/CNV_reads_all.fasta
+
+# blast it
+blastn -query resources/genes/blaSHV.fa -subject notebooks/fasta/read_cnv_5.fa -outfmt 6 > notebooks/tables/blast_blaSHV_read_cnv_5.tsv
+```
+
+#### Read the resulting table
+
+```{r, message=FALSE}
+blast_gene <- read_delim("tables/blast_blaSHV_read_cnv_5.tsv", col_names = F)
+
+names(blast_gene) <- c("query", "subject", "identity", "length", "mismatch", 
+                        "gaps", "start.query", "end.query", "start.subject", 
+                        "end.subject", "e.value", "bit.score")
+
+blast_gene %>% arrange(start.subject)
+```
+
 ### Read with 7 copies
 
-Find the read with 7 copies of *blaSHV*
+#### Find its ID
 
 ```{r}
 n_copies %>% filter(n.copies == 7)
 ```
 
-Extract this read from the data set
+#### Extract this read and blast
 
 ```{bash, eval=F}
 # extract the read
@@ -446,7 +500,7 @@ seqkit grep -p 1e27948e-4554-4533-be59-16e1154978fd -o notebooks/fasta/read_cnv_
 blastn -query resources/genes/blaSHV.fa -subject notebooks/fasta/read_cnv_7.fa -outfmt 6 -num_threads 10 > notebooks/tables/blast_blaSHV_read_cnv_7.tsv
 ```
 
-Read the resulting table
+#### Read the resulting table
 
 ```{r, message=FALSE}
 blast_gene <- read_delim("tables/blast_blaSHV_read_cnv_7.tsv", col_names = F)
@@ -458,13 +512,71 @@ names(blast_gene) <- c("query", "subject", "identity", "length", "mismatch",
 blast_gene %>% arrange(start.subject)
 ```
 
+### Read with 9 copies
+
+#### Find its ID
+
+```{r}
+n_copies %>% filter(n.copies == 9)
+```
+
+#### Extract and blast
+
+```{bash, eval=F}
+# extract the read
+seqkit grep -p be55166a-1415-4f64-b234-029d76f27bb1 -o notebooks/fasta/read_cnv_9.fa  results/reads_filtered/replicate_e/CNV_reads_all.fasta
+
+# blast it, default
+blastn -query resources/genes/blaSHV.fa -subject notebooks/fasta/read_cnv_9.fa -outfmt 6 -num_alignments 1000 > notebooks/tables/blast_blaSHV_read_cnv_9.tsv
+
+# with shorter word-size (higher sens)
+blastn -query resources/genes/blaSHV.fa -subject notebooks/fasta/read_cnv_9.fa -word_size 7 -outfmt 6 -num_alignments 1000 > notebooks/tables/blast_blaSHV_read_cnv_9_w7.tsv
+```
+
+#### Read the resulting table
+
+- Default word size
+
+```{r, message=FALSE}
+blast_gene <- read_delim("tables/blast_blaSHV_read_cnv_9.tsv", col_names = F)
+
+names(blast_gene) <- c("query", "subject", "identity", "length", "mismatch", 
+                        "gaps", "start.query", "end.query", "start.subject", 
+                        "end.subject", "e.value", "bit.score")
+
+blast_gene %>% arrange(start.subject)
+```
+
+save the table
+
+```{r, eval=FALSE}
+blast_gene %>% 
+  arrange(start.subject) %>% 
+  write.table(file = "tables/blast_read_cnv_9.tsv", sep = "\t", quote = F, row.names = F)
+```
+
+
+- Short word size
+
+```{r, message=FALSE}
+blast_gene <- read_delim("tables/blast_blaSHV_read_cnv_9_w7.tsv", col_names = F)
+
+names(blast_gene) <- c("query", "subject", "identity", "length", "mismatch", 
+                        "gaps", "start.query", "end.query", "start.subject", 
+                        "end.subject", "e.value", "bit.score")
+
+blast_gene %>% arrange(start.subject)
+```
+
 ### Read with 12 copies
+
+#### Find its ID
 
 ```{r}
 n_copies %>% filter(n.copies == 12)
 ```
 
-Extract this read from the data set
+#### Extract this read from the data set
 
 ```{bash, eval=F}
 # extract the read
@@ -476,7 +588,9 @@ blastn -query resources/genes/blaSHV.fa -subject notebooks/fasta/read_cnv_12.fa 
 blastn -query resources/genes/blaSHV.fa -subject notebooks/fasta/read_cnv_12.fa -word_size 7 -outfmt 6 -num_alignments 1000 > notebooks/tables/blast_blaSHV_read_cnv_12_w7.tsv
 ```
 
-Read the resulting table
+#### Read the resulting table
+
+- Default word size
 
 ```{r, message=FALSE}
 blast_gene <- read_delim("tables/blast_blaSHV_read_cnv_12.tsv", col_names = F)
@@ -488,4 +602,31 @@ names(blast_gene) <- c("query", "subject", "identity", "length", "mismatch",
 blast_gene %>% arrange(start.subject)
 ```
 
+save the table
+
+```{r, eval=FALSE}
+blast_gene %>% 
+  arrange(start.subject) %>% 
+  write.table(file = "tables/blast_read_cnv_12.tsv", sep = "\t", quote = F, row.names = F)
+```
+
+
+- Short word size
+
+```{r, message=FALSE}
+blast_gene <- read_delim("tables/blast_blaSHV_read_cnv_12_w7.tsv", col_names = F)
+
+names(blast_gene) <- c("query", "subject", "identity", "length", "mismatch", 
+                        "gaps", "start.query", "end.query", "start.subject", 
+                        "end.subject", "e.value", "bit.score")
+
+blast_gene %>% arrange(start.subject)
+```
+
+
+## Conclusions
+
+See the notes.
+
+TBC in the next notebook.
 
