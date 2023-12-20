@@ -108,7 +108,7 @@ if a 'red' segment resides far from one of the ends, then this read should be di
 #### Distance to reads' ends
 
 ```{r, message=FALSE, warning=FALSE}
-blast_red <- read_delim("../results/tables/blast_flanking_region_red.tsv", col_names = F)
+blast_red <- read_delim("../results/tables_part2/blast_flanking_region_red.tsv", col_names = F)
 
 names(blast_red) <- c("query", "subject", "identity", "length", "mismatch", 
                         "gaps", "start.query", "end.query", "start.subject", 
@@ -312,7 +312,7 @@ Apply the same filtering here, except for 'shortest end distance'
 3. Filter out multiple hits
 
 ```{r, message=FALSE, warning=FALSE}
-blast_green <- read_delim("../results/tables/blast_flanking_region_green.tsv", col_names = F)
+blast_green <- read_delim("../results/tables_part2/blast_flanking_region_green.tsv", col_names = F)
 
 names(blast_green) <- c("query", "subject", "identity", "length", "mismatch", 
                         "gaps", "start.query", "end.query", "start.subject", 
@@ -460,26 +460,168 @@ To test this approach, I will take several reads individually - those that conta
 n_copies %>% filter(n.copies == 5)
 ```
 
-#### Extract one read and blast
+#### Extract 3 reads and blast blaSHV
 
 ```{bash, eval=F}
 # extract the read
-seqkit grep -p cf14f1cd-68b2-4993-9bd1-3098614683a1 -o notebooks/fasta/read_cnv_5.fa  results/reads_filtered/replicate_e/CNV_reads_all.fasta
+seqkit grep -p cf14f1cd-68b2-4993-9bd1-3098614683a1 -o notebooks/fasta/read_cnv_5_1.fa  results/reads_filtered/replicate_e/CNV_reads_all_7k.fasta
 
-# blast it
-blastn -query resources/genes/blaSHV.fa -subject notebooks/fasta/read_cnv_5.fa -outfmt 6 > notebooks/tables/blast_blaSHV_read_cnv_5.tsv
+seqkit grep -p 948c7886-16fb-419f-acac-8155bc32222c -o notebooks/fasta/read_cnv_5_2.fa  results/reads_filtered/replicate_e/CNV_reads_all_7k.fasta
+
+seqkit grep -p 7009605b-a57f-4ae2-8aeb-59e4822ffa7f -o notebooks/fasta/read_cnv_5_3.fa  results/reads_filtered/replicate_e/CNV_reads_all_7k.fasta
+
+seqkit grep -p 4cb0481e-2af5-4e6a-9e91-2700d0c481a0 -o notebooks/fasta/read_cnv_5_4.fa  results/reads_filtered/replicate_e/CNV_reads_all_7k.fasta
+
+# blast them
+blastn -query resources/genes/blaSHV.fa -subject notebooks/fasta/read_cnv_5_1.fa -outfmt 6 > notebooks/tables/blast_blaSHV_read_cnv_5_1.tsv
+
+blastn -query resources/genes/blaSHV.fa -subject notebooks/fasta/read_cnv_5_2.fa -outfmt 6 > notebooks/tables/blast_blaSHV_read_cnv_5_2.tsv
+
+blastn -query resources/genes/blaSHV.fa -subject notebooks/fasta/read_cnv_5_3.fa -outfmt 6 > notebooks/tables/blast_blaSHV_read_cnv_5_3.tsv
+
+blastn -query resources/genes/blaSHV.fa -subject notebooks/fasta/read_cnv_5_4.fa -outfmt 6 > notebooks/tables/blast_blaSHV_read_cnv_5_4.tsv
 ```
 
-#### Read the resulting table
+#### Read the 1st table
 
 ```{r, message=FALSE}
-blast_gene <- read_delim("tables/blast_blaSHV_read_cnv_5.tsv", col_names = F)
+blast_gene <- read_delim("tables/blast_blaSHV_read_cnv_5_1.tsv", col_names = F)
 
 names(blast_gene) <- c("query", "subject", "identity", "length", "mismatch", 
                         "gaps", "start.query", "end.query", "start.subject", 
                         "end.subject", "e.value", "bit.score")
 
 blast_gene %>% arrange(start.subject)
+```
+
+save the table
+
+```{r, eval=FALSE}
+blast_gene %>% 
+  arrange(start.subject) %>% 
+  write.table(file = "tables/blast_read_cnv_5_1.tsv", sep = "\t", quote = F, row.names = F)
+```
+
+#### Read the 2nd table
+
+```{r, message=FALSE}
+blast_gene <- read_delim("tables/blast_blaSHV_read_cnv_5_2.tsv", col_names = F)
+
+names(blast_gene) <- c("query", "subject", "identity", "length", "mismatch", 
+                        "gaps", "start.query", "end.query", "start.subject", 
+                        "end.subject", "e.value", "bit.score")
+
+blast_gene %>% arrange(start.subject)
+```
+
+save the table
+
+```{r, eval=FALSE}
+blast_gene %>% 
+  arrange(start.subject) %>% 
+  write.table(file = "tables/blast_read_cnv_5_2.tsv", sep = "\t", quote = F, row.names = F)
+```
+
+#### Read the 3rd table
+
+```{r, message=FALSE}
+blast_gene <- read_delim("tables/blast_blaSHV_read_cnv_5_3.tsv", col_names = F)
+
+names(blast_gene) <- c("query", "subject", "identity", "length", "mismatch", 
+                        "gaps", "start.query", "end.query", "start.subject", 
+                        "end.subject", "e.value", "bit.score")
+
+blast_gene %>% arrange(start.subject)
+```
+
+save the table
+
+```{r, eval=FALSE}
+blast_gene %>% 
+  arrange(start.subject) %>% 
+  write.table(file = "tables/blast_read_cnv_5_3.tsv", sep = "\t", quote = F, row.names = F)
+```
+
+#### Read the 4th table
+
+```{r, message=FALSE}
+blast_gene <- read_delim("tables/blast_blaSHV_read_cnv_5_4.tsv", col_names = F)
+
+names(blast_gene) <- c("query", "subject", "identity", "length", "mismatch", 
+                        "gaps", "start.query", "end.query", "start.subject", 
+                        "end.subject", "e.value", "bit.score")
+
+blast_gene %>% arrange(start.subject)
+```
+This one is good!
+
+save the table
+
+```{r, eval=FALSE}
+blast_gene %>% 
+  arrange(start.subject) %>% 
+  write.table(file = "tables/blast_read_cnv_5_4.tsv", sep = "\t", quote = F, row.names = F)
+```
+
+### Read with 6 copies
+
+```{r}
+n_copies %>% filter(n.copies == 6)
+```
+
+#### Extract this read from the data set
+
+```{bash, eval=F}
+# extract the 1 st read
+seqkit grep -p 368708bd-a4cc-49db-acdf-b3960889697a -o notebooks/fasta/read_cnv_6_1.fa  results/reads_filtered/replicate_e/CNV_reads_all_7k.fasta
+
+# extract the 2nd read
+seqkit grep -p 965d93aa-a6af-4dda-ac06-f53bf9af4a27 -o notebooks/fasta/read_cnv_6_2.fa  results/reads_filtered/replicate_e/CNV_reads_all_7k.fasta
+
+# blast them
+blastn -query resources/genes/blaSHV.fa -subject notebooks/fasta/read_cnv_6_1.fa -outfmt 6 -num_alignments 1000 > notebooks/tables/blast_blaSHV_read_cnv_6_1.tsv
+
+blastn -query resources/genes/blaSHV.fa -subject notebooks/fasta/read_cnv_6_2.fa -outfmt 6 -num_alignments 1000 > notebooks/tables/blast_blaSHV_read_cnv_6_2.tsv
+```
+
+#### Read the 1st table
+
+```{r, message=FALSE}
+blast_gene <- read_delim("tables/blast_blaSHV_read_cnv_6_1.tsv", col_names = F)
+
+names(blast_gene) <- c("query", "subject", "identity", "length", "mismatch", 
+                        "gaps", "start.query", "end.query", "start.subject", 
+                        "end.subject", "e.value", "bit.score")
+
+blast_gene %>% arrange(start.subject)
+```
+
+save the table
+
+```{r, eval=FALSE}
+blast_gene %>% 
+  arrange(start.subject) %>% 
+  write.table(file = "tables/blast_read_cnv_6_1.tsv", sep = "\t", quote = F, row.names = F)
+```
+
+#### Read the 2nd table
+
+```{r, message=FALSE}
+blast_gene <- read_delim("tables/blast_blaSHV_read_cnv_6_2.tsv", col_names = F)
+
+names(blast_gene) <- c("query", "subject", "identity", "length", "mismatch", 
+                        "gaps", "start.query", "end.query", "start.subject", 
+                        "end.subject", "e.value", "bit.score")
+
+blast_gene %>% arrange(start.subject)
+```
+
+save the table
+
+```{r, eval=FALSE}
+blast_gene %>% 
+  arrange(start.subject) %>% 
+  write.table(file = "tables/blast_read_cnv_6_2.tsv", sep = "\t", quote = F, row.names = F)
 ```
 
 ### Read with 7 copies
@@ -510,6 +652,14 @@ names(blast_gene) <- c("query", "subject", "identity", "length", "mismatch",
                         "end.subject", "e.value", "bit.score")
 
 blast_gene %>% arrange(start.subject)
+```
+
+save the table
+
+```{r, eval=FALSE}
+blast_gene %>% 
+  arrange(start.subject) %>% 
+  write.table(file = "tables/blast_read_cnv_7.tsv", sep = "\t", quote = F, row.names = F)
 ```
 
 ### Read with 9 copies
@@ -568,6 +718,68 @@ names(blast_gene) <- c("query", "subject", "identity", "length", "mismatch",
 blast_gene %>% arrange(start.subject)
 ```
 
+
+### Read with 11 copies
+
+```{r}
+n_copies %>% filter(n.copies == 11)
+```
+
+#### Extract this read from the data set
+
+```{bash, eval=F}
+# extract the 1 st read
+seqkit grep -p c812976f-85a9-4122-922a-93755e9bc9f9 -o notebooks/fasta/read_cnv_11_1.fa  results/reads_filtered/replicate_e/CNV_reads_all_7k.fasta
+
+# extract the 2nd read
+seqkit grep -p 3c6176f6-ccb9-4961-bfcc-adc009458e2e -o notebooks/fasta/read_cnv_11_2.fa  results/reads_filtered/replicate_e/CNV_reads_all_7k.fasta
+
+# blast them
+blastn -query resources/genes/blaSHV.fa -subject notebooks/fasta/read_cnv_11_1.fa -outfmt 6 -num_alignments 1000 > notebooks/tables/blast_blaSHV_read_cnv_11_1.tsv
+
+blastn -query resources/genes/blaSHV.fa -subject notebooks/fasta/read_cnv_11_2.fa -outfmt 6 -num_alignments 1000 > notebooks/tables/blast_blaSHV_read_cnv_11_2.tsv
+```
+
+#### Read the 1st table
+
+```{r, message=FALSE}
+blast_gene <- read_delim("tables/blast_blaSHV_read_cnv_11_1.tsv", col_names = F)
+
+names(blast_gene) <- c("query", "subject", "identity", "length", "mismatch", 
+                        "gaps", "start.query", "end.query", "start.subject", 
+                        "end.subject", "e.value", "bit.score")
+
+blast_gene %>% arrange(start.subject)
+```
+
+save the table
+
+```{r, eval=FALSE}
+blast_gene %>% 
+  arrange(start.subject) %>% 
+  write.table(file = "tables/blast_read_cnv_11_1.tsv", sep = "\t", quote = F, row.names = F)
+```
+
+#### Read the 2nd table
+
+```{r, message=FALSE}
+blast_gene <- read_delim("tables/blast_blaSHV_read_cnv_11_2.tsv", col_names = F)
+
+names(blast_gene) <- c("query", "subject", "identity", "length", "mismatch", 
+                        "gaps", "start.query", "end.query", "start.subject", 
+                        "end.subject", "e.value", "bit.score")
+
+blast_gene %>% arrange(start.subject)
+```
+
+save the table
+
+```{r, eval=FALSE}
+blast_gene %>% 
+  arrange(start.subject) %>% 
+  write.table(file = "tables/blast_read_cnv_11_2.tsv", sep = "\t", quote = F, row.names = F)
+```
+
 ### Read with 12 copies
 
 #### Find its ID
@@ -623,6 +835,46 @@ names(blast_gene) <- c("query", "subject", "identity", "length", "mismatch",
 blast_gene %>% arrange(start.subject)
 ```
 
+
+### Read with 13 copies
+
+#### Find its ID
+
+```{r}
+n_copies %>% filter(n.copies == 13)
+```
+
+#### Extract this read from the data set
+
+```{bash, eval=F}
+# extract the read
+seqkit grep -p 9d4dac8e-a042-4de7-9d39-e30866c9765c -o notebooks/fasta/read_cnv_13_1.fa  results/reads_filtered/replicate_e/CNV_reads_all_7k.fasta
+
+# blast it
+blastn -query resources/genes/blaSHV.fa -subject notebooks/fasta/read_cnv_13_1.fa -outfmt 6 -num_alignments 1000 > notebooks/tables/blast_blaSHV_read_cnv_13_1.tsv
+```
+
+#### Read the resulting table
+
+- Default word size
+
+```{r, message=FALSE}
+blast_gene <- read_delim("tables/blast_blaSHV_read_cnv_13_1.tsv", col_names = F)
+
+names(blast_gene) <- c("query", "subject", "identity", "length", "mismatch", 
+                        "gaps", "start.query", "end.query", "start.subject", 
+                        "end.subject", "e.value", "bit.score")
+
+blast_gene %>% arrange(start.subject)
+```
+
+save the table
+
+```{r, eval=FALSE}
+blast_gene %>% 
+  arrange(start.subject) %>% 
+  write.table(file = "tables/blast_read_cnv_13_1.tsv", sep = "\t", quote = F, row.names = F)
+```
 
 ## Conclusions
 
