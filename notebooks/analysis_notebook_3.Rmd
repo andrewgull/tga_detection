@@ -27,7 +27,7 @@ library(tidyverse)
 
 ## Scheme of the region of interest
 
-Compared to part II, here I use longer both red and green regions. 
+Compared to part 2, here I use longer both red and green regions. 
 For the red one I will use all available length (1677 bp). 
 The green region will have the same length.
 
@@ -37,7 +37,7 @@ The green region will have the same length.
 
 replicate E
 
-### length distribution
+### Length distribution
 
 ```{bash, eval=F}
 conda activate snakemake
@@ -64,6 +64,8 @@ seqkit fq2fa results/reads_filtered/replicate_e/CNV_reads_all_7k.fastq.gz > resu
 ![histogram 7k](../results/reads_stat/replicate_e_min_7k.png)
 
 ### Quality distribution
+
+of reads longer than 7k
 
 ```{bash, eval=F}
 seqkit watch results/reads_filtered/replicate_e/CNV_reads_all_7k.fastq.gz -O results/reads_stat/replicate_e_qual.png -j 8 -f MeanQual
@@ -108,14 +110,41 @@ blast_red <- read_delim("../results/tables/blast_flanking_region_red.tsv", col_n
 
 names(blast_red) <- c("query", "subject", "identity", "length", "mismatch", 
                         "gaps", "start.query", "end.query", "start.subject", 
-                        "end.subject", "e.value", "bit.score")
+                        "end.subject", "e.value", "bit.score") 
+blast_red <- 
+  blast_red %>%
+  mutate(orientation = if_else(start.subject < end.subject, "direct", "reverse"))
 
+# rename query
 blast_red$query <- "FR_red"
 
 blast_red
 ```
 
-#### Length
+#### Reads with multiple hits
+
+```{r}
+# rows with the same subject
+blast_red %>% 
+  group_by(subject) %>% 
+  count() %>% 
+  ggplot(aes(n)) + 
+  geom_histogram(bins = 150, fill="steelblue") +
+  geom_rug()
+```
+
+```{r}
+# rows with the same subject
+blast_red %>% 
+  group_by(subject, orientation) %>% 
+  count() %>% 
+  ggplot(aes(n)) + 
+  geom_histogram(bins = 150, fill="steelblue") +
+  geom_rug() +
+  facet_grid(rows = vars(orientation))
+```
+
+#### Hit length
 
 ```{r}
 blast_red %>%
@@ -127,7 +156,7 @@ Number of query hits shorter than 1500: `r blast_red %>% filter(length < 1500) %
 
 Number of query hits longer than 1500: `r blast_red %>% filter(length > 1500) %>% nrow()`
 
-#### Identity
+#### Hit identity
 
 ```{r}
 blast_red %>%
@@ -183,7 +212,7 @@ blast_red %>%
   ggtitle("query hits raw")
 ```
 
-After filtering: 
+Filtering criteria: 
 
 - length > 1500
 - e-value < 10**-5
@@ -207,13 +236,40 @@ blast_green <- read_delim("../results/tables/blast_flanking_region_green.tsv", c
 names(blast_green) <- c("query", "subject", "identity", "length", "mismatch", 
                         "gaps", "start.query", "end.query", "start.subject", 
                         "end.subject", "e.value", "bit.score")
+blast_green <- 
+  blast_green %>%
+  mutate(orientation = if_else(start.subject < end.subject, "direct", "reverse"))
 
 blast_green$query <- "FR_green"
 
 blast_green
 ```
 
-#### Length
+#### Reads with multiple hits
+
+```{r}
+# rows with the same subject
+blast_green %>% 
+  group_by(subject) %>% 
+  count() %>% 
+  ggplot(aes(n)) + 
+  geom_histogram(bins = 150, fill="steelblue") +
+  geom_rug() +
+  xlab("n hits per read")
+```
+
+```{r}
+# rows with the same subject
+blast_green %>% 
+  group_by(subject, orientation) %>% 
+  count() %>% 
+  ggplot(aes(n)) + 
+  geom_histogram(bins = 150, fill="steelblue") +
+  geom_rug() +
+  facet_grid(rows = vars(orientation))
+```
+
+#### Hit length
 
 ```{r}
 blast_green %>%
@@ -303,9 +359,81 @@ blast_green %>%
 
 The plot looks very similar to the one with 'red' query hits
 
-## Filtering and joining
+## Filtering
+
+Filtering criteria for both *red* and *green* FRs
+
+- length > 1500
+- e-value < 10**-5
+- identity >= 75%
+
+Some reads have multiple hits (red and green)!
 
 ```{r}
+blast_red_filt <-
+  blast_red %>%
+  filter(length > 1500,
+         e.value < 10 ** -5,
+         identity >= 75)
 
+blast_green_filt <-
+  blast_green %>%
+  filter(length > 1500,
+         e.value < 10 ** -5,
+         identity >= 75)
+```
+
+### Multiple hits per read?
+
+```{r}
+blast_red_filt %>% 
+  group_by(subject) %>% 
+  count() %>% 
+  ggplot(aes(n)) + 
+  geom_histogram(bins = 150, fill="steelblue") +
+  geom_rug()
+```
+
+Lets look at the reads with multiple hits
+
+```{r}
+blast_red_filt %>% 
+  group_by(subject) %>% 
+  count() %>% 
+  filter(n > 1) %>% 
+  left_join(blast_red_filt, by = "subject") %>% 
+  select(subject, start.subject, end.subject, orientation)
+```
+
+
+```{r}
+blast_green_filt %>% 
+  group_by(subject) %>% 
+  count() %>% 
+  ggplot(aes(n)) + 
+  geom_histogram(bins = 150, fill="steelblue") +
+  geom_rug()
+```
+
+Lets look at the reads with multiple hits
+
+```{r}
+blast_green_filt %>% 
+  group_by(subject) %>% 
+  count() %>% 
+  filter(n > 1) %>% 
+  left_join(blast_green_filt, by = "subject") %>% 
+  select(subject, start.subject, end.subject, orientation)
+```
+
+Such reads should not be kept in the analysis
+
+## Joining
+
+```{r}
+blast_joined <- 
+  full_join(blast_red_filt, blast_red_filt, by = "subject")
+
+blast_joined
 ```
 
