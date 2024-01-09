@@ -359,9 +359,9 @@ blast_green %>%
 
 The plot looks very similar to the one with 'red' query hits
 
-## Filtering
+## Filtering, part 1
 
-Filtering criteria for both *red* and *green* FRs
+BLAST results filtering criteria for both *red* and *green* FRs
 
 - length > 1500
 - e-value < 10**-5
@@ -390,7 +390,7 @@ blast_red_filt %>%
   group_by(subject) %>% 
   count() %>% 
   ggplot(aes(n)) + 
-  geom_histogram(bins = 150, fill="steelblue") +
+  geom_histogram(bins = 150, fill="red") +
   geom_rug()
 ```
 
@@ -411,7 +411,7 @@ blast_green_filt %>%
   group_by(subject) %>% 
   count() %>% 
   ggplot(aes(n)) + 
-  geom_histogram(bins = 150, fill="steelblue") +
+  geom_histogram(bins = 150, fill="lightgreen") +
   geom_rug()
 ```
 
@@ -428,12 +428,113 @@ blast_green_filt %>%
 
 Such reads should not be kept in the analysis
 
-## Joining
+## Filtering, part 2
+
+Filter out:
+
+- reads with multiple green/red regions detected
+- reads with only one red or green hit (join first!)
+- reads with different orientation of the flanking regions
+- reads without full blaSHV genes in between the flanking regions 
+or/and -> requires more blasting and subsequent analysis 
+- reads with 'wrong' number of repeats between the flanking regions -> divide distance by AU length
+
+### Filter out reads with multiple hits
+
+```{r}
+# a function to get IDs of reads with multiple hits of the same 'color'
+get_multihits_ids <- function(df){
+  # df: filtered blast table
+  df %>% 
+  group_by(subject) %>% 
+  count() %>% 
+  filter(n > 1) %>% 
+  pull(subject)
+}
+
+reads_multiple_hits <- union(get_multihits_ids(blast_red_filt), 
+                             get_multihits_ids(blast_green_filt))
+```
+
+There are `r length(reads_multiple_hits)` reads with multiple hits
+
+Remove these reads
+
+```{r}
+blast_red_filt <- 
+  blast_red_filt %>% 
+  filter(!subject %in% reads_multiple_hits)
+
+blast_green_filt <-
+  blast_green_filt %>% 
+  filter(!subject %in% reads_multiple_hits)
+```
+
+
+### Filter out reads with single hits
+
+First, join the tables by subject (read ID)
+Then, remove reads with 'lonely' FRs
 
 ```{r}
 blast_joined <- 
-  full_join(blast_red_filt, blast_red_filt, by = "subject")
+  full_join(blast_red_filt, blast_green_filt, by = "subject")
 
-blast_joined
+# reads with only one flanking region should have NA in query.x or query.y
+blast_joined %>% filter(is.na(query.x) | is.na(query.y))
 ```
+
+Remove them
+
+```{r}
+blast_joined_filt <-
+  blast_joined %>% 
+  filter(!is.na(query.x), 
+         !is.na(query.y))
+
+blast_joined_filt %>% 
+  head()
+```
+
+
+### Filter by orientation
+
+```{r}
+# orientation.x and orientation.y should match
+blast_joined_filt %>% 
+  filter(orientation.x != orientation.y) %>% 
+  select(contains('query'), contains('orientation'))
+```
+
+There are 18 reads with non-matching orientation of the FRs
+
+Remove them
+
+```{r}
+blast_joined_filt <-
+  blast_joined_filt %>%
+  filter(orientation.x == orientation.y)
+
+nrow(blast_joined_filt)
+```
+
+
+### Filter by number of AUs
+
+using distance between the FRs
+
+```{r}
+blast_joined_filt %>% 
+  #filter(orientation.x == "reverse") %>% 
+  mutate(green.red.distance = end.subject.x - start.subject.y) %>% 
+  ggplot(aes(green.red.distance)) +
+  geom_histogram(bins = 100) +
+  geom_rug() +
+  facet_grid(rows = vars(orientation.x))
+```
+
+If expected AU length is 3500, then
+
+
+
 
