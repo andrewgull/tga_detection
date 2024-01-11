@@ -129,7 +129,7 @@ blast_red %>%
   group_by(subject) %>% 
   count() %>% 
   ggplot(aes(n)) + 
-  geom_histogram(bins = 150, fill="steelblue") +
+  geom_histogram(bins = 150, fill="darkred") +
   geom_rug()
 ```
 
@@ -139,7 +139,7 @@ blast_red %>%
   group_by(subject, orientation) %>% 
   count() %>% 
   ggplot(aes(n)) + 
-  geom_histogram(bins = 150, fill="steelblue") +
+  geom_histogram(bins = 150, fill="darkred") +
   geom_rug() +
   facet_grid(rows = vars(orientation))
 ```
@@ -149,7 +149,7 @@ blast_red %>%
 ```{r}
 blast_red %>%
   ggplot(aes(length)) +
-  geom_histogram(bins = 150) 
+  geom_histogram(bins = 150, fill='darkred') 
 ```
 
 Number of query hits shorter than 1500: `r blast_red %>% filter(length < 1500) %>% nrow()`
@@ -161,7 +161,7 @@ Number of query hits longer than 1500: `r blast_red %>% filter(length > 1500) %>
 ```{r}
 blast_red %>%
   ggplot(aes(identity)) +
-  geom_histogram(bins = 150) 
+  geom_histogram(bins = 150, fill='darkred') 
 ```
 
 Number of query hits with identity below 75%: `r blast_red %>% filter(identity < 75) %>% nrow()`
@@ -173,14 +173,14 @@ Number of query hits with identity above 75%: `r blast_red %>% filter(identity >
 ```{r}
 blast_red %>%
   ggplot(aes(e.value)) +
-  geom_histogram(bins = 150) 
+  geom_histogram(bins = 150, fill='darkred') 
 ```
 
 ```{r}
 blast_red %>%
   filter(e.value != 0) %>% 
   ggplot(aes(e.value)) +
-  geom_histogram(bins = 150) +
+  geom_histogram(bins = 150, fill='darkred') +
   ggtitle("e-value = 0 excluded")
 ```
 
@@ -253,7 +253,7 @@ blast_green %>%
   group_by(subject) %>% 
   count() %>% 
   ggplot(aes(n)) + 
-  geom_histogram(bins = 150, fill="steelblue") +
+  geom_histogram(bins = 30, fill="darkgreen") +
   geom_rug() +
   xlab("n hits per read")
 ```
@@ -264,7 +264,7 @@ blast_green %>%
   group_by(subject, orientation) %>% 
   count() %>% 
   ggplot(aes(n)) + 
-  geom_histogram(bins = 150, fill="steelblue") +
+  geom_histogram(bins = 30, fill="darkgreen") +
   geom_rug() +
   facet_grid(rows = vars(orientation))
 ```
@@ -274,7 +274,7 @@ blast_green %>%
 ```{r}
 blast_green %>%
   ggplot(aes(length)) +
-  geom_histogram(bins = 150) 
+  geom_histogram(bins = 150, fill='darkgreen') 
 ```
 
 Number of query hits shorter than 1500: `r blast_green %>% filter(length < 1500) %>% nrow()`
@@ -290,7 +290,7 @@ blast_green %>% filter(length < 1500)
 ```{r}
 blast_green %>%
   ggplot(aes(identity)) +
-  geom_histogram(bins = 150) 
+  geom_histogram(bins = 150, fill='darkgreen') 
 ```
 
 Number of query hits with identity below 75%: `r blast_green %>% filter(identity < 75) %>% nrow()`
@@ -302,14 +302,14 @@ Number of query hits with identity above 75%: `r blast_green %>% filter(identity
 ```{r}
 blast_green %>%
   ggplot(aes(e.value)) +
-  geom_histogram(bins = 150) 
+  geom_histogram(bins = 150, fill='darkgreen') 
 ```
 
 ```{r}
 blast_green %>%
   filter(e.value != 0) %>% 
   ggplot(aes(e.value)) +
-  geom_histogram(bins = 150) +
+  geom_histogram(bins = 150, fill='darkgreen') +
   ggtitle("e-value = 0 excluded")
 ```
 
@@ -390,7 +390,7 @@ blast_red_filt %>%
   group_by(subject) %>% 
   count() %>% 
   ggplot(aes(n)) + 
-  geom_histogram(bins = 150, fill="red") +
+  geom_histogram(bins = 150, fill="darkred") +
   geom_rug()
 ```
 
@@ -411,7 +411,7 @@ blast_green_filt %>%
   group_by(subject) %>% 
   count() %>% 
   ggplot(aes(n)) + 
-  geom_histogram(bins = 150, fill="lightgreen") +
+  geom_histogram(bins = 150, fill="darkgreen") +
   geom_rug()
 ```
 
@@ -528,12 +528,29 @@ blast_joined_filt %>%
   #filter(orientation.x == "reverse") %>% 
   mutate(green.red.distance = end.subject.x - start.subject.y) %>% 
   ggplot(aes(green.red.distance)) +
-  geom_histogram(bins = 100) +
+  geom_histogram(bins = 100, fill='steelblue') +
   geom_rug() +
   facet_grid(rows = vars(orientation.x))
 ```
 
-If expected AU length is 3500, then
+Direct:
+
+```{r}
+blast_joined_filt %>% 
+  mutate(green.red.distance = end.subject.x - start.subject.y) %>% 
+  select(subject, green.red.distance, orientation.x) %>% 
+  filter(orientation.x == "direct") %>% 
+  arrange(green.red.distance)
+```
+
+Reverse:
+
+```{r}
+blast_joined_filt %>% 
+  mutate(green.red.distance = end.subject.x - start.subject.y) %>% 
+  select(subject, green.red.distance, orientation.x) %>% 
+  filter(orientation.x == "reverse")
+```
 
 
 
