@@ -598,7 +598,76 @@ blast_joined_filt %>%
 I can just blast all reads together, then *analyse* the results and join them with FR blast table
 
 ```{bash, eval=FALSE}
+# requires ca. 23 Gb of RAM
 blastn -query resources/genes/blaSHV.fa -subject results/reads_filtered/replicate_e/CNV_reads_all_3.7k.fasta -outfmt 6 -num_alignments 5000000 -num_threads 4 > results/tables/blast_blaSHV.tsv
+```
+
+Read the blast results and leave only the reads that have been selected during the previous steps
+
+```{r, message=FALSE, warning=FALSE}
+blast_blaSHV <- read_delim("../results/tables/blast_blaSHV.tsv", col_names = F) %>% 
+  filter(X2 %in% unique(blast_joined_filt$subject)) %>% 
+  filter(X11 > 10*-5)
+
+names(blast_blaSHV) <- c("query", "subject", "identity", "length", "mismatch", 
+                        "gaps", "start.query", "end.query", "start.subject", 
+                        "end.subject", "e.value", "bit.score") 
+blast_blaSHV
+```
+
+### Some plots
+
+```{r}
+blast_blaSHV %>% 
+  ggplot(aes(length)) +
+  geom_histogram(bins = 300, fill = "steelblue") +
+  geom_rug()
+```
+
+```{r}
+blast_blaSHV %>% 
+  ggplot(aes(identity)) +
+  geom_histogram(bins = 300, fill = "steelblue") +
+  geom_rug()
+```
+
+```{r}
+blast_blaSHV %>% 
+  ggplot(aes(gaps)) +
+  geom_histogram(bins = 50, fill = "steelblue") +
+  geom_rug()
+```
+
+### How many blaSHV hits per read?
+
+```{r}
+blast_blaSHV %>% 
+  group_by(subject) %>% 
+  count() %>% 
+  ggplot(aes(n)) +
+  geom_histogram(bins = 100, fill = "steelblue") +
+  geom_rug()
+```
+
+This histogram corresponds to the previous plot (read length vs distance between FRs) and the distributions of distances between FRs
+
+Maybe blaSHV hits are shorter on the reads with only two balSHV copies?
+
+```{r}
+blaSHV_mean_len <- 
+  blast_blaSHV %>% 
+  group_by(subject) %>% 
+  summarise(mean.length = mean(length)) 
+
+blaSHV_counts <- 
+  blast_blaSHV %>% 
+  group_by(subject) %>% 
+  count()
+
+left_join(blaSHV_mean_len, blaSHV_counts, by = "subject") %>% 
+  mutate(n = as_factor(n)) %>% 
+  ggplot(aes(n, mean.length)) +
+  geom_jitter(alpha=0.3, size = 0.5, height = 0.05)
 ```
 
 
