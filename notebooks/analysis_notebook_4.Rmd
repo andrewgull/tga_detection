@@ -515,20 +515,29 @@ nrow(blast_joined_filt)
 using distance between the FRs
 
 ```{r}
+blast_joined_filt <- blast_joined_filt %>% 
+  mutate(green.red.distance = end.subject.x - start.subject.y) 
+
 blast_joined_filt %>% 
-  #filter(orientation.x == "reverse") %>% 
-  mutate(green.red.distance = end.subject.x - start.subject.y) %>% 
   ggplot(aes(green.red.distance)) +
   geom_histogram(bins = 100, fill='steelblue') +
   geom_rug() +
   facet_grid(rows = vars(orientation.x))
 ```
 
+```{r}
+blast_joined_filt %>% 
+  mutate(green.red.distance.2 = if_else(green.red.distance < 0, green.red.distance * -1, green.red.distance * 1)) %>%
+  ggplot(aes(green.red.distance.2)) +
+  geom_histogram(bins = 200, fill='steelblue') +
+  geom_rug()
+```
+
+
 Direct:
 
 ```{r}
 blast_joined_filt %>% 
-  mutate(green.red.distance = end.subject.x - start.subject.y) %>% 
   select(subject, green.red.distance, orientation.x) %>% 
   filter(orientation.x == "direct") %>% 
   arrange(green.red.distance)
@@ -540,7 +549,8 @@ Reverse:
 blast_joined_filt %>% 
   mutate(green.red.distance = end.subject.x - start.subject.y) %>% 
   select(subject, green.red.distance, orientation.x) %>% 
-  filter(orientation.x == "reverse")
+  filter(orientation.x == "reverse") %>% 
+  arrange(-green.red.distance)
 ```
 
 # Length of the reads
@@ -555,26 +565,42 @@ reads <- readDNAStringSet(file_path)
 read_lengths <- width(reads)
 
 reads_len_df <- tibble("subject" = sub("^(.*?) runid=.*", "\\1", names(reads)), 
-                       "len" = read_lengths)
+                       "read.len" = read_lengths)
 
-ggplot(reads_len_df, aes(len)) +
+ggplot(reads_len_df, aes(read.len)) +
   geom_histogram(bins = 300, fill = "steelblue")
 ```
 
 Join this table with filtered blast results and check the length distribution
 
 ```{r}
-left_join(blast_joined_filt, 
-          reads_len_df, 
-          by = "subject") %>% 
-  ggplot(aes(len)) +
+blast_joined_filt <- left_join(blast_joined_filt,
+                               reads_len_df,
+                               by = "subject")
+
+blast_joined_filt %>% 
+  ggplot(aes(read.len)) +
   geom_histogram(bins = 300)
+```
+
+```{r}
+blast_joined_filt %>% 
+  mutate(green.red.distance.2 = if_else(green.red.distance < 0, green.red.distance * -1, green.red.distance * 1)) %>% 
+  ggplot(aes(green.red.distance.2, read.len)) +
+  geom_point(alpha=0.3) +
+  xlab("Distance between FRs") +
+  ylab("read length")
 ```
 
 
 # BLASTing the blaSHA genes
 
 I can just blast all reads together, then *analyse* the results and join them with FR blast table
+
+```{bash, eval=FALSE}
+blastn -query resources/genes/blaSHV.fa -subject results/reads_filtered/replicate_e/CNV_reads_all_3.7k.fasta -outfmt 6 -num_alignments 5000000 -num_threads 4 > results/tables/blast_blaSHV.tsv
+```
+
 
 # Model
 
