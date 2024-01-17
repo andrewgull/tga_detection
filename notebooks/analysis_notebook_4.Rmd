@@ -553,7 +553,7 @@ blast_joined_filt %>%
   arrange(-green.red.distance)
 ```
 
-# Length of the reads
+## Length of the reads
 
 ```{r}
 library(Biostrings)
@@ -584,16 +584,19 @@ blast_joined_filt %>%
 ```
 
 ```{r}
+blast_joined_filt <-
+  blast_joined_filt %>% 
+  mutate(green.red.distance.pos = if_else(green.red.distance < 0, green.red.distance * -1, green.red.distance * 1)) 
+
 blast_joined_filt %>% 
-  mutate(green.red.distance.2 = if_else(green.red.distance < 0, green.red.distance * -1, green.red.distance * 1)) %>% 
-  ggplot(aes(green.red.distance.2, read.len)) +
+  ggplot(aes(green.red.distance.pos, read.len)) +
   geom_point(alpha=0.3) +
   xlab("Distance between FRs") +
   ylab("read length")
 ```
 
 
-# BLASTing the blaSHA genes
+## BLASTing the blaSHV genes
 
 I can just blast all reads together, then *analyse* the results and join them with FR blast table
 
@@ -670,10 +673,44 @@ left_join(blaSHV_mean_len, blaSHV_counts, by = "subject") %>%
   geom_jitter(alpha=0.3, size = 0.5, height = 0.05)
 ```
 
+### Count blaSHV genes not hits
 
-# Model
+sum of blaSHV hits between two FRs divided by blaSHV length (~860 nt)
 
-idea: if I see 3 reads with 10 copies of blaSHV, it doesn't mean that there *indeed* are only three molecules with 10 blaSHV, because the chance to get long reads is lower than to get short reads - i.e it is very likely that there were more molecules but they got fragmented and were discarded from our analysis.
+```{r}
+blaSHV_counts <- 
+  blast_blaSHV %>% 
+  group_by(subject) %>% 
+  summarise(sum.bla.hit.len = sum(length)) %>% 
+  mutate(n.blaSHV = round(sum.bla.hit.len/860))
+
+blaSHV_counts %>% 
+  ggplot(aes(n.blaSHV)) +
+  geom_histogram(bins = 200, fill = "steelblue") +
+  geom_rug()
+```
+
+
+
+
+## blaSHV genes and the distance between FRs
+
+```{r}
+# join bla counts and ain blast table containing gree.red.distance
+blast_joined_filt <- 
+  left_join(blast_joined_filt, 
+            blaSHV_counts, 
+            by = "subject") %>% 
+  mutate(n.blaSHV = replace_na(n.blaSHV, 0))
+
+blast_joined_filt %>% 
+  ggplot(aes(n.blaSHV, green.red.distance.pos)) +
+  geom_point(alpha=0.3, color="steelblue") +
+  geom_smooth(method = "custom") # use your custom function dist = X * n.blaSHV
+  
+
+```
+
 
 
 
