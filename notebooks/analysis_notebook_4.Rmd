@@ -673,6 +673,15 @@ left_join(blaSHV_mean_len, blaSHV_counts, by = "subject") %>%
   geom_jitter(alpha=0.3, size = 0.5, height = 0.05)
 ```
 
+Extract the names of the reads with 6 CNV
+
+```{r}
+left_join(blaSHV_mean_len, blaSHV_counts, by = "subject") %>% 
+  filter(n == 6)
+```
+
+use seqkit grep -p %read_id% to extract the read by id
+
 ### Count blaSHV genes not hits
 
 sum of blaSHV hits between two FRs divided by blaSHV length (~860 nt)
