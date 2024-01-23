@@ -48,18 +48,25 @@ seqkit watch resources/reads/replicate_e/CNV_reads_all.fastq.gz -O results/reads
 
 Filter out all reads shorter than 3.7 Kb (FR+IS+FR) - minimal read length that can capture 0 CN variants consisting only of two FRs and one IS copy between them.
 
+Precise length FR+IS+FR = 3756.6
+
 ```{bash, eval=FALSE}
 # filter out too short reads
 conda activate /home/andrei/mambaforge/envs/filtlong-env 
-LENGTH="3700"
+LENGTH="3757"
 filtlong --min_length $LENGTH resources/reads/replicate_e/CNV_reads_all.fastq.gz > results/reads_filtered/replicate_e/CNV_reads_all_3.7k.fastq && pigz -p 12 results/reads_filtered/replicate_e/CNV_reads_all_3.7k.fastq
 conda deactivate
 
+# trim adapters
+conda activate porechop-env
+porechop -i results/reads_filtered/replicate_e/CNV_reads_all_3.7k.fastq.gz -o results/reads_filtered/replicate_e/CNV_reads_all_3.7k_chop.fastq.gz --threads 10
+conda deactivate
+
 # histogram
-seqkit watch results/reads_filtered/replicate_e/CNV_reads_all_3.7k.fastq.gz -O results/reads_stat/replicate_e_min_3.7k.png -j 12
+seqkit watch results/reads_filtered/replicate_e/CNV_reads_all_3.7k_chop.fastq.gz -O results/reads_stat/replicate_e_min_3.7k.png -j 12
 
 # convert fastq to fasta
-seqkit fq2fa results/reads_filtered/replicate_e/CNV_reads_all_3.7k.fastq.gz > results/reads_filtered/replicate_e/CNV_reads_all_3.7k.fasta
+seqkit fq2fa results/reads_filtered/replicate_e/CNV_reads_all_3.7k_chop.fastq.gz > results/reads_filtered/replicate_e/CNV_reads_all_3.7k.fasta
 ```
 
 ![histogram 7k](../results/reads_stat/replicate_e_min_3.7k.png)
@@ -69,7 +76,7 @@ seqkit fq2fa results/reads_filtered/replicate_e/CNV_reads_all_3.7k.fastq.gz > re
 of reads longer than 3.7k
 
 ```{bash, eval=F}
-seqkit watch results/reads_filtered/replicate_e/CNV_reads_all_3.7k.fastq.gz -O results/reads_stat/replicate_e_qual_min3.7.png -j 8 -f MeanQual
+seqkit watch results/reads_filtered/replicate_e/CNV_reads_all_3.7k_chop.fastq.gz -O results/reads_stat/replicate_e_qual_min3.7.png -j 8 -f MeanQual
 ```
 
 ![quality](../results/reads_stat/replicate_e_qual_min3.7.png)
@@ -713,9 +720,9 @@ blast_joined_filt <-
   mutate(n.blaSHV = replace_na(n.blaSHV, 0))
 
 blast_joined_filt %>% 
-  ggplot(aes(n.blaSHV, green.red.distance.pos)) +
+  ggplot(aes(n.blaSHV, green.red.distance.pos - (2*1677+820))) +
   geom_point(alpha=0.3, color="steelblue") +
-  geom_smooth(method = "custom") # use your custom function dist = X * n.blaSHV
+  geom_smooth(method = "lm") # use your custom function dist = X * n.blaSHV
   
 
 ```
