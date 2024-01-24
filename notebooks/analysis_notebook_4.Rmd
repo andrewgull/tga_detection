@@ -58,15 +58,17 @@ filtlong --min_length $LENGTH resources/reads/replicate_e/CNV_reads_all.fastq.gz
 conda deactivate
 
 # trim adapters
+# 1. it runs out of RAM
+# 2. it's no assembly, we can skip this step
 conda activate porechop-env
 porechop -i results/reads_filtered/replicate_e/CNV_reads_all_3.7k.fastq.gz -o results/reads_filtered/replicate_e/CNV_reads_all_3.7k_chop.fastq.gz --threads 10
 conda deactivate
 
 # histogram
-seqkit watch results/reads_filtered/replicate_e/CNV_reads_all_3.7k_chop.fastq.gz -O results/reads_stat/replicate_e_min_3.7k.png -j 12
+seqkit watch results/reads_filtered/replicate_e/CNV_reads_all_3.7k.fastq.gz -O results/reads_stat/replicate_e_min_3.7k.png -j 8
 
 # convert fastq to fasta
-seqkit fq2fa results/reads_filtered/replicate_e/CNV_reads_all_3.7k_chop.fastq.gz > results/reads_filtered/replicate_e/CNV_reads_all_3.7k.fasta
+seqkit fq2fa results/reads_filtered/replicate_e/CNV_reads_all_3.7k.fastq.gz > results/reads_filtered/replicate_e/CNV_reads_all_3.7k.fasta
 ```
 
 ![histogram 7k](../results/reads_stat/replicate_e_min_3.7k.png)
@@ -76,7 +78,7 @@ seqkit fq2fa results/reads_filtered/replicate_e/CNV_reads_all_3.7k_chop.fastq.gz
 of reads longer than 3.7k
 
 ```{bash, eval=F}
-seqkit watch results/reads_filtered/replicate_e/CNV_reads_all_3.7k_chop.fastq.gz -O results/reads_stat/replicate_e_qual_min3.7.png -j 8 -f MeanQual
+seqkit watch results/reads_filtered/replicate_e/CNV_reads_all_3.7k.fastq.gz -O results/reads_stat/replicate_e_qual_min3.7.png -j 8 -f MeanQual
 ```
 
 ![quality](../results/reads_stat/replicate_e_qual_min3.7.png)
@@ -103,9 +105,9 @@ left = red; right = green
 #    * Incompatible with:  max_target_seqs
 
 # num_alignments should be high enough, depending on the total number of reads
-blastn -query resources/flanking_regions/flanking_region_red_1677.fa -subject results/reads_filtered/replicate_e/CNV_reads_all_3.7k.fasta -outfmt 6 -num_alignments 333000 -num_threads 4 > results/tables/blast_flanking_region_red.tsv
+blastn -query resources/flanking_regions/flanking_region_red_1677.fa -subject results/reads_filtered/replicate_e/CNV_reads_all_3.7k.fasta -outfmt 6 -num_alignments 450000 > results/tables/blast_flanking_region_red.tsv
 
-blastn -query resources/flanking_regions/flanking_region_green_1677.fa -subject results/reads_filtered/replicate_e/CNV_reads_all_3.7k.fasta -outfmt 6 -num_alignments 333000 -num_threads 4 > results/tables/blast_flanking_region_green.tsv
+blastn -query resources/flanking_regions/flanking_region_green_1677.fa -subject results/reads_filtered/replicate_e/CNV_reads_all_3.7k.fasta -outfmt 6 -num_alignments 450000 > results/tables/blast_flanking_region_green.tsv
 ```
 
 ## Parse BLAST results
@@ -669,36 +671,64 @@ blaSHV_mean_len <-
   group_by(subject) %>% 
   summarise(mean.length = mean(length)) 
 
+# outdated way of counting!
 blaSHV_counts <- 
   blast_blaSHV %>% 
   group_by(subject) %>% 
   count()
 
+# a better way
+bla_len <- 860
+
+blaSHV_counts <- 
+  blast_blaSHV %>% 
+  group_by(subject) %>% 
+  summarise(sum.bla.hit.len = sum(length)) %>% 
+  mutate(n.blaSHV = round(sum.bla.hit.len/bla_len))
+
+
 left_join(blaSHV_mean_len, blaSHV_counts, by = "subject") %>% 
-  mutate(n = as_factor(n)) %>% 
-  ggplot(aes(n, mean.length)) +
+  mutate(n.blaSHV = as_factor(n.blaSHV)) %>% 
+  ggplot(aes(n.blaSHV, mean.length)) +
   geom_jitter(alpha=0.3, size = 0.5, height = 0.05)
 ```
 
-Extract the names of the reads with 6 CNV
+**NB**: for n.blaSHV = 0 mean.length doesn't have any sense
+
+Extract the names of the reads with N *blaSHV* copies
 
 ```{r}
+N <- 2
+
 left_join(blaSHV_mean_len, blaSHV_counts, by = "subject") %>% 
-  filter(n == 6)
+  filter(n.blaSHV == 1)
 ```
 
 use seqkit grep -p %read_id% to extract the read by id
+
+Try other view:
+
+```{r}
+left_join(blast_blaSHV, blaSHV_counts, by = "subject") %>% 
+  mutate(n.blaSHV = as_factor(n.blaSHV)) %>% 
+  ggplot(aes(n.blaSHV, length)) +
+  geom_boxplot(outlier.size = 0.2, outlier.alpha = 0.3) 
+```
+
+But these short lengths are just short hits, we don't count them as *blaSHV* copies anymore, we merge them together instead
 
 ### Count blaSHV genes not hits
 
 sum of blaSHV hits between two FRs divided by blaSHV length (~860 nt)
 
 ```{r}
+bla_len <- 860
+
 blaSHV_counts <- 
   blast_blaSHV %>% 
   group_by(subject) %>% 
   summarise(sum.bla.hit.len = sum(length)) %>% 
-  mutate(n.blaSHV = round(sum.bla.hit.len/860))
+  mutate(n.blaSHV = round(sum.bla.hit.len/bla_len))
 
 blaSHV_counts %>% 
   ggplot(aes(n.blaSHV)) +
@@ -711,6 +741,29 @@ blaSHV_counts %>%
 
 ## blaSHV genes and the distance between FRs
 
+Theoretical length of the amplified region:
+
+$\hat{d}=\hat{n}_{bla}+2l_{FR}+l_{IS}$
+
+Observed number of *blaSHV* genes:
+
+$\hat{n}_{bla}=\sum_{i=1}^N l_i$
+
+Observed length of the amplified region:
+
+$d=loc_{FR1} - loc_{FR2}$
+
+Linear relationship between theoretical and observed lengths:
+
+$\hat{d}=ad$
+
+Linear relationship between theoretical and observed number of *blaSHV* genes:
+
+$\hat{n}_{bla}=bn_{bla}$
+
+
+### Plot: n.blaSHv v distance
+
 ```{r}
 # join bla counts and ain blast table containing gree.red.distance
 blast_joined_filt <- 
@@ -719,16 +772,78 @@ blast_joined_filt <-
             by = "subject") %>% 
   mutate(n.blaSHV = replace_na(n.blaSHV, 0))
 
-blast_joined_filt %>% 
-  ggplot(aes(n.blaSHV, green.red.distance.pos - (2*1677+820))) +
-  geom_point(alpha=0.3, color="steelblue") +
-  geom_smooth(method = "lm") # use your custom function dist = X * n.blaSHV
-  
+# exp. dist vs obs. dist
+FR <- 1677
+IS <- 820
+len_bla <- 860
 
+blast_joined_filt %>%
+  ggplot(aes(green.red.distance.pos, n.blaSHV)) +
+  geom_point(alpha = 0.3, color = "steelblue") 
+```
+
+### Poisson regression?
+
+Idea: if PR works (i.e. predictors are significant and assumptions are fulfilled), then we can say that distance between FR indeed corresponds the *blaSHV* count (sum of blast hits).
+
+```{r}
+fit  <- glm(n.blaSHV ~ green.red.distance.pos, data = blast_joined_filt, family = "poisson")
+summary(fit)
+```
+
+Coefficients exponentiation:
+
+```{r}
+exp(coef(fit))
+```
+
+Check deviance:
+
+```{r}
+qcc::qcc.overdispersion.test(blast_joined_filt$n.blaSHV, type="poisson")
+```
+
+No over-dispersion: observed dispersion of the data is not greater than the expected one
+
+### Filter out suspiciously short distances
+
+If a FR-FR distance is way too short for the observed number of *blaSHV*, remove such observations from the analysis.
+
+those faulty distances are such that deviate more tha 10% of theoretical in both directions
+
+```{r}
+dist_marg <- 0.1
+spacer <- 700
+
+blast_joined_filt %>%
+  mutate(dist.expected = n.blaSHV*len_bla + 2*FR + 2*IS + 2*spacer) %>% 
+  ggplot(aes(green.red.distance.pos, n.blaSHV)) +
+  geom_point(alpha = 0.3, color = "steelblue") +
+  geom_vline(aes(xintercept = dist.expected - dist_marg*dist.expected)) +
+  geom_vline(aes(xintercept = dist.expected + dist_marg*dist.expected, color=dist.expected), linetype="dotdash")
+```
+
+```{r}
+blast_joined_filt %>%
+  mutate(dist.expected = n.blaSHV*len_bla + 2*FR + IS) %>% 
+  ggplot(aes(green.red.distance.pos, n.blaSHV)) +
+  geom_point(alpha = 0.3, color = "steelblue") +
+  geom_vline(aes(xintercept = dist.expected - dist_marg*dist.expected)) +
+  geom_vline(aes(xintercept = dist.expected + dist_marg*dist.expected, color=dist.expected), linetype="dotdash")
 ```
 
 
+```{r}
+blast_joined_filt %>%
+  mutate(dist.expected = n.blaSHV*len_bla + 2*FR + IS) %>% 
+  ggplot(aes(green.red.distance.pos, dist.expected)) +
+  geom_point(alpha = 0.3, color = "steelblue")
+```
 
-
-
+```{r}
+blast_joined_filt %>%
+  mutate(dist.expected = n.blaSHV*len_bla + 2*FR + IS) %>% 
+  ggplot(aes(dist.expected, dist.expected)) +
+  geom_point(alpha = 0.3, color = "steelblue")
+```
 
