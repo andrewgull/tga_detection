@@ -816,7 +816,8 @@ dist_marg <- 0.1
 spacer <- 700
 
 blast_joined_filt %>%
-  mutate(dist.expected = n.blaSHV*len_bla + 2*FR + 2*IS + 2*spacer) %>% 
+  #mutate(dist.expected = n.blaSHV*len_bla + 2*FR + 2*IS + 2*spacer) %>% 
+  mutate(dist.expected = n.blaSHV*3450 + 820) %>%
   ggplot(aes(green.red.distance.pos, n.blaSHV)) +
   geom_point(alpha = 0.3, color = "steelblue") +
   geom_vline(aes(xintercept = dist.expected - dist_marg*dist.expected)) +
