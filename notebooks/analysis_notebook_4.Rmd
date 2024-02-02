@@ -57,13 +57,6 @@ LENGTH="3757"
 filtlong --min_length $LENGTH resources/reads/replicate_e/CNV_reads_all.fastq.gz > results/reads_filtered/replicate_e/CNV_reads_all_3.7k.fastq && pigz -p 12 results/reads_filtered/replicate_e/CNV_reads_all_3.7k.fastq
 conda deactivate
 
-# trim adapters
-# 1. it runs out of RAM
-# 2. it's no assembly, we can skip this step
-conda activate porechop-env
-porechop -i results/reads_filtered/replicate_e/CNV_reads_all_3.7k.fastq.gz -o results/reads_filtered/replicate_e/CNV_reads_all_3.7k_chop.fastq.gz --threads 10
-conda deactivate
-
 # histogram
 seqkit watch results/reads_filtered/replicate_e/CNV_reads_all_3.7k.fastq.gz -O results/reads_stat/replicate_e_min_3.7k.png -j 8
 
@@ -132,7 +125,7 @@ blast_red$query <- "FR_red"
 blast_red
 ```
 
-#### Reads with multiple hits
+#### Number of hits
 
 ```{r}
 # rows with the same subject
@@ -143,6 +136,18 @@ blast_red %>%
   geom_histogram(bins = 150, fill="darkred") +
   geom_rug()
 ```
+
+In plain numbers:
+
+Total number of reads with red hits: `r length(unique(blast_red$subject))` of which `r blast_red %>% group_by(subject) %>% count() %>% filter(n > 1) %>% nrow()` have more than 1 hit, `r t <- length(unique(blast_red$subject)); m <- blast_red %>% group_by(subject) %>% count() %>% filter(n > 1) %>% nrow(); round(m/t, 3)*100`%
+
+Vast majority of hits has only one red hit per read.
+
+Some hits may represent a 'good' but fragmented hit.
+
+If we filter out all the reads containing more than 1 hit including such fragmented reads, we loose just a fraction of data.
+
+#### Number of hits & orientation
 
 ```{r}
 # rows with the same subject
@@ -155,7 +160,7 @@ blast_red %>%
   facet_grid(rows = vars(orientation))
 ```
 
-#### Hit length
+#### Hit lengths
 
 ```{r}
 blast_red %>%
@@ -183,14 +188,14 @@ Number of query hits with identity above 75%: `r blast_red %>% filter(identity >
 
 ```{r}
 blast_red %>%
-  ggplot(aes(e.value)) +
+  ggplot(aes(log10(e.value))) +
   geom_histogram(bins = 150, fill='darkred') 
 ```
 
 ```{r}
 blast_red %>%
   filter(e.value != 0) %>% 
-  ggplot(aes(e.value)) +
+  ggplot(aes(log10(e.value))) +
   geom_histogram(bins = 150, fill='darkred') +
   ggtitle("e-value = 0 excluded")
 ```
@@ -256,7 +261,7 @@ blast_green
 ```
 
 
-#### Reads with multiple hits
+#### Number of hits
 
 ```{r}
 # rows with the same subject
@@ -268,6 +273,14 @@ blast_green %>%
   geom_rug() +
   xlab("n hits per read")
 ```
+
+In plain numbers:
+
+Total number of reads with red hits: `r length(unique(blast_green$subject))` of which `r blast_green %>% group_by(subject) %>% count() %>% filter(n > 1) %>% nrow()` have more than 1 hit, `r t <- length(unique(blast_green$subject)); m <- blast_green %>% group_by(subject) %>% count() %>% filter(n > 1) %>% nrow(); round(m/t, 3)*100`%
+
+That's a lot, we shouldn't just filter out all the reads containing multiple green hits.
+
+#### Number of hits & orientation
 
 ```{r}
 # rows with the same subject
@@ -319,7 +332,7 @@ blast_green %>%
 ```{r}
 blast_green %>%
   filter(e.value != 0) %>% 
-  ggplot(aes(e.value)) +
+  ggplot(aes(log10(e.value))) +
   geom_histogram(bins = 150, fill='darkgreen') +
   ggtitle("e-value = 0 excluded")
 ```
@@ -361,7 +374,7 @@ blast_green %>%
 
 The plot looks very similar to the one with 'red' query hits
 
-## Filtering, part 1
+## Filtering 1: length, e-value, identity
 
 BLAST results filtering criteria for both *red* and *green* FRs
 
@@ -369,7 +382,7 @@ BLAST results filtering criteria for both *red* and *green* FRs
 - e-value < 10**-5
 - identity >= 75%
 
-Some reads have multiple hits (red and green)!
+After this round of filtering many multiple hits might be gone. Let's check.
 
 ```{r}
 blast_red_filt <-
@@ -387,6 +400,8 @@ blast_green_filt <-
 
 ### Multiple hits per read?
 
+#### Red
+
 ```{r}
 blast_red_filt %>% 
   group_by(subject) %>% 
@@ -395,6 +410,10 @@ blast_red_filt %>%
   geom_histogram(bins = 150, fill="darkred") +
   geom_rug()
 ```
+
+In plain numbers:
+
+Total number of reads with red hits: `r length(unique(blast_red_filt$subject))` of which `r blast_red_filt %>% group_by(subject) %>% count() %>% filter(n > 1) %>% nrow()` have more than 1 hit, `r t <- length(unique(blast_red_filt$subject)); m <- blast_red_filt %>% group_by(subject) %>% count() %>% filter(n > 1) %>% nrow(); round(m/t, 3)*100`%
 
 Lets look at the reads with multiple hits
 
@@ -407,6 +426,8 @@ blast_red_filt %>%
   select(subject, start.subject, end.subject, orientation)
 ```
 
+#### Green
+
 ```{r}
 blast_green_filt %>% 
   group_by(subject) %>% 
@@ -416,25 +437,18 @@ blast_green_filt %>%
   geom_rug()
 ```
 
-Lets look at the reads with multiple hits
+In plain numbers:
 
-```{r}
-blast_green_filt %>% 
-  group_by(subject) %>% 
-  count() %>% 
-  filter(n > 1) %>% 
-  left_join(blast_green_filt, by = "subject") %>% 
-  select(subject, start.subject, end.subject, orientation)
-```
+Total number of reads with red hits: `r length(unique(blast_green_filt$subject))` of which `r blast_green_filt %>% group_by(subject) %>% count() %>% filter(n > 1) %>% nrow()` have more than 1 hit, `r t <- length(unique(blast_green_filt$subject)); m <- blast_green_filt %>% group_by(subject) %>% count() %>% filter(n > 1) %>% nrow(); round(m/t, 3)*100`%
 
-Such reads should not be kept in the analysis
+This looks much better now. We can discard this fraction of reads from the analysis.
 
-## Filtering, part 2
+## Filtering 2: multiple hits, sibgle hits, orientation etc
 
 Filter out:
 
 - reads with multiple green/red regions detected
-- reads with only one red or green hit (join first!)
+- reads with only one red or green hit
 - reads with different orientation of the flanking regions
 - reads without full blaSHV genes in between the flanking regions 
 or/and -> requires more blasting and subsequent analysis 
@@ -482,8 +496,9 @@ blast_joined <-
   full_join(blast_red_filt, blast_green_filt, by = "subject")
 
 # reads with only one flanking region should have NA in query.x or query.y
-blast_joined %>% filter(is.na(query.x) | is.na(query.y))
 ```
+
+That's how many reads with single FRs there are: `r blast_joined %>% filter(is.na(query.x) | is.na(query.y)) %>% nrow()`
 
 Remove them
 
@@ -492,21 +507,15 @@ blast_joined_filt <-
   blast_joined %>% 
   filter(!is.na(query.x), 
          !is.na(query.y))
-
-blast_joined_filt %>% 
-  head()
 ```
+
+That's how many reads left: `r length(unique(blast_joined_filt$subject))`
 
 ### Filter by orientation
 
-```{r}
-# orientation.x and orientation.y should match
-blast_joined_filt %>% 
-  filter(orientation.x != orientation.y) %>% 
-  select(contains('query'), contains('orientation'))
-```
+`orientation.x` and `orientation.y` should match
 
-There are 18 reads with non-matching orientation of the FRs
+There are `r blast_joined_filt %>% filter(orientation.x != orientation.y) %>% select(contains('query'), contains('orientation')) %>% nrow()` reads with non-matching orientation of the FRs
 
 Remove them
 
@@ -514,10 +523,9 @@ Remove them
 blast_joined_filt <-
   blast_joined_filt %>%
   filter(orientation.x == orientation.y)
-
-nrow(blast_joined_filt)
 ```
 
+That many reads left: `r nrow(blast_joined_filt)`
 
 ### Filter by number of AUs
 
@@ -531,40 +539,26 @@ blast_joined_filt %>%
   ggplot(aes(green.red.distance)) +
   geom_histogram(bins = 100, fill='steelblue') +
   geom_rug() +
-  facet_grid(rows = vars(orientation.x))
+  facet_grid(rows = vars(orientation.x)) +
+  xlab("distance between FRs")
 ```
+
+Make distance bewteen the FRs positive
 
 ```{r}
 blast_joined_filt %>% 
   mutate(green.red.distance.2 = if_else(green.red.distance < 0, green.red.distance * -1, green.red.distance * 1)) %>%
   ggplot(aes(green.red.distance.2)) +
   geom_histogram(bins = 200, fill='steelblue') +
-  geom_rug()
+  geom_rug() +
+  xlab("distance between FRs")
 ```
 
-
-Direct:
-
-```{r}
-blast_joined_filt %>% 
-  select(subject, green.red.distance, orientation.x) %>% 
-  filter(orientation.x == "direct") %>% 
-  arrange(green.red.distance)
-```
-
-Reverse:
-
-```{r}
-blast_joined_filt %>% 
-  mutate(green.red.distance = end.subject.x - start.subject.y) %>% 
-  select(subject, green.red.distance, orientation.x) %>% 
-  filter(orientation.x == "reverse") %>% 
-  arrange(-green.red.distance)
-```
+These distances should reflect the copy number variation.
 
 ## Length of the reads
 
-```{r}
+```{r, message=FALSE}
 library(Biostrings)
 
 file_path <- "../results/reads_filtered/replicate_e/CNV_reads_all_3.7k.fasta" 
@@ -577,7 +571,9 @@ reads_len_df <- tibble("subject" = sub("^(.*?) runid=.*", "\\1", names(reads)),
                        "read.len" = read_lengths)
 
 ggplot(reads_len_df, aes(read.len)) +
-  geom_histogram(bins = 300, fill = "steelblue")
+  geom_histogram(bins = 300, fill = "steelblue") +
+  ggtitle("all reads") +
+  xlab("read length")
 ```
 
 Join this table with filtered blast results and check the length distribution
@@ -589,8 +585,12 @@ blast_joined_filt <- left_join(blast_joined_filt,
 
 blast_joined_filt %>% 
   ggplot(aes(read.len)) +
-  geom_histogram(bins = 300)
+  geom_histogram(bins = 300, fill = "steelblue") +
+  ggtitle("filtered reads") +
+  xlab("read length")
 ```
+
+## Length of the reads & distance between FRs
 
 ```{r}
 blast_joined_filt <-
@@ -618,7 +618,9 @@ Read the blast results and leave only the reads that have been selected during t
 
 ```{r, message=FALSE, warning=FALSE}
 blast_blaSHV <- read_delim("../results/tables/blast_blaSHV.tsv", col_names = F) %>% 
+  # leave only the reads in filtered FR blast
   filter(X2 %in% unique(blast_joined_filt$subject)) %>% 
+  # remove unreliable hits
   filter(X11 > 10*-5)
 
 names(blast_blaSHV) <- c("query", "subject", "identity", "length", "mismatch", 
@@ -627,28 +629,39 @@ names(blast_blaSHV) <- c("query", "subject", "identity", "length", "mismatch",
 blast_blaSHV
 ```
 
-### Some plots
+### blaSHV hits lengths
 
 ```{r}
 blast_blaSHV %>% 
   ggplot(aes(length)) +
-  geom_histogram(bins = 300, fill = "steelblue") +
+  geom_histogram(bins = 300, fill = "darkslategray4") +
   geom_rug()
 ```
+
+### blaSHV hits identity
 
 ```{r}
 blast_blaSHV %>% 
   ggplot(aes(identity)) +
-  geom_histogram(bins = 300, fill = "steelblue") +
+  geom_histogram(bins = 300, fill = "darkslategray4") +
+  geom_rug()
+```
+
+### blaSHV hits gaps
+
+```{r}
+blast_blaSHV %>% 
+  ggplot(aes(gaps)) +
+  geom_histogram(bins = 50, fill = "darkslategray4") +
   geom_rug()
 ```
 
 ```{r}
 blast_blaSHV %>% 
-  ggplot(aes(gaps)) +
-  geom_histogram(bins = 50, fill = "steelblue") +
-  geom_rug()
+  ggplot(aes(gaps, identity)) +
+  geom_point(alpha = 0.3, color = "darkslategray4")
 ```
+
 
 ### How many blaSHV hits per read?
 
@@ -657,27 +670,66 @@ blast_blaSHV %>%
   group_by(subject) %>% 
   count() %>% 
   ggplot(aes(n)) +
-  geom_histogram(bins = 100, fill = "steelblue") +
+  geom_histogram(bins = 100, fill = "darkslategray4") +
   geom_rug()
 ```
 
-This histogram corresponds to the previous plot (read length vs distance between FRs) and the distributions of distances between FRs
+This histogram corresponds to the previous plot (read length vs distance between FRs) and the distributions of distances between FRs.
 
-Maybe blaSHV hits are shorter on the reads with only two balSHV copies?
+But this plot **is not** the number of blaSHV copies between FRs.
+
+To get it summarize the length of blaSHV hits.
+
+### Three plots together
+
+```{r, fig.height=8}
+library(patchwork)
+
+bla_len <- 860
+
+hist.n.bla <- blast_blaSHV %>% 
+  group_by(subject) %>% 
+  summarise(sum.bla.hit.len = sum(length)) %>% 
+  mutate(n.blaSHV = round(sum.bla.hit.len/bla_len)) %>% 
+  ggplot(aes(n.blaSHV)) +
+  geom_histogram(bins = 100, fill = "darkslategray4") +
+  geom_rug() +
+  xlab("n blaSHV")
+
+hist.dist.FR <- blast_joined_filt %>%
+  mutate(
+    green.red.distance.2 = if_else(
+      green.red.distance < 0,
+      green.red.distance * -1,
+      green.red.distance * 1
+    )
+  ) %>%
+  ggplot(aes(green.red.distance.2)) +
+  geom_histogram(bins = 200, fill = 'steelblue') +
+  geom_rug() +
+  xlab("distance between FRs")
+
+point.len.dist <- blast_joined_filt %>%
+  ggplot(aes(green.red.distance.pos, read.len)) +
+  geom_point(alpha = 0.3) +
+  xlab("distance between FRs") +
+  ylab("read length")
+
+
+hist.n.bla / hist.dist.FR / point.len.dist
+```
+
+
+Maybe blaSHV hits are shorter on the reads with only two blaSHV copies?
+
+### read length & number of blaSHV
 
 ```{r}
-blaSHV_mean_len <- 
+blaSHV_hit_mean_len <- 
   blast_blaSHV %>% 
   group_by(subject) %>% 
-  summarise(mean.length = mean(length)) 
+  summarise(mean.bla.hit.len = mean(length)) 
 
-# outdated way of counting!
-blaSHV_counts <- 
-  blast_blaSHV %>% 
-  group_by(subject) %>% 
-  count()
-
-# a better way
 bla_len <- 860
 
 blaSHV_counts <- 
@@ -687,20 +739,20 @@ blaSHV_counts <-
   mutate(n.blaSHV = round(sum.bla.hit.len/bla_len))
 
 
-left_join(blaSHV_mean_len, blaSHV_counts, by = "subject") %>% 
+left_join(blaSHV_hit_mean_len, blaSHV_counts, by = "subject") %>% 
   mutate(n.blaSHV = as_factor(n.blaSHV)) %>% 
-  ggplot(aes(n.blaSHV, mean.length)) +
-  geom_jitter(alpha=0.3, size = 0.5, height = 0.05)
+  ggplot(aes(n.blaSHV, mean.bla.hit.len)) +
+  geom_jitter(alpha=0.3, size = 0.5, height = 0.05) +
+  xlab("n blaSHV (sum hits/860)")
 ```
 
-**NB**: for n.blaSHV = 0 mean.length doesn't have any sense
 
 Extract the names of the reads with N *blaSHV* copies
 
 ```{r}
 N <- 2
 
-left_join(blaSHV_mean_len, blaSHV_counts, by = "subject") %>% 
+left_join(blaSHV_hit_mean_len, blaSHV_counts, by = "subject") %>% 
   filter(n.blaSHV == 1)
 ```
 
@@ -712,31 +764,12 @@ Try other view:
 left_join(blast_blaSHV, blaSHV_counts, by = "subject") %>% 
   mutate(n.blaSHV = as_factor(n.blaSHV)) %>% 
   ggplot(aes(n.blaSHV, length)) +
-  geom_boxplot(outlier.size = 0.2, outlier.alpha = 0.3) 
+  geom_boxplot(outlier.size = 0.2, outlier.alpha = 0.3) +
+  ylab("bla hit length") +
+  xlab("n blaSHV")
 ```
 
 But these short lengths are just short hits, we don't count them as *blaSHV* copies anymore, we merge them together instead
-
-### Count blaSHV genes not hits
-
-sum of blaSHV hits between two FRs divided by blaSHV length (~860 nt)
-
-```{r}
-bla_len <- 860
-
-blaSHV_counts <- 
-  blast_blaSHV %>% 
-  group_by(subject) %>% 
-  summarise(sum.bla.hit.len = sum(length)) %>% 
-  mutate(n.blaSHV = round(sum.bla.hit.len/bla_len))
-
-blaSHV_counts %>% 
-  ggplot(aes(n.blaSHV)) +
-  geom_histogram(bins = 200, fill = "steelblue") +
-  geom_rug()
-```
-
-
 
 
 ## blaSHV genes and the distance between FRs
@@ -777,10 +810,19 @@ FR <- 1677
 IS <- 820
 len_bla <- 860
 
+
 blast_joined_filt %>%
-  ggplot(aes(green.red.distance.pos, n.blaSHV)) +
-  geom_point(alpha = 0.3, color = "steelblue") 
+  mutate(predicted.distance = n.blaSHV*3450+820+1677*2) %>% 
+  ggplot(aes(n.blaSHV, green.red.distance.pos)) +
+  geom_point(alpha = 0.3, color = "brown4") +
+  geom_line(aes(y = predicted.distance), color = "blue") +
+  geom_smooth(method="lm", lty=3, color="black") +
+  xlab("n blaSHV genes (sum of hits / 860)") +
+  ylab("distance between FRs")
 ```
+
+the blue line - distance predicted using blaSHV counts (sum hits/860)
+dashed line - linear regression `n.blaSHV ~ FR distance`s
 
 ### Poisson regression?
 
@@ -805,6 +847,16 @@ qcc::qcc.overdispersion.test(blast_joined_filt$n.blaSHV, type="poisson")
 
 No over-dispersion: observed dispersion of the data is not greater than the expected one
 
+### SUm of bla hits & FR distance
+
+```{r}
+blast_joined_filt %>%
+  ggplot(aes(green.red.distance.pos, sum.bla.hit.len)) +
+  geom_point(alpha = 0.3, color = "brown4") +
+  geom_smooth(method = "lm", lty = 3, color = "black")
+```
+
+
 ### Filter out suspiciously short distances
 
 If a FR-FR distance is way too short for the observed number of *blaSHV*, remove such observations from the analysis.
@@ -821,30 +873,60 @@ blast_joined_filt %>%
   ggplot(aes(green.red.distance.pos, n.blaSHV)) +
   geom_point(alpha = 0.3, color = "steelblue") +
   geom_vline(aes(xintercept = dist.expected - dist_marg*dist.expected)) +
-  geom_vline(aes(xintercept = dist.expected + dist_marg*dist.expected, color=dist.expected), linetype="dotdash")
+  geom_vline(aes(xintercept = dist.expected + dist_marg*dist.expected, color=dist.expected), linetype="dotdash") +
+  xlab("distance between FRs with +/- 10% margins") +
+  ylab("n blaSHV")
 ```
 
-```{r}
-blast_joined_filt %>%
-  mutate(dist.expected = n.blaSHV*len_bla + 2*FR + IS) %>% 
-  ggplot(aes(green.red.distance.pos, n.blaSHV)) +
-  geom_point(alpha = 0.3, color = "steelblue") +
-  geom_vline(aes(xintercept = dist.expected - dist_marg*dist.expected)) +
-  geom_vline(aes(xintercept = dist.expected + dist_marg*dist.expected, color=dist.expected), linetype="dotdash")
+## Filtering 3: control region
+
+Additional filtering: 
+1. Mean length of blast hits (like: 'FR dist / n bla' ?)
+2. If it’s close to 860 - we accept this read
+3. If not - take region between IS and bla, blast it and check if the number of this region corresponds to what distance between FRs suggests (in terms of n bla expected)
+4. If all is ok here, accept this read, else trash it
+
+```{bash, eval=F}
+# extract the 'control' region
+seqkit subseq -r 8000:8500 resources/flanking_regions/plasmid/DA61218_plasmid.fa > resources/flanking_regions/plasmid/DA61218_plasmid_substr_8-8.5k.fa
+
+# RUN BLAST
+#
+# -sorthsps <Integer, (>=0 and =<4)>
+#   Sorting option for hps:
+#     0 = Sort by hsp evalue,
+#     1 = Sort by hsp score,
+#     2 = Sort by hsp query start,
+#     3 = Sort by hsp percent identity,
+#     4 = Sort by hsp subject start
+#   Not applicable for outfmt != 0
+#
+# -num_alignments <Integer, >=0>
+#   Number of database sequences to show alignments for
+#   Default = `250'
+#    * Incompatible with:  max_target_seqs
+
+# num_alignments should be high enough, depending on the total number of reads
+# requires > 20 GB of RAM
+blastn -query resources/flanking_regions/plasmid/DA61218_plasmid_substr_8-8.5k.fa -subject results/reads_filtered/replicate_e/CNV_reads_all_3.7k.fasta -outfmt 6 -num_alignments 450000 > results/tables/blast_control_region.tsv
+
 ```
 
+### Parsing
 
-```{r}
-blast_joined_filt %>%
-  mutate(dist.expected = n.blaSHV*len_bla + 2*FR + IS) %>% 
-  ggplot(aes(green.red.distance.pos, dist.expected)) +
-  geom_point(alpha = 0.3, color = "steelblue")
-```
+```{r, message=FALSE, warning=FALSE}
+blast_ctrl <- read_delim("../results/tables/blast_control_region.tsv", col_names = F)
 
-```{r}
-blast_joined_filt %>%
-  mutate(dist.expected = n.blaSHV*len_bla + 2*FR + IS) %>% 
-  ggplot(aes(dist.expected, dist.expected)) +
-  geom_point(alpha = 0.3, color = "steelblue")
+names(blast_ctrl) <- c("query", "subject", "identity", "length", "mismatch", 
+                        "gaps", "start.query", "end.query", "start.subject", 
+                        "end.subject", "e.value", "bit.score") 
+blast_ctrl <- 
+  blast_ctrl %>%
+  mutate(orientation = if_else(start.subject < end.subject, "direct", "reverse"))
+
+# rename query
+blast_ctrl$query <- "control"
+
+blast_ctrl
 ```
 
