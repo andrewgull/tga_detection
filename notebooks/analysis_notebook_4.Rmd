@@ -878,13 +878,25 @@ blast_joined_filt %>%
   ylab("n blaSHV")
 ```
 
-## Filtering 3: control region
+## blaSHV clusters
 
-Additional filtering: 
-1. Mean length of blast hits (like: 'FR dist / n bla' ?)
-2. If it’s close to 860 - we accept this read
-3. If not - take region between IS and bla, blast it and check if the number of this region corresponds to what distance between FRs suggests (in terms of n bla expected)
-4. If all is ok here, accept this read, else trash it
+The idea is to find blaSHV blast hits clusters and count them as blaSHV copies.
+
+Additionally, we can look into the size of these clusters. 
+
+I need bedtools for this https://bedtools.readthedocs.io/en/latest/content/tools/cluster.html
+
+```{bash}
+bedtools cluster [OPTIONS] -i <BED/GFF/VCF>
+```
+
+
+
+## Control region
+
+The idea is to do the same analysis with the control region as with blaSHV,
+
+and see if the copy-number of CRs correlate with copy-number of blaSHV
 
 ```{bash, eval=F}
 # extract the 'control' region
