@@ -8,6 +8,8 @@ examples/**
 .Rhistory
 .Rproj.user
 .snakemake
+notebooks/fasta/
+notebooks/tables/
 
 # PyCharm
 .idea
