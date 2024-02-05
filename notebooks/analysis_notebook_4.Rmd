@@ -561,7 +561,7 @@ These distances should reflect the copy number variation.
 ```{r, message=FALSE}
 library(Biostrings)
 
-file_path <- "../results/reads_filtered/replicate_e/CNV_reads_all_3.7k.fasta" 
+file_path <- "../results/reads/replicate_e/reads_all.fasta" 
 
 # Read the file
 reads <- readDNAStringSet(file_path)
@@ -823,6 +823,68 @@ blast_joined_filt %>%
 
 the blue line - distance predicted using blaSHV counts (sum hits/860)
 dashed line - linear regression `n.blaSHV ~ FR distance`s
+
+Extract some reads (on and off the line)
+
+```{r}
+blast_joined_filt %>%
+  mutate(predicted.distance = n.blaSHV*3450+820+1677*2) %>% 
+  filter(n.blaSHV == 7, green.red.distance.pos > 20000) %>% 
+  select(subject, green.red.distance.pos, predicted.distance) %>% 
+  arrange(green.red.distance.pos)
+
+```
+
+Parse and save reads
+
+```{python}
+from Bio import SeqIO
+import os
+
+# Define the output names array
+output_names = [0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 4, 5, 5, 6, 7]
+
+def read_ids(file_path):
+    """Read IDs from a file, skipping commented lines."""
+    ids = []
+    with open(file_path, 'r') as file:
+        for line in file:
+            line = line.strip()
+            if not line.startswith('#') and line:  # Skip commented or empty lines
+                ids.append(line)
+    return ids
+
+def extract_reads(fasta_file, ids, output_dir):
+    """Extract reads from a FASTA file using Biopython and save them to separate files."""
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)  # Create the output directory if it doesn't exist
+    
+    for record in SeqIO.parse(fasta_file, "fasta"):
+        if record.id in ids:
+            save_read(record, output_dir, ids)
+
+def save_read(record, output_dir, ids):
+    """Save a read to a file named based on the output names array and the length of the read."""
+    try:
+        output_index = ids.index(record.id)
+        output_name = f"{output_names[output_index]}_{len(record.seq)}.fasta"
+        output_path = os.path.join(output_dir, output_name)
+        with open(output_path, 'w') as output_file:
+            SeqIO.write(record, output_file, "fasta")
+    except ValueError:
+        print(f"ID {record.id} not found in the list of IDs.")
+
+# Paths
+ids_file = '/home/andrei/Data/nano-cnv/results/extracted_reads/reads_on_off_regr_line.txt'
+fasta_file = '/home/andrei/Data/nano-cnv/results/reads/replicate_e/reads_all.fasta'
+output_dir = '/home/andrei/Data/nano-cnv/results/extracted_reads/reads_on_off_regr_line'
+
+# Extract and save reads
+ids = read_ids(ids_file)
+extract_reads(fasta_file, ids, output_dir)
+
+```
+
 
 ### Poisson regression?
 
