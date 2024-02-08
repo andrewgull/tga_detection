@@ -948,10 +948,78 @@ Additionally, we can look into the size of these clusters.
 
 I need bedtools for this https://bedtools.readthedocs.io/en/latest/content/tools/cluster.html
 
-```{bash}
-bedtools cluster [OPTIONS] -i <BED/GFF/VCF>
+1. Make a bed file (chrom - start - end - name - score - strand)
+2. Sort it
+3. Run bedtools cluster
+
+```{r}
+bla_bed_mix <- 
+  blast_blaSHV %>% 
+  select(subject, start.subject, end.subject, query, e.value) %>% 
+  mutate(strand = if_else(start.subject < end.subject, '+', '-'),
+         start = start.subject - 1,
+         end = end.subject - 1) %>% 
+  dplyr::rename("chrom" = subject,
+                "name" = query,
+                "score" = e.value) %>% 
+  select(chrom, start, end, name, score, strand)
+
+# swap start and end on negative stands and join with positive strands
+bla_bed <- 
+  bla_bed_mix %>% 
+  filter(strand == '-') %>% 
+  dplyr::rename("start" = end,
+         "end" = start) %>% 
+  select(chrom, start, end, name, score, strand) %>% 
+  bind_rows(bla_bed %>% filter(strand == '+'))
+
+
+write_tsv(bla_bed, "/home/andrei/Data/nano-cnv/notebooks/bedfiles/blaSHV.bed", col_names = F)
+
+# number of obs
+bla_bed %>% nrow()
 ```
 
+```{bash, eval=F}
+conda activate varcalling-env
+
+sort -k1,1 -k2,2n blaSHV.bed > blaSHV_sorted.bed 
+
+# try distance = 10
+bedtools cluster -i blaSHV_sorted.bed -s -d 10 > blaSHV_clusters_d10.bed
+```
+
+Look at the results of clusters 10
+
+```{r}
+bla_clust <- read_tsv("/home/andrei/Data/nano-cnv/notebooks/bedfiles/blaSHV_clusters_d10.bed", col_names = F)
+```
+
+### Distance & N clusters
+
+Run this:
+
+```{bash, eval=F}
+distances=("10" "50" "100" "150" "200" "300" "500" "800")
+
+for dist in $distances; do
+  obs=$(bedtools cluster -i blaSHV_sorted.bed -s -d $dist | cut -f7 | uniq | wc -l)
+  echo $dist $obs >> testing_distances.txt
+done
+
+```
+
+Plot
+
+```{r}
+testing_dist <- read.table("~/Data/nano-cnv/notebooks/bedfiles/testing_distances.txt")
+
+ggplot(testing_dist, aes(V1, V2)) +
+  geom_line() +
+  xlab("distance") +
+  ylab("clusters") +
+  geom_hline(yintercept = nrow(bla_bed), lty=2)
+```
 
 
 ## Control region
