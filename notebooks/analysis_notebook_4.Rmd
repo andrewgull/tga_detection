@@ -443,7 +443,7 @@ Total number of reads with red hits: `r length(unique(blast_green_filt$subject))
 
 This looks much better now. We can discard this fraction of reads from the analysis.
 
-## Filtering 2: multiple hits, sibgle hits, orientation etc
+## Filtering 2: multiple hits, single hits, orientation etc
 
 Filter out:
 
@@ -837,7 +837,7 @@ blast_joined_filt %>%
 
 Parse and save reads
 
-```{python}
+```{python, eval=F}
 from Bio import SeqIO
 import os
 
@@ -965,13 +965,12 @@ bla_bed_mix <-
   select(chrom, start, end, name, score, strand)
 
 # swap start and end on negative stands and join with positive strands
-bla_bed <- 
-  bla_bed_mix %>% 
+bla_bed <- bla_bed_mix %>% 
   filter(strand == '-') %>% 
   dplyr::rename("start" = end,
          "end" = start) %>% 
   select(chrom, start, end, name, score, strand) %>% 
-  bind_rows(bla_bed %>% filter(strand == '+'))
+  bind_rows(bla_bed_mix %>% filter(strand == '+'))
 
 
 write_tsv(bla_bed, "/home/andrei/Data/nano-cnv/notebooks/bedfiles/blaSHV.bed", col_names = F)
@@ -980,27 +979,13 @@ write_tsv(bla_bed, "/home/andrei/Data/nano-cnv/notebooks/bedfiles/blaSHV.bed", c
 bla_bed %>% nrow()
 ```
 
-```{bash, eval=F}
-conda activate varcalling-env
-
-sort -k1,1 -k2,2n blaSHV.bed > blaSHV_sorted.bed 
-
-# try distance = 10
-bedtools cluster -i blaSHV_sorted.bed -s -d 10 > blaSHV_clusters_d10.bed
-```
-
-Look at the results of clusters 10
-
-```{r}
-bla_clust <- read_tsv("/home/andrei/Data/nano-cnv/notebooks/bedfiles/blaSHV_clusters_d10.bed", col_names = F)
-```
 
 ### Distance & N clusters
 
-Run this:
+Find using BEDtools merge
 
 ```{bash, eval=F}
-distances=("10" "50" "100" "150" "200" "300" "500" "800")
+distances=("10" "50" "100" "150" "200" "300" "500" "800" "1000")
 
 for dist in $distances; do
   obs=$(bedtools cluster -i blaSHV_sorted.bed -s -d $dist | cut -f7 | uniq | wc -l)
@@ -1016,11 +1001,90 @@ testing_dist <- read.table("~/Data/nano-cnv/notebooks/bedfiles/testing_distances
 
 ggplot(testing_dist, aes(V1, V2)) +
   geom_line() +
-  xlab("distance") +
-  ylab("clusters") +
+  xlab("clustering distance") +
+  ylab("n clusters") +
   geom_hline(yintercept = nrow(bla_bed), lty=2)
 ```
 
+Saturation is around d=500
+
+### Merge the clusters
+
+Now use BEDtools merge
+
+```{bash, eval=F}
+bedtools merge -i blaSHV_sorted.bed -s -d 500 > blaSHV_merge_d500.bed
+```
+
+```{r, message=FALSE}
+bla_merge <- read_tsv("/home/andrei/Data/nano-cnv/notebooks/bedfiles/blaSHV_merge_d500.bed", col_names = F)
+
+bla_merged_df <- 
+bla_merge %>% 
+  group_by(X1) %>% 
+  summarise(sum.merged.hits = sum(X3-X2+1)) %>% 
+  mutate(n.blaSHV.merged = round(sum.merged.hits/860, 0)) %>% 
+  dplyr::rename("subject" = X1) %>% 
+  # filter out the reads the 'bad reads' from previous filtering rounds
+  right_join(blast_joined_filt, by="subject") %>% 
+  select(subject, n.blaSHV.merged, n.blaSHV, green.red.distance.pos)
+
+bla_merged_df %>% 
+  ggplot(aes(n.blaSHV.merged)) +
+  geom_histogram()+
+  geom_rug()
+```
+
+```{r}
+bla_merged_df %>% 
+  ggplot(aes(n.blaSHV, n.blaSHV.merged)) +
+  geom_point(alpha=0.3) +
+  xlab("n blaSHV: sum blast hits") +
+  ylab("n blaSHV: merged clusters")
+```
+
+```{r}
+bla_merged_df %>% 
+  filter(n.blaSHV == 2, 
+         n.blaSHV.merged == 2) %>% 
+  nrow()
+```
+
+```{r}
+bla_merged_df %>% 
+  filter(n.blaSHV == 3, 
+         n.blaSHV.merged == 3) %>% 
+  nrow()
+```
+
+Discrepancies are not big
+
+```{r}
+bla_merged_df %>% 
+  filter(n.blaSHV == 2, 
+         n.blaSHV.merged == 1) %>% 
+  nrow()
+```
+
+```{r}
+bla_merged_df %>% 
+  filter(n.blaSHV == 2, 
+         n.blaSHV.merged == 1) %>% 
+  nrow()
+```
+
+The relationship to the distance between FRs is the same
+
+```{r}
+bla_merged_df %>% 
+  ggplot(aes(green.red.distance.pos, n.blaSHV.merged)) +
+  geom_point() +
+  ylab("n blaSHV: merged clusters") +
+  xlab("distance between FRs")
+```
+
+
+----
 
 ## Control region
 
