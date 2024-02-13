@@ -20,7 +20,25 @@ option_list <- list(
               type = "character",
               default = NULL,
               help = "filtered and joined blast tables",
-              metavar = "character")
+              metavar = "character"),
+
+  make_option(c("-e", "--evalue"),
+              type = "double",
+              default = 10^-5,
+              help = "max e-value",
+              metavar = "double"),
+
+  make_option(c("-l", "--min_len"),
+              type = "integer",
+              default = 1500,
+              help = "min hit length",
+              metavar = "int"),
+
+  make_option(c("-i", "--identity"),
+              type = "integer",
+              default = 75,
+              help = "min identity",
+              metavar = "integer")
 )
 
 opt_parser <- OptionParser(option_list = option_list)
@@ -48,6 +66,10 @@ library(readr)
 parse_blast <- function(file_path, region_name) {
   # read blast table
   df <- read_delim(file_path, col_names = FALSE, show_col_types = FALSE)
+  # check if the table is empty
+  stopifnot(nrow(df) > 0)
+  # check if nrow is wrong
+  stopifnot(ncol(df) != 12)
   # assign names
   names(df) <- c("query", "subject", "identity", "length", "mismatch",
                  "gaps", "start.query", "end.query", "start.subject",
@@ -100,7 +122,7 @@ blast_green <- parse_blast(opt$blast_green, "FR_green")
 
 #### Filtering, part 1
 filtered_blasts <- lapply(list(blast_red, blast_green), function(item) {
-  filter_blast_p1(item, min_len = 1500, max_e_value = 10 ** -5, min_identity = 75) # nolint: line_length_linter.
+  filter_blast_p1(item, min_len = opt$min_len, max_e_value = opt$evalue, min_identity = opt$identity) # nolint: line_length_linter.
 })
 
 ### Filtering, part 2
@@ -108,3 +130,4 @@ blast_joined <- filter_blast_p2(filtered_blasts[[1]], filtered_blasts[[2]])
 
 # Save results
 write_delim(blast_joined, file = opt$output, delim = "\t")
+print("Fininshed. No erorrs.")
