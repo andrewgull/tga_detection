@@ -71,6 +71,13 @@ rule blast_green:
     conda: "blast-env"
     shell: "blastn -query {input.fr} -subject {input.rd} -outfmt {params.fmt} -num_alignments {params.nalns} 1> {output} 2> {log}"
 
+rule filter_flanking_regions_blast:
+    input: red = "results/tables/{sample}_blast_red.tsv", green = "results/tables/{sample}_blast_green.tsv"
+    output: "results/tables/{sample}_blast_joined.tsv"
+    log: "results/logs/{sample}_blast_joined.log"
+    conda: "rscripts-env"
+    shell: "Rscript filter_fr_hits.R -r {input.red} -g {input.green} -o {output} &> {log}"
+
 rule final:
     input: blast_red="results/tables/{sample}_blast_red.tsv", 
             blast_green="results/tables/{sample}_blast_green.tsv",
