@@ -24,7 +24,7 @@ option_list <- list(
 
   make_option(c("-e", "--evalue"),
               type = "double",
-              default = 10^-5,
+              default = 0.00001,
               help = "max e-value",
               metavar = "double"),
 
@@ -69,7 +69,7 @@ parse_blast <- function(file_path, region_name) {
   # check if the table is empty
   stopifnot(nrow(df) > 0)
   # check if nrow is wrong
-  stopifnot(ncol(df) != 12)
+  stopifnot(ncol(df) == 12)
   # assign names
   names(df) <- c("query", "subject", "identity", "length", "mismatch",
                  "gaps", "start.query", "end.query", "start.subject",
