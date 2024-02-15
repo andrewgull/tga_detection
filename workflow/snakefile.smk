@@ -58,7 +58,7 @@ rule create_fr_green:
 rule blast_red:
     input: fr="results/flanking_regions/{sample}_fr_red.fa", rd="results/reads/{sample}/reads_all.fasta"
     output: "results/tables/{sample}_blast_red.tsv"
-    params: fmt=config['format'], nalns=config['n_aligns']
+    params: fmt=config['format'], nalns=config['n_fr_aligns']
     log: "results/logs/{sample}_blast_red.log"
     conda: "blast-env"
     shell: "blastn -query {input.fr} -subject {input.rd} -outfmt {params.fmt} -num_alignments {params.nalns} 1> {output} 2> {log}"
@@ -117,12 +117,43 @@ rule plot_blaSHV_counts:
     conda: "rscripts-env"
     shell: "Rscript {input.script} -i {input.bla} -l {params.length} -o {output} $> {log}"
 
+rule make_bed:
+    input: script="workflow/scripts/make_bed.R", bla="results/tables/{sample}_blast_blaSHV_filtered.tsv"
+    output: "results/bedfiles/{sample}_blaSHV_hits.bed"
+    log: "results/logs/{sample}_make_bed.log"
+    conda: "rscripts-env"
+    shell: "Rscript {input.script} -i {input.bla} -o {output}"
+
+rule cluster_blaSHV_hits:
+    input: "results/bedfiles/{sample}_blaSHV_hits.bed"
+    output: sorted="results/bedfiles/{sample}_blaSHV_hits_sorted.bed", merged="results/bedfiles/{sample}_blaSHV_hits_merged.bed"
+    log: "results/logs/{sample}_bedtools_merge.log"
+    conda: "varcalling-env"
+    params: dist=config["dist"]
+    shell: "sort -k1,1 -k2,2n {input} > {output.sorted} && bedtools merge -i {output.sorted} -s -d {params.dist} > {output.merged} 2> {log}"
+
+rule plot_bla_clusters:
+    input: script="workflow/scripts/plot_blaSHV_counts_merged.R", bed="results/bedfiles/{sample}_blaSHV_hits_merged.bed"
+    output: "results/plots/{sample}_blaSHV_merged_counts.png"
+    log: "results/logs/{sample}_blaSHV_counts.log"
+    conda: "rscripts-env"
+    params: length=config["bla_len"]
+    shell: "Rscript {input.script} -i {input.bed} -l {params.length} -o {output} &> {log}"
+
 rule final:
     input: blast_red="results/tables/{sample}_blast_red.tsv", 
-            blast_green="results/tables/{sample}_blast_green.tsv",
-            len_hist="results/plots/{sample}_read_length_histogram.png",
-            qual_hist="results/reads_stat/{sample}_read_quality_histogram.png"
-
+           blast_green="results/tables/{sample}_blast_green.tsv",
+           len_hist="results/plots/{sample}_read_length_histogram.png",
+           qual_hist="results/reads_stat/{sample}_read_quality_histogram.png",
+           blast_join="results/tables/{sample}_blast_joined.tsv",
+           plot_dist="results/plots/{sample}_FR_distances.png",
+           plot_len_dist="results/plots/{sample}_reads_FR_distances.png",
+           blast_blaSHV="results/tables/{sample}_blast_blaSHV.tsv",
+           filt_blaSHV="results/tables/{sample}_blast_blaSHV_filtered.tsv",
+           bla_counts="results/plots/{sample}_blaSHV_counts.png",
+           bed="results/bedfiles/{sample}_blaSHV_hits.bed",
+           clusters="results/bedfiles/{sample}_blaSHV_hits_merged.bed",
+           plot_clust="results/plots/{sample}_blaSHV_merged_counts.png"
     output: touch("results/final/{sample}_all.done")
     shell: "echo 'DONE'"
 
