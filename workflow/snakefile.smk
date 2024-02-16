@@ -103,7 +103,7 @@ rule plot_read_length_FR_distance:
     shell: "Rscript {input.script} -b {input.blast} -r {input.reads} -o {output} &> {log}"
 
 rule blast_blaSHV:
-    input: query="resources/genes/blaSHV.fa", subject_dir="results/reads/{sample}"
+    input: query="resources/genes/blaSHV.fa", subject_dir="results/reads_split/{sample}"
     output: "results/tables/{sample}_blast_blaSHV.tsv"
     log: "results/logs/{sample}_blast_blaSHV.log"
     conda: "blast-env"
