@@ -44,15 +44,15 @@ option_list <- list(
 opt_parser <- OptionParser(option_list = option_list)
 opt <- parse_args(opt_parser)
 
-if (is.null(opt$blast_red)){
+if (is.null(opt$blast_red)) {
   print_help(opt_parser)
   stop("Input file 1 must be provided", call. = FALSE)
 }
-if (is.null(opt$blast_green)){
+if (is.null(opt$blast_green)) {
   print_help(opt_parser)
   stop("Input file 2 must be provided", call. = FALSE)
 }
-if (is.null(opt$output)){
+if (is.null(opt$output)) {
   print_help(opt_parser)
   stop("Output file must be provided", call. = FALSE)
 }
@@ -82,10 +82,11 @@ parse_blast <- function(file_path, region_name) {
 }
 
 filter_blast_p1 <- function(blast_df, min_len, max_e_value, min_identity) {
-  filter(blast_df,
+  filt_df <- filter(blast_df,
          length >= min_len,
          e.value <= max_e_value,
          identity >= min_identity)
+  return(filt_df)
 }
 
 get_multihits_ids <- function(df) {
@@ -124,6 +125,10 @@ blast_green <- parse_blast(opt$blast_green, "FR_green")
 filtered_blasts <- lapply(list(blast_red, blast_green), function(item) {
   filter_blast_p1(item, min_len = opt$min_len, max_e_value = opt$evalue, min_identity = opt$identity) # nolint: line_length_linter.
 })
+
+# check if they are empty
+stopifnot(nrow(filtered_blasts[[1]]) > 0)
+stopifnot(nrow(filtered_blasts[[2]]) > 0)
 
 ### Filtering, part 2
 blast_joined <- filter_blast_p2(filtered_blasts[[1]], filtered_blasts[[2]])

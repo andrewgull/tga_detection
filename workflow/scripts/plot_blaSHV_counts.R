@@ -35,7 +35,12 @@ if (is.null(opt$output)) {
 library(ggplot2)
 suppressPackageStartupMessages(library(dplyr))
 
+# gene length
 bla_len <- opt$length
+# read the filtered blast table
+blast_blaSHV <- readr::read_tsv(opt$input, show_col_types = FALSE)
+# check if it is empty
+stopifnot(nrow(blast_blaSHV) > 0)
 
 # n bla = (sum of bla hits/bla length)
 hist_plot <- blast_blaSHV %>%

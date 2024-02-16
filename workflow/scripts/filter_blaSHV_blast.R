@@ -46,7 +46,7 @@ library(ggplot2)
 suppressPackageStartupMessages(library(dplyr))
 
 fr_df <- readr::read_delim(opt$blast_fr, show_col_types = FALSE)
-bla_df <- read_delim(opt$blast_bla, col_names = FALSE)
+bla_df <- readr::read_delim(opt$blast_bla, col_names = FALSE, show_col_types = FALSE)
 
 bla_df_filt <-
   bla_df %>%
@@ -59,5 +59,5 @@ names(bla_df_filt) <- c("query", "subject", "identity", "length", "mismatch",
                         "gaps", "start.query", "end.query", "start.subject",
                         "end.subject", "e.value", "bit.score")
 # save results of filtering
-write_delim(bla_df_filt, file = opt$output, delim = "\t")
+readr::write_delim(bla_df_filt, file = opt$output, delim = "\t")
 print("Fininshed. No erorrs.")
