@@ -42,7 +42,7 @@ suppressPackageStartupMessages(library(dplyr))
 suppressPackageStartupMessages(library(Biostrings))
 
 # read filtered and joined blast
-blast_df <- readr::read_delim(opt$blast, show_col_types = FALSE)
+blast_df <- read.table(file = opt$blast, header = TRUE, sep = "\t")
 # read reads
 reads <- readDNAStringSet(opt$reads)
 read_lengths <- width(reads)
@@ -60,5 +60,5 @@ len_dist_plot <-
   xlab("distance between FRs") +
   ylab("read length")
 
-ggsave(filename = opt$output, plot = len_dist_plot, height = 7, width = 10, units = "in")
+ggsave(filename = opt$output, plot = len_dist_plot, height = 7, width = 10, units = "in") # nolint: line_length_linter.
 print("Plot was saved to a file. No errors.")
