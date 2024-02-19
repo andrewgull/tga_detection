@@ -44,7 +44,8 @@ rule split_fasta:
     threads: 8
     log: "results/logs/{sample}_seqkit_split.log"
     conda: "seqkit-env"
-    shell: "seqkit split {input} -j {threads} -O {output} -p 2 --two-pass -U &> {log}"
+    params: parts=config['parts']
+    shell: "seqkit split {input} -j {threads} -O {output} -p {params.parts} --two-pass -U &> {log}"
 
 rule create_fr_red:
     input: "resources/plasmid/DA61218_plasmid.fa"
