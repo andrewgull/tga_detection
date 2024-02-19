@@ -53,7 +53,7 @@ bla_df_filt <-
   # leave only the reads in filtered FR blast
   filter(X2 %in% unique(fr_df$subject)) %>%
   # remove unreliable hits
-  filter(X11 > opt$evalue)
+  filter(X11 <= opt$evalue)
 
 names(bla_df_filt) <- c("query", "subject", "identity", "length", "mismatch",
                         "gaps", "start.query", "end.query", "start.subject",
