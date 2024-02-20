@@ -4,6 +4,14 @@ rule all:
     input:
         expand("results/final/{sample}_all.done", sample=config['samples'])
 
+rule merge_reads:
+    input: "resources/reads_separate/{sample}"
+    output: "resources/reads/{sample}/reads_all.fastq.gz"
+    threads: 10
+    log: "results/logs/{sample}_zcat.log"
+    benchmark: "results/benchmarks/zcat_reads/{sample}.tsv"
+    shell: "zcat {input}/*.gz | pigz -c -p {threads} 1> {output} 2> {log}"
+
 rule filter_reads:
     input: "resources/reads/{sample}/reads_all.fastq.gz"
     output: "results/reads/{sample}/reads_all.fastq.gz"
