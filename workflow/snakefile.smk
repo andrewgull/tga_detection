@@ -41,17 +41,6 @@ rule fq2fasta:
     conda: "seqkit-env"
     shell: "seqkit fq2fa -j {threads} {input} 1> {output} 2> {log}"
 
-rule split_fasta:
-    input: "results/reads/{sample}/reads_all.fasta"
-    # here you may need a smarter splitting, e.g. depending on the file size
-    output: directory("results/reads_split/{sample}")
-    threads: 10
-    log: "results/logs/{sample}_seqkit_split.log"
-    benchmark: "results/benchmarks/seqkit_split/{sample}.tsv"
-    conda: "seqkit-env"
-    params: parts=config['parts']
-    shell: "seqkit split {input} -j {threads} -O {output} -p {params.parts} --two-pass -U &> {log}"
-
 rule create_fr_red:
     input: "resources/plasmid/DA61218_plasmid.fa"
     output: "results/flanking_regions/fr_red.fa" # the same for every sample
@@ -70,25 +59,34 @@ rule create_fr_green:
     params: start = config['fr_green_start'], end = config['fr_green_end']
     shell: "seqkit subseq -j {threads} -r {params.start}:{params.end} {input} 1> {output} 2> {log}"
 
+rule make_blast_db:
+    input: "results/reads/{sample}/reads_all.fasta"
+    output: directory("results/blast_databases/{sample}")
+    log: "results/logs/{sample}_blastdb.log"
+    conda: "blast-env"
+    shell: "makeblastdb -in {input} -dbtype nucl -out {output}/blastdb &> {log}"
+
 rule blast_red:
-    input: query="results/flanking_regions/fr_red.fa",
-           subject_dir="results/reads_split/{sample}"
+    input: query="results/flanking_regions/fr_red.fa", database="results/blast_databases/{sample}"
     output: "results/tables/{sample}/blast_red.tsv"
+    threads: 10
     params: fmt=config['format'], n_alns=config['n_fr_aligns']
     log: "results/logs/{sample}_blast_red.log"
     benchmark: "results/benchmarks/blast_red/{sample}.tsv"
     conda: "blast-env"
-    shell: "for F in {input.subject_dir}/*.fasta; do blastn -query {input.query} -subject $F -outfmt {params.fmt} -num_alignments {params.n_alns} 1> {output} 2> {log}; done"
+    shell: "blastn -query {input.query} -db {input.database}/blastdb -outfmt {params.fmt} "
+           "-num_threads {threads} -num_alignments {params.n_alns} 1> {output} 2> {log}"
 
 rule blast_green:
-    input: query="results/flanking_regions/fr_green.fa",
-           subject_dir="results/reads/{sample}"
+    input: query="results/flanking_regions/fr_green.fa", database="results/blast_databases/{sample}"
     output: "results/tables/{sample}/blast_green.tsv"
+    threads: 10
     params: fmt = config['format'], n_alns = config['n_fr_aligns']
     log: "results/logs/{sample}_blast_green.log"
     benchmark: "results/benchmarks/blast_green/{sample}.tsv"
     conda: "blast-env"
-    shell: "for F in {input.subject_dir}/*.fasta; do blastn -query {input.query} -subject $F -outfmt {params.fmt} -num_alignments {params.n_alns} 1> {output} 2> {log}; done"
+    shell: "blastn -query {input.query} -db {input.database}/blastdb -outfmt {params.fmt} "
+           "-num_threads {threads} -num_alignments {params.n_alns} 1> {output} 2> {log}"
 
 rule filter_flanking_regions_blast:
     input: script="workflow/scripts/filter_fr_hits.R",
@@ -120,13 +118,15 @@ rule plot_read_length_FR_distance:
 
 rule blast_blaSHV:
     input: query="resources/genes/blaSHV.fa",
-           subject_dir="results/reads_split/{sample}"
+           database="results/blast_databases/{sample}"
     output: "results/tables/{sample}/blast_blaSHV.tsv"
+    threads: 10
     log: "results/logs/{sample}_blast_blaSHV.log"
     benchmark: "results/benchmarks/blast_blaSHV/{sample}.tsv"
     conda: "blast-env"
-    params: alns=config["n_bla_aligns"], fmt=config["format"]
-    shell: "for F in {input.subject_dir}/*.fasta; do blastn -query {input.query} -subject $F -outfmt {params.fmt} -num_alignments {params.alns} 1> {output} 2> {log}; done"
+    params: fmt=config["format"], n_alns=config["n_bla_aligns"]
+    shell: "blastn -query {input.query} -db {input.database}/blastdb -outfmt {params.fmt} "
+           "-num_threads {threads} -num_alignments {params.n_alns} 1> {output} 2> {log}"
 
 rule filter_blaSHV_hits:
     input: script="workflow/scripts/filter_blaSHV_blast.R",
