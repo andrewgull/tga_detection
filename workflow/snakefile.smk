@@ -7,42 +7,47 @@ rule all:
 rule filter_reads:
     input: "resources/reads/{sample}/reads_all.fastq.gz"
     output: "results/reads/{sample}/reads_all.fastq.gz"
-    threads: 2
+    threads: 10
     log: "results/logs/{sample}_filtlong.log"
+    benchmark: "results/benchmarks/filtlong_filter/{sample}.tsv"
     conda: "filtlong-env"
-    params: config['min_read_len']
+    params: min_len=config['min_read_len']
     shell: "filtlong --min_length {params.min_len} {input} 2> {log} | pigz -c -p {threads} > {output}"
 
 rule read_length_histogram:
     input: "results/reads/{sample}/reads_all.fastq.gz"
     output: "results/plots/{sample}/reads_length_histogram.png"
-    threads: 2
+    threads: 10
     log: "results/logs/{sample}_seqkit_length.log"
+    benchmark: "results/benchmarks/seqkit_length_filter/{sample}.tsv"
     conda: "seqkit-env"
-    shell: "seqkit watch {input} -O {output} -j {threads}"
+    shell: "seqkit watch {input} -O {output} -j {threads} &> {log}"
 
 rule read_quality_histogram:
     input: "results/reads/{sample}/reads_all.fastq.gz"
     output: "results/plots/{sample}/reads_quality_histogram.png"
-    threads: 2
+    threads: 10
     log: "results/logs/{sample}_seqkit_quality.log"
+    benchmark: "results/benchmarks/seqkit_quality/{sample}.tsv"
     conda: "seqkit-env"
-    shell: "seqkit watch {input} -O {output} -j {threads} -f MeanQual"
+    shell: "seqkit watch {input} -O {output} -j {threads} -f MeanQual &> {log}"
 
 rule fq2fasta:
     input: "results/reads/{sample}/reads_all.fastq.gz"
     output: "results/reads/{sample}/reads_all.fasta"
-    threads: 2
+    threads: 10
     log: "results/logs/{sample}_seqkit_fq2fa.log"
+    benchmark: "results/benchmarks/seqkit_convert/{sample}.tsv"
     conda: "seqkit-env"
     shell: "seqkit fq2fa -j {threads} {input} 1> {output} 2> {log}"
 
 rule split_fasta:
     input: "results/reads/{sample}/reads_all.fasta"
-    # here you may need a smarter spliiting, e.g. depending on the file size
+    # here you may need a smarter splitting, e.g. depending on the file size
     output: directory("results/reads_split/{sample}")
-    threads: 8
+    threads: 10
     log: "results/logs/{sample}_seqkit_split.log"
+    benchmark: "results/benchmarks/seqkit_split/{sample}.tsv"
     conda: "seqkit-env"
     params: parts=config['parts']
     shell: "seqkit split {input} -j {threads} -O {output} -p {params.parts} --two-pass -U &> {log}"
@@ -50,7 +55,7 @@ rule split_fasta:
 rule create_fr_red:
     input: "resources/plasmid/DA61218_plasmid.fa"
     output: "results/flanking_regions/fr_red.fa" # the same for every sample
-    threads: 2
+    threads: 10
     log: "results/logs/seqkit_subseq_fr_red.log"
     conda: "seqkit-env"
     params: start = config['fr_red_start'], end = config['fr_red_end']
@@ -59,60 +64,74 @@ rule create_fr_red:
 rule create_fr_green:
     input: "resources/plasmid/DA61218_plasmid.fa"
     output: "results/flanking_regions/fr_green.fa" # the same for every sample
-    threads: 2
+    threads: 10
     log: "results/logs/seqkit_subseq_fr_green.log"
     conda: "seqkit-env"
     params: start = config['fr_green_start'], end = config['fr_green_end']
     shell: "seqkit subseq -j {threads} -r {params.start}:{params.end} {input} 1> {output} 2> {log}"
 
 rule blast_red:
-    input: fr="results/flanking_regions/fr_red.fa", rd="results/reads/{sample}/reads_all.fasta"
+    input: query="results/flanking_regions/fr_red.fa",
+           subject_dir="results/reads_split/{sample}"
     output: "results/tables/{sample}/blast_red.tsv"
-    params: fmt=config['format'], nalns=config['n_fr_aligns']
+    params: fmt=config['format'], n_alns=config['n_fr_aligns']
     log: "results/logs/{sample}_blast_red.log"
+    benchmark: "results/benchmarks/blast_red/{sample}.tsv"
     conda: "blast-env"
-    shell: "blastn -query {input.fr} -subject {input.rd} -outfmt {params.fmt} -num_alignments {params.nalns} 1> {output} 2> {log}"
+    shell: "for F in {input.subject_dir}/*.fasta; do blastn -query {input.query} -subject $F -outfmt {params.fmt} -num_alignments {params.n_alns} 1> {output} 2> {log}; done"
 
 rule blast_green:
-    input: fr="results/flanking_regions/fr_green.fa", rd="results/reads/{sample}/reads_all.fasta"
+    input: query="results/flanking_regions/fr_green.fa",
+           subject_dir="results/reads/{sample}"
     output: "results/tables/{sample}/blast_green.tsv"
-    params: fmt = config['format'], nalns = config['n_fr_aligns']
+    params: fmt = config['format'], n_alns = config['n_fr_aligns']
     log: "results/logs/{sample}_blast_green.log"
+    benchmark: "results/benchmarks/blast_green/{sample}.tsv"
     conda: "blast-env"
-    shell: "blastn -query {input.fr} -subject {input.rd} -outfmt {params.fmt} -num_alignments {params.nalns} 1> {output} 2> {log}"
+    shell: "for F in {input.subject_dir}/*.fasta; do blastn -query {input.query} -subject $F -outfmt {params.fmt} -num_alignments {params.n_alns} 1> {output} 2> {log}; done"
 
 rule filter_flanking_regions_blast:
-    input: script="workflow/scripts/filter_fr_hits.R", red = "results/tables/{sample}/blast_red.tsv", green = "results/tables/{sample}/blast_green.tsv"
+    input: script="workflow/scripts/filter_fr_hits.R",
+           red = "results/tables/{sample}/blast_red.tsv",
+           green = "results/tables/{sample}/blast_green.tsv"
     output: "results/tables/{sample}/blast_joined.tsv"
     log: "results/logs/{sample}_blast_joined.log"
+    benchmark: "results/benchmarks/filter_fr/{sample}.tsv"
     conda: "rscripts-env"
     params: identity = config['min_identity'], e_val = config['max_e_value'], length = config['min_hit_len']
     shell: "Rscript {input.script} -r {input.red} -g {input.green} -i {params.identity} -e {params.e_val} -l {params.length} -o {output} &> {log}"
 
 rule plot_distance_between_FRs:
-    input: script="workflow/scripts/plot_fr_distances.R", blast="results/tables/{sample}/blast_joined.tsv"
+    input: script="workflow/scripts/plot_fr_distances.R",
+           blast="results/tables/{sample}/blast_joined.tsv"
     output: "results/plots/{sample}/FR_distances.png"
     log: "results/logs/{sample}_FR_distances.log"
     conda: "rscripts-env"
     shell: "Rscript {input.script} -i {input.blast} -o {output} &> {log}"
 
 rule plot_read_length_FR_distance:
-    input: script="workflow/scripts/plot_read_length_and_FR_distances.R", blast="results/tables/{sample}/blast_joined.tsv", reads="results/reads/{sample}/reads_all.fasta"
+    input: script="workflow/scripts/plot_read_length_and_FR_distances.R",
+           blast="results/tables/{sample}/blast_joined.tsv",
+           reads="results/reads/{sample}/reads_all.fasta"
     output: "results/plots/{sample}/reads_FR_distances.png"
     log: "results/logs/{sample}_reads_FR_distances.log"
     conda: "biostrings-env"
     shell: "Rscript {input.script} -b {input.blast} -r {input.reads} -o {output} &> {log}"
 
 rule blast_blaSHV:
-    input: query="resources/genes/blaSHV.fa", subject_dir="results/reads_split/{sample}"
+    input: query="resources/genes/blaSHV.fa",
+           subject_dir="results/reads_split/{sample}"
     output: "results/tables/{sample}/blast_blaSHV.tsv"
     log: "results/logs/{sample}_blast_blaSHV.log"
+    benchmark: "results/benchmarks/blast_blaSHV/{sample}.tsv"
     conda: "blast-env"
     params: alns=config["n_bla_aligns"], fmt=config["format"]
     shell: "for F in {input.subject_dir}/*.fasta; do blastn -query {input.query} -subject $F -outfmt {params.fmt} -num_alignments {params.alns} 1> {output} 2> {log}; done"
 
 rule filter_blaSHV_hits:
-    input: script="workflow/scripts/filter_blaSHV_blast.R", bla="results/tables/{sample}/blast_blaSHV.tsv", fr="results/tables/{sample}/blast_joined.tsv"
+    input: script="workflow/scripts/filter_blaSHV_blast.R",
+           bla="results/tables/{sample}/blast_blaSHV.tsv",
+           fr="results/tables/{sample}/blast_joined.tsv"
     output: "results/tables/{sample}/blast_blaSHV_filtered.tsv"
     log: "results/logs/{sample}_blast_blaSHV_filter.log"
     conda: "rscripts-env"
@@ -120,7 +139,8 @@ rule filter_blaSHV_hits:
     shell: "Rscript {input.script} -b {input.bla} -f {input.fr} -e {params.e_val} -o {output} &> {log}"
 
 rule plot_blaSHV_counts:
-    input: script="workflow/scripts/plot_blaSHV_counts.R", bla="results/tables/{sample}/blast_blaSHV_filtered.tsv"
+    input: script="workflow/scripts/plot_blaSHV_counts.R",
+           bla="results/tables/{sample}/blast_blaSHV_filtered.tsv"
     output: "results/plots/{sample}/blaSHV_counts.png"
     log: "results/logs/{sample}_blaSHV_counts.log"
     params: length=config["bla_len"]
@@ -128,22 +148,28 @@ rule plot_blaSHV_counts:
     shell: "Rscript {input.script} -i {input.bla} -l {params.length} -o {output} &> {log}"
 
 rule make_bed:
-    input: script="workflow/scripts/make_bed.R", bla="results/tables/{sample}/blast_blaSHV_filtered.tsv"
+    input: script="workflow/scripts/make_bed.R",
+           bla="results/tables/{sample}/blast_blaSHV_filtered.tsv"
     output: "results/bedfiles/{sample}/blaSHV_hits.bed"
     log: "results/logs/{sample}_make_bed.log"
+    benchmark: "results/benchmarks/make_bed/{sample}.tsv"
     conda: "rscripts-env"
     shell: "Rscript {input.script} -i {input.bla} -o {output} &> {log}"
 
 rule cluster_blaSHV_hits:
     input: "results/bedfiles/{sample}/blaSHV_hits.bed"
-    output: sorted="results/bedfiles/{sample}/blaSHV_hits_sorted.bed", merged="results/bedfiles/{sample}/blaSHV_hits_merged.bed"
+    output: sorted="results/bedfiles/{sample}/blaSHV_hits_sorted.bed",
+            merged="results/bedfiles/{sample}/blaSHV_hits_merged.bed"
     log: "results/logs/{sample}_bedtools_merge.log"
+    benchmark: "results/benchmarks/bedtools_merge/{sample}.tsv"
     conda: "varcalling-env"
     params: dist=config["dist"]
     shell: "sort -k1,1 -k2,2n {input} > {output.sorted} && bedtools merge -i {output.sorted} -s -d {params.dist} > {output.merged} 2> {log}"
 
 rule plot_bla_clusters:
-    input: script="workflow/scripts/plot_blaSHV_counts_merged.R", bed="results/bedfiles/{sample}/blaSHV_hits_merged.bed", blast="results/tables/{sample}/blast_joined.tsv"
+    input: script="workflow/scripts/plot_blaSHV_counts_merged.R",
+           bed="results/bedfiles/{sample}/blaSHV_hits_merged.bed",
+           blast="results/tables/{sample}/blast_joined.tsv"
     output: "results/plots/{sample}/blaSHV_merged_counts.png"
     log: "results/logs/{sample}_blaSHV_counts.log"
     conda: "rscripts-env"
