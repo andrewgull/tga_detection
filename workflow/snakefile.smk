@@ -184,6 +184,12 @@ rule plot_bla_clusters:
     params: length=config["bla_len"]
     shell: "Rscript {input.script} -i {input.bed} -b {input.blast} -l {params.length} -o {output} &> {log}"
 
+rule link_final_plots:
+    input: "results/plots/{sample}/blaSHV_merged_counts.png"
+    output: "notebooks/plot_results/figures/{sample}/blaSHV_merged_counts.png"
+    params: prefix="/home/andrei/Data/nano-cnv/"
+    shell: "ln -s {params.prefix}{input} {params.prefix}{output}"
+
 rule final:
     input:  len_hist="results/plots/{sample}/reads_length_histogram.png",
             qual_hist="results/plots/{sample}/reads_quality_histogram.png",
@@ -192,7 +198,8 @@ rule final:
             plot_len_dist="results/plots/{sample}/reads_FR_distances.png",
             bla_counts="results/plots/{sample}/blaSHV_counts.png",
             clusters="results/bedfiles/{sample}/blaSHV_hits_merged.bed",
-            plot_clust="results/plots/{sample}/blaSHV_merged_counts.png"
+            plot_clust="results/plots/{sample}/blaSHV_merged_counts.png",
+            linked_plots="notebooks/plot_results/figures/{sample}/blaSHV_merged_counts.png"
     output: touch("results/final/{sample}_all.done")
     shell: "echo 'DONE'"
 
