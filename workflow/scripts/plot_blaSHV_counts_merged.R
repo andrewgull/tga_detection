@@ -19,11 +19,16 @@ option_list <- list(
               default = 860,
               help = "blaSHV gene length, nt",
               metavar = "int"),
-  make_option(c("-o", "--output"),
+  make_option(c("-p", "--output_plot"),
               type = "character",
               default = NULL,
               help = "plot (*.png)",
-              metavar = "histogram.png")
+              metavar = "histogram.png"),
+  make_option(c("-a", "--output_table"),
+              type = "character",
+              default = NULL,
+              help = "table file TSV",
+              metavar = "table.tsv")
 )
 
 opt_parser <- OptionParser(option_list = option_list)
@@ -33,10 +38,13 @@ if (is.null(opt$input)) {
   print_help(opt_parser)
   stop("Input file must be provided", call. = FALSE)
 }
-
-if (is.null(opt$output)) {
+if (is.null(opt$output_plot)) {
   print_help(opt_parser)
-  stop("Output file must be provided", call. = FALSE)
+  stop("Output file for plot must be provided", call. = FALSE)
+}
+if (is.null(opt$output_table)) {
+  print_help(opt_parser)
+  stop("Output file for table must be provided", call. = FALSE)
 }
 if (is.null(opt$blast)) {
   print_help(opt_parser)
@@ -62,5 +70,7 @@ hist_plot <- bla_merged_df %>%
   geom_rug() +
   xlab("n blaSHV merged hits")
 
-ggsave(filename = opt$output, plot = hist_plot, height = 7, width = 10, units = "in") # nolint: line_length_linter.
+# save outputs
+ggsave(filename = opt$output_plot, plot = hist_plot, height = 7, width = 10, units = "in") # nolint: line_length_linter.
+readr::write_tsv(x = bla_merged_df, file = opt$output_table)
 print("Histogram was saved to a file. No errors.")
