@@ -178,11 +178,12 @@ rule plot_bla_clusters:
     input: script="workflow/scripts/plot_blaSHV_counts_merged.R",
            bed="results/bedfiles/{sample}/blaSHV_hits_merged.bed",
            blast="results/tables/{sample}/blast_joined.tsv"
-    output: "results/plots/{sample}/blaSHV_merged_counts.png"
+    output: plot="results/plots/{sample}/blaSHV_merged_counts.png",
+            table="results/tables/{sample}/table_blaSHV_hit_counts.tsv"
     log: "results/logs/{sample}_blaSHV_counts.log"
     conda: "rscripts-env"
     params: length=config["bla_len"]
-    shell: "Rscript {input.script} -i {input.bed} -b {input.blast} -l {params.length} -o {output} &> {log}"
+    shell: "Rscript {input.script} -i {input.bed} -b {input.blast} -l {params.length} -p {output.plot} -a {output.table} &> {log}"
 
 rule link_final_plots:
     input: "results/plots/{sample}/blaSHV_merged_counts.png"
@@ -199,7 +200,8 @@ rule final:
             bla_counts="results/plots/{sample}/blaSHV_counts.png",
             clusters="results/bedfiles/{sample}/blaSHV_hits_merged.bed",
             plot_clust="results/plots/{sample}/blaSHV_merged_counts.png",
-            linked_plots="notebooks/plot_results/figures/{sample}/blaSHV_merged_counts.png"
+            linked_plots="notebooks/plot_results/figures/{sample}/blaSHV_merged_counts.png",
+            final_table="results/tables/{sample}/table_blaSHV_hit_counts.tsv"
     output: touch("results/final/{sample}_all.done")
     shell: "echo 'DONE'"
 
