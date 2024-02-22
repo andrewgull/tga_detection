@@ -1,0 +1,193 @@
+---
+title: "CNV plots"
+author: "AG"
+date: "`r Sys.Date()`"
+format:
+  html:
+    toc: true
+    toc_float: true
+    theme: cyborg
+    embed-resources: true
+    code-fold: true
+    code-summary: "show code"
+    df-print: kable
+    cap-location: top
+---
+
+## Data
+
+```{r, message=FALSE}
+library(purrr)
+library(readr)
+library(dplyr)
+library(stringr)
+library(ggplot2)
+
+config <- yaml::read_yaml("../workflow/config.yaml")
+samples <- unlist(config$samples)
+
+res_df <- map_dfr(samples, function(x){
+  df <- read_tsv(paste0("../results/tables/", x, "/table_blaSHV_hit_counts.tsv"), show_col_types = F)
+  df$sample <- x
+  return(df)
+  }
+) 
+
+res_df <- res_df %>% 
+  mutate(replicate = str_split_i(sample, "_", i = 2),
+         group = str_split_i(sample, "_", i = 3))
+```
+
+
+```{r}
+#| tbl-cap: "N reads per sample"
+
+read_counts <- res_df %>% 
+  group_by(sample) %>% 
+  count()
+
+knitr::kable(read_counts)
+```
+
+
+```{r, fig.width=10, fig.height=6}
+res_df %>% 
+  group_by(sample) %>% 
+  count() %>% 
+  ggplot(aes(sample, n)) +
+  geom_col(fill="steelblue") +
+  #coord_trans(y = "sqrt") +
+  theme(axis.text.x = element_text(size=10, angle=45, hjust = 1)) +
+  ggtitle("Reads per sample") +
+  ylab("n reads")
+```
+
+
+## CNV Plots
+
+### No selection
+
+```{r, fig.height=6, fig.width=8, warning=FALSE}
+res_df %>%
+  filter(group == "mh") %>%
+  ggplot(aes(n.blaSHV.merged)) +
+  #geom_histogram(fill = "steelblue", binwidth = 1) +
+  geom_density(aes(fill=replicate), alpha=0.5) +
+  scale_fill_manual(values=c("cyan4", "firebrick2", "purple4")) +
+  geom_rug() +
+  facet_grid(rows = vars(replicate), scales = "free_x") +
+  ggtitle("No selection") +
+  xlab("n blaSHV") +
+  theme(legend.position = "none")
+```
+
+### Selection
+
+#### Altogether
+
+```{r, fig.height=8, fig.width=10, warning=FALSE}
+res_df %>%
+  filter(grepl("x", group)) %>%
+  ggplot(aes(n.blaSHV.merged)) +
+  #geom_histogram(fill = "steelblue", binwidth = 1) +
+  geom_density(aes(fill=replicate), alpha=0.5) +
+  scale_fill_manual(values=c("cyan4", "firebrick2", "purple4")) +
+  geom_rug() +
+  facet_grid(rows = vars(replicate), cols = vars(group), scales = "free") +
+  ggtitle("Distribution of blaSHV counts", subtitle = "Selection with AB") +
+  xlab("n blaSHV") +
+  theme(legend.position = "none")
+```
+
+#### Separately
+
+```{r, fig.height=8, fig.width=8, warning=FALSE}
+# function to make faceted density plots
+plot_cnv <- function(df, color, cap="", subcap=""){
+  ggplot(df, aes(n.blaSHV.merged)) +
+  #geom_histogram(fill = "steelblue", binwidth = 1) +
+  geom_density(fill=color, alpha=0.5) +
+  geom_rug() +
+  facet_grid(rows = vars(group), scales = "free") +
+  ggtitle(cap, subtitle = subcap) +
+  xlab("n blaSHV")
+}
+
+res_df %>%
+  filter(!grepl("g", group), replicate == "D") %>% 
+  plot_cnv("cyan4", "Selection", "Replicate D")
+```
+
+```{r, fig.height=8, fig.width=8, warning=FALSE}
+res_df %>%
+  filter(!grepl("g", group), replicate == "E") %>% 
+  plot_cnv("firebrick2", "Selection", "Replicate E")
+```
+
+```{r, fig.height=8, fig.width=8, warning=FALSE}
+res_df %>%
+  filter(!grepl("g", group), replicate == "F") %>% 
+  plot_cnv("purple4", "Selection", "Replicate F")
+```
+
+#### Only x4 and x8 together
+
+```{r, fig.height=8, fig.width=8, warning=FALSE}
+res_df %>%
+  filter(grepl("x8", group) | grepl("x4", group)) %>%
+  ggplot(aes(n.blaSHV.merged)) +
+  #geom_histogram(fill = "steelblue", binwidth = 1) +
+  geom_density(aes(fill=replicate), alpha=0.5) +
+  scale_fill_manual(values=c("cyan4", "firebrick2", "purple4")) +
+  geom_rug() +
+  facet_grid(rows = vars(replicate), cols=vars(group), scales = "free") +
+  ggtitle("Selection") +
+  xlab("n blaSHV") +
+  theme(legend.position = "none")
+
+```
+
+### Reversion
+
+#### Altogether
+
+```{r, fig.height=8, fig.width=11, warning=FALSE}
+res_df %>%
+  filter(grepl("g", group) | grepl("x8", group)) %>%
+  mutate(group = factor(group, levels=c("x8", "10g", "20g", "40g", "160g"))) %>% 
+  ggplot(aes(n.blaSHV.merged)) +
+  #geom_histogram(fill = "steelblue", binwidth = 1) +
+  geom_density(aes(fill=replicate), alpha=0.5) +
+  scale_fill_manual(values=c("cyan4", "firebrick2", "purple4")) +
+  geom_rug() +
+  facet_grid(rows = vars(replicate), cols = vars(group), scales = "free") +
+  ggtitle("Distribution of blaSHV counts", subtitle="No selection") +
+  xlab("n blaSHV") +
+  theme(legend.position = "none")
+```
+
+#### Seprately
+
+```{r, fig.height=8, fig.width=8, warning=FALSE}
+res_df %>%
+  filter(replicate == "D", 
+         grepl("x8", group) | grepl("g", group)) %>%
+  mutate(group = factor(group, levels=c("x8", "10g", "20g", "40g", "160g"))) %>% 
+  plot_cnv("cyan4", "Reversion", "Replicate D")
+```
+
+```{r, fig.height=8, fig.width=8, warning=FALSE}
+res_df %>%
+  filter(replicate == "E", 
+         grepl("x8", group) | grepl("g", group)) %>%
+  mutate(group = factor(group, levels=c("x8", "10g", "20g", "40g", "160g"))) %>% 
+  plot_cnv("firebrick2", "Reversion", "Replicate E")
+```
+
+```{r, fig.height=8, fig.width=8, warning=FALSE}
+res_df %>%
+  filter(replicate == "F", 
+         grepl("x8", group) | grepl("g", group)) %>%
+  mutate(group = factor(group, levels=c("x8", "10g", "20g", "40g", "160g"))) %>% 
+  plot_cnv("purple4", "Reversion", "Replicate F")
+```
