@@ -13,7 +13,7 @@ option_list <- list(
               type = "character",
               default = NULL,
               help = "output BED file",
-              metavar = "histogram.png")
+              metavar = "file.bed")
 )
 
 opt_parser <- OptionParser(option_list = option_list)
