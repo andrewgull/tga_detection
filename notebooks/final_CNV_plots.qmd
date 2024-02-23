@@ -26,16 +26,21 @@ library(ggplot2)
 config <- yaml::read_yaml("../workflow/config.yaml")
 samples <- unlist(config$samples)
 
-res_df <- map_dfr(samples, function(x){
-  df <- read_tsv(paste0("../results/tables/", x, "/table_blaSHV_hit_counts.tsv"), show_col_types = F)
-  df$sample <- x
-  return(df)
-  }
-) 
+read_many_tables <- function(table_name) {
+  out_df <- map_dfr(samples, function(x) {
+    df <-
+      read_tsv(paste0("../results/tables/", x, "/", table_name),
+               show_col_types = F)
+    df$sample <- x
+    return(df)
+  }) %>%
+    mutate(replicate = str_split_i(sample, "_", i = 2),
+           group = str_split_i(sample, "_", i = 3))
+  
+  return(out_df)
+}
 
-res_df <- res_df %>% 
-  mutate(replicate = str_split_i(sample, "_", i = 2),
-         group = str_split_i(sample, "_", i = 3))
+res_df <- read_many_tables("blaSHV_counts.tsv")
 ```
 
 
@@ -62,6 +67,27 @@ res_df %>%
   ylab("n reads")
 ```
 
+## Mean counts
+
+```{r}
+#| tbl-cap: "mean gene counts"
+
+all_df <- read_many_tables("blaSHV_counts_all.tsv")
+
+counts_filt <- res_df %>% 
+  group_by(sample) %>% 
+  summarise(mean = round(mean(n.blaSHV.merged, na.rm = T), 1)) 
+
+counts_all <- all_df %>% 
+  group_by(sample) %>% 
+  summarise(mean = round(mean(n, na.rm = T), 1)) 
+
+new_names <- c(mean_filt = "mean.x", mean_all = "mean.y")
+
+left_join(counts_filt, counts_all, by = "sample") %>% 
+  rename(all_of(new_names)) %>% 
+  knitr::kable()
+```
 
 ## CNV Plots
 
@@ -71,12 +97,28 @@ res_df %>%
 res_df %>%
   filter(group == "mh") %>%
   ggplot(aes(n.blaSHV.merged)) +
-  #geom_histogram(fill = "steelblue", binwidth = 1) +
-  geom_density(aes(fill=replicate), alpha=0.5) +
+  geom_histogram(aes(fill=replicate), binwidth = 1, alpha=0.5) +
+  #geom_density(aes(fill=replicate), alpha=0.5) +
   scale_fill_manual(values=c("cyan4", "firebrick2", "purple4")) +
   geom_rug() +
   facet_grid(rows = vars(replicate), scales = "free_x") +
   ggtitle("No selection") +
+  xlab("n blaSHV") +
+  theme(legend.position = "none")
+```
+
+If we count all the blaSHVs in our reads
+
+```{r, fig.height=6, fig.width=8, warning=FALSE}
+all_df %>%
+  filter(group == "mh") %>%
+  ggplot(aes(n)) +
+  geom_histogram(aes(fill=replicate), binwidth = 1, alpha=0.8) +
+  #geom_density(aes(fill=replicate), alpha=0.5) +
+  scale_fill_manual(values=c("cyan4", "firebrick2", "purple4")) +
+  geom_rug() +
+  facet_grid(rows = vars(replicate), scales = "free_x") +
+  ggtitle("No selection & no filtering") +
   xlab("n blaSHV") +
   theme(legend.position = "none")
 ```
@@ -89,12 +131,28 @@ res_df %>%
 res_df %>%
   filter(grepl("x", group)) %>%
   ggplot(aes(n.blaSHV.merged)) +
-  #geom_histogram(fill = "steelblue", binwidth = 1) +
-  geom_density(aes(fill=replicate), alpha=0.5) +
+  geom_histogram(aes(fill=replicate), alpha=0.5, binwidth = 1) +
+  #geom_density(aes(fill=replicate), alpha=0.5) +
   scale_fill_manual(values=c("cyan4", "firebrick2", "purple4")) +
   geom_rug() +
   facet_grid(rows = vars(replicate), cols = vars(group), scales = "free") +
   ggtitle("Distribution of blaSHV counts", subtitle = "Selection with AB") +
+  xlab("n blaSHV") +
+  theme(legend.position = "none")
+```
+
+If we count all the blaSHV in our reads
+
+```{r, fig.height=8, fig.width=10, warning=FALSE}
+all_df %>%
+  filter(grepl("x", group)) %>%
+  ggplot(aes(n)) +
+  geom_histogram(aes(fill=replicate), alpha=0.8, binwidth = 1) +
+  #geom_density(aes(fill=replicate), alpha=0.5) +
+  scale_fill_manual(values=c("cyan4", "firebrick2", "purple4")) +
+  geom_rug() +
+  facet_grid(rows = vars(replicate), cols = vars(group), scales = "free") +
+  ggtitle("Distribution of blaSHV counts (no filtering)", subtitle = "Selection with AB") +
   xlab("n blaSHV") +
   theme(legend.position = "none")
 ```
@@ -105,8 +163,8 @@ res_df %>%
 # function to make faceted density plots
 plot_cnv <- function(df, color, cap="", subcap=""){
   ggplot(df, aes(n.blaSHV.merged)) +
-  #geom_histogram(fill = "steelblue", binwidth = 1) +
-  geom_density(fill=color, alpha=0.5) +
+  geom_histogram(fill = color, alpha=0.5, binwidth = 1) +
+  #geom_density(fill=color, alpha=0.5) +
   geom_rug() +
   facet_grid(rows = vars(group), scales = "free") +
   ggtitle(cap, subtitle = subcap) +
@@ -136,8 +194,8 @@ res_df %>%
 res_df %>%
   filter(grepl("x8", group) | grepl("x4", group)) %>%
   ggplot(aes(n.blaSHV.merged)) +
-  #geom_histogram(fill = "steelblue", binwidth = 1) +
-  geom_density(aes(fill=replicate), alpha=0.5) +
+  geom_histogram(aes(fill=replicate), alpha=0.5, binwidth = 1) +
+  #geom_density(aes(fill=replicate), alpha=0.5) +
   scale_fill_manual(values=c("cyan4", "firebrick2", "purple4")) +
   geom_rug() +
   facet_grid(rows = vars(replicate), cols=vars(group), scales = "free") +
@@ -156,8 +214,8 @@ res_df %>%
   filter(grepl("g", group) | grepl("x8", group)) %>%
   mutate(group = factor(group, levels=c("x8", "10g", "20g", "40g", "160g"))) %>% 
   ggplot(aes(n.blaSHV.merged)) +
-  #geom_histogram(fill = "steelblue", binwidth = 1) +
-  geom_density(aes(fill=replicate), alpha=0.5) +
+  geom_histogram(aes(fill=replicate), alpha=0.5, binwidth = 1) +
+  #geom_density(aes(fill=replicate), alpha=0.5) +
   scale_fill_manual(values=c("cyan4", "firebrick2", "purple4")) +
   geom_rug() +
   facet_grid(rows = vars(replicate), cols = vars(group), scales = "free") +
@@ -165,6 +223,24 @@ res_df %>%
   xlab("n blaSHV") +
   theme(legend.position = "none")
 ```
+
+If we count all the blaSHV in our reads
+
+```{r, fig.height=8, fig.width=11, warning=FALSE}
+all_df %>%
+  filter(grepl("g", group) | grepl("x8", group)) %>%
+  mutate(group = factor(group, levels=c("x8", "10g", "20g", "40g", "160g"))) %>% 
+  ggplot(aes(n)) +
+  geom_histogram(aes(fill=replicate), alpha=0.8, binwidth = 1) +
+  #geom_density(aes(fill=replicate), alpha=0.5) +
+  scale_fill_manual(values=c("cyan4", "firebrick2", "purple4")) +
+  geom_rug() +
+  facet_grid(rows = vars(replicate), cols = vars(group), scales = "free") +
+  ggtitle("Distribution of blaSHV counts (no filtering)", subtitle="No selection") +
+  xlab("n blaSHV") +
+  theme(legend.position = "none")
+```
+
 
 #### Seprately
 
