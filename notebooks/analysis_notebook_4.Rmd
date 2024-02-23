@@ -610,7 +610,7 @@ blast_joined_filt %>%
 I can just blast all reads together, then *analyse* the results and join them with FR blast table
 
 ```{bash, eval=FALSE}
-# requires ca. 23 Gb of RAM
+# requires a lot of RAM unless you build a DB first
 blastn -query resources/genes/blaSHV.fa -subject results/reads_filtered/replicate_e/CNV_reads_all_3.7k.fasta -outfmt 6 -num_alignments 5000000 -num_threads 4 > results/tables/blast_blaSHV.tsv
 ```
 
@@ -1086,53 +1086,40 @@ bla_merged_df %>%
 
 ----
 
-## Control region
+## Overall counting of blaSHV genes
 
-The idea is to do the same analysis with the control region as with blaSHV,
+Let's count all blaSHVs that we can find in the reads. That will give us an idea of how many blaSHV there is.
 
-and see if the copy-number of CRs correlate with copy-number of blaSHV
-
-```{bash, eval=F}
-# extract the 'control' region
-seqkit subseq -r 8000:8500 resources/flanking_regions/plasmid/DA61218_plasmid.fa > resources/flanking_regions/plasmid/DA61218_plasmid_substr_8-8.5k.fa
-
-# RUN BLAST
-#
-# -sorthsps <Integer, (>=0 and =<4)>
-#   Sorting option for hps:
-#     0 = Sort by hsp evalue,
-#     1 = Sort by hsp score,
-#     2 = Sort by hsp query start,
-#     3 = Sort by hsp percent identity,
-#     4 = Sort by hsp subject start
-#   Not applicable for outfmt != 0
-#
-# -num_alignments <Integer, >=0>
-#   Number of database sequences to show alignments for
-#   Default = `250'
-#    * Incompatible with:  max_target_seqs
-
-# num_alignments should be high enough, depending on the total number of reads
-# requires > 20 GB of RAM
-blastn -query resources/flanking_regions/plasmid/DA61218_plasmid_substr_8-8.5k.fa -subject results/reads_filtered/replicate_e/CNV_reads_all_3.7k.fasta -outfmt 6 -num_alignments 450000 > results/tables/blast_control_region.tsv
-
+```{r}
+# the blast file already exists
+blast_blaSHV <- read_tsv("../results/tables/76595_E_mh/blast_blaSHV.tsv", show_col_types = F, col_names = F)
+names(blast_blaSHV) <- c("query", "subject", "identity", "length", "mismatch",
+                        "gaps", "start.query", "end.query", "start.subject",
+                        "end.subject", "e.value", "bit.score")
+write_delim(blast_blaSHV, file = "../results/tables/76595_E_mh/blast_blaSHV_headers.tsv", delim = "\t")
 ```
 
-### Parsing
+```{bash}
+# activate rscripts-env
+Rscript workflow/scripts/make_bed.R -i results/tables/76595_E_mh/blast_blaSHV_headers.tsv -o results/tables/76595_E_mh/blaSHV_hits_non_filtered.bed
 
-```{r, message=FALSE, warning=FALSE}
-blast_ctrl <- read_delim("../results/tables/blast_control_region.tsv", col_names = F)
+# cluster hits
+# activate varcalling-env
+sort -k1,1 -k2,2n results/tables/76595_E_mh/blaSHV_hits_non_filtered.bed > results/tables/76595_E_mh/blaSHV_hits_non_filtered_sorted.bed && bedtools merge -i results/tables/76595_E_mh/blaSHV_hits_non_filtered_sorted.bed -s -d 500 > results/tables/76595_E_mh/blaSHV_hits_non_filtered_merged.bed
+```
 
-names(blast_ctrl) <- c("query", "subject", "identity", "length", "mismatch", 
-                        "gaps", "start.query", "end.query", "start.subject", 
-                        "end.subject", "e.value", "bit.score") 
-blast_ctrl <- 
-  blast_ctrl %>%
-  mutate(orientation = if_else(start.subject < end.subject, "direct", "reverse"))
+```{r}
+bla_merge <- readr::read_tsv("../results/tables/76595_E_mh/blaSHV_hits_non_filtered_merged.bed", col_names = FALSE, show_col_types = FALSE)
 
-# rename query
-blast_ctrl$query <- "control"
+bla_length <- 860
 
-blast_ctrl
+bla_merged_df <- bla_merge %>%
+  group_by(X1) %>%
+  summarise(sum.merged.hits = sum(X3 - X2 + 1)) %>%
+  mutate(n.blaSHV.merged = round(sum.merged.hits / bla_length, 0)) %>%
+  rename("subject" = X1) %>%
+  # filter out the reads the 'bad reads' from previous filtering rounds
+  right_join(blast_blaSHV, by = "subject") %>%
+  select(subject, n.blaSHV.merged, distance.btw.FR)
 ```
 
