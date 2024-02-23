@@ -31,8 +31,32 @@ if (is.null(opt$output)) {
 # other packages
 suppressPackageStartupMessages(library(dplyr))
 
-# read the filtered blast table
-blast_blaSHV <- readr::read_tsv(opt$input, show_col_types = FALSE)
+# if the blast table has headers it's been filtred
+# otherwise it's not
+
+filtered <- grepl("filtered", opt$input, fixed = TRUE)
+if (filtered) {
+  print("filtred version of the blast table is detected")
+  # read the filtered blast table
+  blast_blaSHV <- readr::read_tsv(opt$input, show_col_types = FALSE, col_names = TRUE)
+  # check if the correct variant of the blast table was read
+  # incorrect version of the table (without headers) will have 'X1' as the first column name
+  stopifnot(grepl("query", names(blast_blaSHV)[1]))
+} else {
+  print("Non-filtred version of the blast table is detected")
+  # read the non-filtered blast table
+  blast_blaSHV <- readr::read_tsv(opt$input, show_col_types = FALSE, col_names = FALSE)
+  # check if the correct variant of the blast table was read
+  # incorrect version of the table (with headers) will have 'query' and 'blaSHV-1' in X1
+  stopifnot(length(unique(blast_blaSHV$X1)) == 1)
+  # check dimensions
+  stopifnot(ncol(blast_blaSHV) == 12)
+  # set names
+  names(blast_blaSHV) <- c("query", "subject", "identity", "length", "mismatch",
+                        "gaps", "start.query", "end.query", "start.subject",
+                        "end.subject", "e.value", "bit.score")
+}
+
 # check if it is empty
 stopifnot(nrow(blast_blaSHV) > 0)
 
@@ -58,4 +82,4 @@ bla_bed <- bla_bed_mix %>%
 
 # write to file
 readr::write_tsv(bla_bed, opt$output, col_names = FALSE)
-print("Finished. no errors.")
+print("Finished. No errors.")
