@@ -1096,7 +1096,12 @@ blast_blaSHV <- read_tsv("../results/tables/76595_E_mh/blast_blaSHV.tsv", show_c
 names(blast_blaSHV) <- c("query", "subject", "identity", "length", "mismatch",
                         "gaps", "start.query", "end.query", "start.subject",
                         "end.subject", "e.value", "bit.score")
+
 write_delim(blast_blaSHV, file = "../results/tables/76595_E_mh/blast_blaSHV_headers.tsv", delim = "\t")
+
+blast_blaSHV %>% 
+  group_by(subject) %>% 
+  count()
 ```
 
 ```{bash}
@@ -1111,15 +1116,23 @@ sort -k1,1 -k2,2n results/tables/76595_E_mh/blaSHV_hits_non_filtered.bed > resul
 ```{r}
 bla_merge <- readr::read_tsv("../results/tables/76595_E_mh/blaSHV_hits_non_filtered_merged.bed", col_names = FALSE, show_col_types = FALSE)
 
-bla_length <- 860
+bla_merge %>% 
+  group_by(X1) %>% 
+  count() %>% 
+  ggplot(aes(n)) +
+  geom_histogram(binwidth = 1) +
+  geom_rug()
+```
 
-bla_merged_df <- bla_merge %>%
-  group_by(X1) %>%
-  summarise(sum.merged.hits = sum(X3 - X2 + 1)) %>%
-  mutate(n.blaSHV.merged = round(sum.merged.hits / bla_length, 0)) %>%
-  rename("subject" = X1) %>%
-  # filter out the reads the 'bad reads' from previous filtering rounds
-  right_join(blast_blaSHV, by = "subject") %>%
-  select(subject, n.blaSHV.merged, distance.btw.FR)
+The mode is the same, maximum is not
+
+The mean is same too.
+
+```{r}
+bla_merge %>% 
+  group_by(X1) %>% 
+  count() %>% 
+  pull(n) %>% 
+  mean()
 ```
 
