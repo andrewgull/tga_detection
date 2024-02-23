@@ -2,7 +2,7 @@ name: biostrings-env
 channels: 
   - bioconda
 dependencies:
-  - r-optparse
+  - r-optparse=1.7.3
   - r-ggplot2=3.3.5
   - r-dplyr==1.0.8
-  - bioconductor-biostrings
+  - bioconductor-biostrings=2.62.0
