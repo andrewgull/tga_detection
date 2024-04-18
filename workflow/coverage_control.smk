@@ -3,6 +3,8 @@
 
 from snakemake.io import expand, touch
 
+configfile: "workflow/config.yaml"
+
 rule all_regions:
     input:
         expand("results/coverage_control/final/{region}_{sample}_all.done", sample=config['samples'],
@@ -11,6 +13,7 @@ rule all_regions:
 module main_workflow:
     snakefile:
         "snakefile.smk"
+    #config: config["main-workflow"]
 
 # import rules that you're going to use from the main file
 use rule merge_reads, filter_reads, fq2fasta, make_blast_db from main_workflow

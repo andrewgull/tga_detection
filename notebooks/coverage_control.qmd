@@ -1,0 +1,121 @@
+---
+title: "Coverage control"
+author: "AG"
+date: "`r Sys.Date()`"
+format:
+  html:
+    toc: true
+    toc_float: true
+    theme: cyborg
+    embed-resources: true
+    code-fold: true
+    code-summary: "show code"
+    df-print: kable
+    cap-location: top
+editor: visual
+---
+
+## Intro
+
+Here i will check coverage and proportion of reads that exceed the length threshold (3577 bp) and containing:
+
+1. a region approx. 500 bp downstream the DS (CR4, pos. 31071 + 500 + 1677)
+2. a region exactly opposite of the DS (CR1, pos. 87000 + 1677)
+3. a region between the DS and the opposite end (clockwise) (CR3, pos. 60000 - 1677)
+4. a region between the DS and the opposite end (anti-clockwise) (CR2, pos. 5000 + 1677)
+
+Our hypothesis is that coverage upstream the DS is higher than in the three remote regions (?)
+
+![Fig.1. Plasmid DA61218 and location of control regions](figures/pDA61218_full_size_annotated.png)
+
+Sequences of the regions CR1 - CR4 are in `resources/control_regions`
+
+
+
+sample 76595_D_mh 
+
+## BLAST commands
+
+```{bash}
+#| eval: false
+#| echo: false
+mkdir -p results/tables/CR1/
+
+blastn -query resources/control_regions/CR1.fa -db results/blast_databases/76595_D_mh/blastdb -outfmt 6 -num_threads 8 -num_alignments 900000 > results/tables/CR1/blast_CR1_76595_D_mh.tsv
+
+mkdir -p results/tables/CR2/
+
+blastn -query resources/control_regions/CR2.fa -db results/blast_databases/76595_D_mh/blastdb -outfmt 6 -num_threads 8 -num_alignments 900000 > results/tables/CR2/blast_CR2_76595_D_mh.tsv
+
+mkdir -p results/tables/CR3/
+
+blastn -query resources/control_regions/CR3.fa -db results/blast_databases/76595_D_mh/blastdb -outfmt 6 -num_threads 8 -num_alignments 900000 > results/tables/CR3/blast_CR3_76595_D_mh.tsv
+
+mkdir -p results/tables/CR4/
+
+blastn -query resources/control_regions/CR4.fa -db results/blast_databases/76595_D_mh/blastdb -outfmt 6 -num_threads 8 -num_alignments 900000 > results/tables/CR4/blast_CR4_76595_D_mh.tsv
+```
+
+## BLAST results:
+
+reads have been filtered by length (min 3757 bp)
+
+```{r, message=FALSE}
+library(tidyverse)
+
+project_path <- "/home/andrei/Data/nano-cnv/"
+results_path <- "results/tables/"
+blast_tables <- c("CR1/blast_CR1_76595_D_mh.tsv", "CR2/blast_CR2_76595_D_mh.tsv", 
+                  "CR3/blast_CR3_76595_D_mh.tsv", "CR4/blast_CR4_76595_D_mh.tsv",
+                  "blast_flanking_region_red.tsv")
+
+blast_cr <- purrr::map_dfr(blast_tables, 
+                    ~ read_delim(paste0(project_path, results_path, .), 
+                                        col_names = F, show_col_types = F))
+
+blast_cr %>% 
+  head(n = 30) %>% 
+  knitr::kable()
+```
+
+### Identity
+
+```{r, fig.width=12, fig.height=6}
+ggplot(blast_cr, aes(X3)) +
+  geom_histogram(aes(fill = X1), bins = 100) +
+  facet_grid(cols = vars(X1)) +
+  theme(legend.position = "none") +
+  scale_fill_brewer(palette = "Set2")
+```
+
+### Length
+
+```{r, fig.width=12, fig.height=6}
+ggplot(blast_cr, aes(X4)) +
+  geom_histogram(aes(fill = X1), bins = 100) +
+  facet_grid(cols = vars(X1)) +
+  theme(legend.position = "none") +
+  scale_fill_brewer(palette = "Set2")
+```
+
+## Number of reads containing each CR & FR (red)
+
+hits shorter than 1500 and less 80% identity have been removed
+
+```{r}
+blast_cr %>% 
+  filter(X4 >= 1500,
+         X3 >= 80) %>% 
+  select(X1, X2) %>% 
+  distinct() %>% 
+  dplyr::group_by(X1) %>% 
+  dplyr::count() %>% 
+  ggplot(aes(X1, n)) +
+  geom_col(aes(fill = X1)) +
+  theme(legend.position = "none") +
+  xlab("") +
+  ylab("N reads") +
+  scale_fill_brewer(palette = "Set2")
+  
+```
+
