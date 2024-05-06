@@ -1136,3 +1136,131 @@ bla_merge %>%
   mean()
 ```
 
+## Filtering 3: by orientation of the repeat unit and FR red
+
+This section should become a script and replace `filter_fr_hits.R``
+
+```{r}
+library(dplyr)
+library(readr)
+
+parse_blast <- function(file_path, region_name) {
+  # read blast table
+  df <- read_delim(file_path, col_names = FALSE, show_col_types = FALSE)
+  # check if the table is empty
+  stopifnot(nrow(df) > 0)
+  # check if nrow is wrong
+  stopifnot(ncol(df) == 12)
+  # assign names
+  names(df) <- c("query", "subject", "identity", "length", "mismatch",
+                 "gaps", "start.query", "end.query", "start.subject",
+                 "end.subject", "e.value", "bit.score")
+  # create orientation column
+  df$orientation <- ifelse(df$start.subject < df$end.subject, "direct", "reverse") # nolint: line_length_linter.
+  # rename query
+  df$query <- region_name
+  return(df)
+}
+
+blast_red <- parse_blast("results/tables/76595_D_mh/blast_red.tsv", "FR_red")
+blast_repunit <- parse_blast("results/tables/76595_D_mh/blast_repeat_unit.tsv", "Rep_unit")
+
+blast_repunit %>% 
+  ggplot(aes(length)) +
+  geom_histogram(bins = 100) +
+  geom_rug()
+```
+
+How many rep units detected per read?
+
+```{r}
+blast_repunit %>% 
+  group_by(subject) %>% 
+  count() %>% 
+  ggplot(aes(n)) +
+  geom_histogram(bins = 50) +
+  geom_rug() + 
+  ylab("n rep units per read")
+```
+
+
+filter hits by length, e.value and identity
+
+```{r}
+# NB: min length is different from FR's min length
+blast_repunit <- blast_repunit %>%
+  filter(length > 700, e.value < 0.00001, identity > 0.75) %>%
+  select(query, contains("subject"), orientation)
+
+# FR has different length
+blast_red <- blast_red %>%
+  filter(length > 500, e.value < 0.00001, identity > 0.75) %>%
+  select(query, contains("subject"), orientation)
+
+# join 
+# there will be one-to-many matches, apply the 2nd filtering step
+# look at the distances between start.subject.x and end.subject.y
+# subject.x and subject.y should be close to next after each other 
+red_repunit <- left_join(blast_red, blast_repunit, by = 'subject') %>%
+  filter(orientation.x == orientation.y) %>% 
+  mutate(distance = if_else(orientation.x == "reverse", 
+                            end.subject.y - start.subject.x + 1, 
+                            start.subject.x - end.subject.y + 1))
+```
+
+Distance distribution
+
+```{r}
+red_repunit %>% 
+  ggplot(aes(distance)) +
+  geom_histogram(bins = 100) +
+  geom_rug()
+```
+
+
+filtering by this distance would mean that we keep only those reads that have at least one repeat unit in proximity to the FR and in correct orientation
+
+```{r}
+red_repunit %>% 
+  ggplot(aes(query.x, distance)) +
+  geom_boxplot(alpha = 0.5) +
+  xlab("")
+```
+
+```{r}
+summary(red_repunit$distance)
+```
+
+Take the minimum distance for each read and plot its distribution
+
+```{r}
+red_repunit %>% 
+  group_by(subject) %>% 
+  mutate(min_dist = min(abs(distance))) %>% 
+  select(query.x, subject, min_dist) %>% 
+  distinct() %>% 
+  ggplot(aes(min_dist)) +
+  geom_histogram(bins=100) +
+  geom_rug()
+```
+
+```{r}
+red_repunit %>% 
+  group_by(subject) %>% 
+  mutate(min_dist = min(abs(distance))) %>% 
+  select(query.x, subject, min_dist) %>% 
+  distinct() %>%
+  pull(min_dist) %>% 
+  summary()
+```
+
+
+filtering
+
+```{r}
+red_repunit %>% 
+  filter(distance <= 20)
+
+```
+
+
