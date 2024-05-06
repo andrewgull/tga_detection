@@ -12,9 +12,18 @@ rule merge_reads:
     benchmark: "results/benchmarks/zcat_reads/{sample}.tsv"
     shell: "zcat {input}/*.gz | pigz -c -p {threads} 1> {output} 2> {log}"
 
-rule filter_reads:
+rule chop_reads:
     input: "resources/reads/{sample}/reads_all.fastq.gz"
-    output: "results/reads/{sample}/reads_all.fastq.gz"
+    output: "results/reads/{sample}/reads_chopped.fastq.gz"
+    threads: 10
+    log: "results/logs/{sample}_porechop.log"
+    benchmark: "results/benchmarks/porechop_reads/{sample}.tsv"
+    conda: "porechop-env"
+    shell: "porechop -i {input} -o {output} --threads {threads} &> {log}"
+
+rule filter_reads:
+    input: "results/reads/{sample}/reads_chopped.fastq.gz"
+    output: "results/reads/{sample}/reads_filtered.fastq.gz"
     threads: 10
     log: "results/logs/{sample}_filtlong.log"
     benchmark: "results/benchmarks/filtlong_filter/{sample}.tsv"
@@ -23,7 +32,7 @@ rule filter_reads:
     shell: "filtlong --min_length {params.min_len} {input} 2> {log} | pigz -c -p {threads} > {output}"
 
 rule read_length_histogram:
-    input: "results/reads/{sample}/reads_all.fastq.gz"
+    input: "results/reads/{sample}/reads_filtered.fastq.gz"
     output: "results/plots/{sample}/reads_length_histogram.png"
     threads: 10
     log: "results/logs/{sample}_seqkit_length.log"
@@ -32,7 +41,7 @@ rule read_length_histogram:
     shell: "seqkit watch {input} -O {output} -j {threads} &> {log}"
 
 rule read_quality_histogram:
-    input: "results/reads/{sample}/reads_all.fastq.gz"
+    input: "results/reads/{sample}/reads_filtered.fastq.gz"
     output: "results/plots/{sample}/reads_quality_histogram.png"
     threads: 10
     log: "results/logs/{sample}_seqkit_quality.log"
@@ -41,8 +50,8 @@ rule read_quality_histogram:
     shell: "seqkit watch {input} -O {output} -j {threads} -f MeanQual &> {log}"
 
 rule fq2fasta:
-    input: "results/reads/{sample}/reads_all.fastq.gz"
-    output: "results/reads/{sample}/reads_all.fasta"
+    input: "results/reads/{sample}/reads_filtered.fastq.gz"
+    output: "results/reads/{sample}/reads_filtered.fasta"
     threads: 10
     log: "results/logs/{sample}_seqkit_fq2fa.log"
     benchmark: "results/benchmarks/seqkit_convert/{sample}.tsv"
@@ -68,7 +77,7 @@ rule create_fr_green:
     shell: "seqkit subseq -j {threads} -r {params.start}:{params.end} {input} 1> {output} 2> {log}"
 
 rule make_blast_db:
-    input: "results/reads/{sample}/reads_all.fasta"
+    input: "results/reads/{sample}/reads_filtered.fasta"
     output: directory("results/blast_databases/{sample}")
     log: "results/logs/{sample}_blastdb.log"
     conda: "blast-env"
@@ -85,44 +94,67 @@ rule blast_red:
     shell: "blastn -query {input.query} -db {input.database}/blastdb -outfmt {params.fmt} "
            "-num_threads {threads} -num_alignments {params.n_alns} 1> {output} 2> {log}"
 
-rule blast_green:
-    input: query="results/flanking_regions/fr_green.fa", database="results/blast_databases/{sample}"
-    output: "results/tables/{sample}/blast_green.tsv"
+# rule blast_green:
+#     input: query="results/flanking_regions/fr_green.fa", database="results/blast_databases/{sample}"
+#     output: "results/tables/{sample}/blast_green.tsv"
+#     threads: 10
+#     params: fmt = config['format'], n_alns = config['n_fr_aligns']
+#     log: "results/logs/{sample}_blast_green.log"
+#     benchmark: "results/benchmarks/blast_green/{sample}.tsv"
+#     conda: "blast-env"
+#     shell: "blastn -query {input.query} -db {input.database}/blastdb -outfmt {params.fmt} "
+#            "-num_threads {threads} -num_alignments {params.n_alns} 1> {output} 2> {log}"
+
+# rule filter_flanking_regions_blast:
+#     input: script="workflow/scripts/filter_fr_hits.R",
+#            red = "results/tables/{sample}/blast_red.tsv",
+#            green = "results/tables/{sample}/blast_green.tsv"
+#     output: "results/tables/{sample}/blast_joined.tsv"
+#     log: "results/logs/{sample}_blast_joined.log"
+#     benchmark: "results/benchmarks/filter_fr/{sample}.tsv"
+#     conda: "rscripts-env"
+#     params: identity = config['min_identity'], e_val = config['max_e_value'], length = config['min_hit_len']
+#     shell: "Rscript {input.script} -r {input.red} -g {input.green} -i {params.identity} -e {params.e_val} -l {params.length} -o {output} &> {log}"
+#
+# rule plot_distance_between_FRs:
+#     input: script="workflow/scripts/plot_fr_distances.R",
+#            blast="results/tables/{sample}/blast_joined.tsv"
+#     output: "results/plots/{sample}/FR_distances.png"
+#     log: "results/logs/{sample}_FR_distances.log"
+#     conda: "rscripts-env"
+#     shell: "Rscript {input.script} -i {input.blast} -o {output} &> {log}"
+#
+# rule plot_read_length_FR_distance:
+#     input: script="workflow/scripts/plot_read_length_and_FR_distances.R",
+#            blast="results/tables/{sample}/blast_joined.tsv",
+#            reads="results/reads/{sample}/reads_filtered.fasta"
+#     output: "results/plots/{sample}/reads_FR_distances.png"
+#     log: "results/logs/{sample}_reads_FR_distances.log"
+#     conda: "biostrings-env"
+#     shell: "Rscript {input.script} -b {input.blast} -r {input.reads} -o {output} &> {log}"
+
+rule blast_repeat_unit:
+    input: query="resources/flanking_regions/repeat_unit.fa",
+           database="results/blast_databases/{sample}"
+    output: "results/tables/{sample}/blast_repeat_unit.tsv"
     threads: 10
-    params: fmt = config['format'], n_alns = config['n_fr_aligns']
-    log: "results/logs/{sample}_blast_green.log"
-    benchmark: "results/benchmarks/blast_green/{sample}.tsv"
+    log: "results/logs/{sample}_blast_repeat_unit.log"
+    benchmark: "results/benchmarks/blast_repeat_unit/{sample}.tsv"
     conda: "blast-env"
+    params: fmt=config["format"], n_alns=config["n_bla_aligns"]
     shell: "blastn -query {input.query} -db {input.database}/blastdb -outfmt {params.fmt} "
            "-num_threads {threads} -num_alignments {params.n_alns} 1> {output} 2> {log}"
 
-rule filter_flanking_regions_blast:
-    input: script="workflow/scripts/filter_fr_hits.R",
+rule filter_red_and_repeat_unit_blast:
+    input: script="workflow/scripts/filter_red_repunit.R",
            red = "results/tables/{sample}/blast_red.tsv",
-           green = "results/tables/{sample}/blast_green.tsv"
+           repunit = "results/tables/{sample}/blast_repeat_unit.tsv"
     output: "results/tables/{sample}/blast_joined.tsv"
     log: "results/logs/{sample}_blast_joined.log"
     benchmark: "results/benchmarks/filter_fr/{sample}.tsv"
     conda: "rscripts-env"
     params: identity = config['min_identity'], e_val = config['max_e_value'], length = config['min_hit_len']
     shell: "Rscript {input.script} -r {input.red} -g {input.green} -i {params.identity} -e {params.e_val} -l {params.length} -o {output} &> {log}"
-
-rule plot_distance_between_FRs:
-    input: script="workflow/scripts/plot_fr_distances.R",
-           blast="results/tables/{sample}/blast_joined.tsv"
-    output: "results/plots/{sample}/FR_distances.png"
-    log: "results/logs/{sample}_FR_distances.log"
-    conda: "rscripts-env"
-    shell: "Rscript {input.script} -i {input.blast} -o {output} &> {log}"
-
-rule plot_read_length_FR_distance:
-    input: script="workflow/scripts/plot_read_length_and_FR_distances.R",
-           blast="results/tables/{sample}/blast_joined.tsv",
-           reads="results/reads/{sample}/reads_all.fasta"
-    output: "results/plots/{sample}/reads_FR_distances.png"
-    log: "results/logs/{sample}_reads_FR_distances.log"
-    conda: "biostrings-env"
-    shell: "Rscript {input.script} -b {input.blast} -r {input.reads} -o {output} &> {log}"
 
 rule blast_blaSHV:
     input: query="resources/genes/blaSHV.fa",
