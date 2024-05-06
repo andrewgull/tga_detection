@@ -82,6 +82,7 @@ parse_blast <- function(file_path, region_name) {
 }
 
 filter_blast_p1 <- function(blast_df, min_len, max_e_value, min_identity) {
+  # return: a blast table filtered by minimal length, evalue and hit identity
   filt_df <- filter(blast_df,
          length >= min_len,
          e.value <= max_e_value,
@@ -91,6 +92,7 @@ filter_blast_p1 <- function(blast_df, min_len, max_e_value, min_identity) {
 
 get_multihits_ids <- function(df) {
   # df: filtered blast table
+  # return: subject (read ids) containing multiple query hits
   df %>%
     group_by(subject) %>%
     count() %>%
@@ -102,12 +104,12 @@ filter_blast_p2 <- function(df1, df2) {
   # find read IDs containig multiple query hits
   reads_multiple_hits <- union(get_multihits_ids(df1),
                                get_multihits_ids(df2))
+  # filter out reads with multiple query hits
   df1_filt <- df1 %>%
     filter(!subject %in% reads_multiple_hits)
   df2_filt <- df2 %>%
     filter(!subject %in% reads_multiple_hits)
 
-  # Filter out reads with single hits
   # Filter by orientation
   # Add distance between FRs
   df_joined <- full_join(df1_filt, df2_filt, by = "subject") %>%
