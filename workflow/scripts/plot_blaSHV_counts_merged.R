@@ -12,7 +12,7 @@ option_list <- list(
   make_option(c("-b", "--blast"),
               type = "character",
               default = NULL,
-              help = "filtered table of blaSHV blast hits",
+              help = "filtered table of FR blast hits",
               metavar = "file.tsv"),
   make_option(c("-l", "--length"),
               type = "integer",
@@ -62,7 +62,7 @@ bla_merged_df <- bla_merge %>%
   rename("subject" = X1) %>%
   # filter out the reads the 'bad reads' from previous filtering rounds
   right_join(blast_filt, by = "subject") %>%
-  select(subject, n.blaSHV.merged, distance.btw.FR)
+  select(subject, n.blaSHV.merged)
 
 hist_plot <- bla_merged_df %>%
   ggplot(aes(n.blaSHV.merged)) +
