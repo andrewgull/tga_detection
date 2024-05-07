@@ -30,17 +30,29 @@ option_list <- list(
               help = "max e-value",
               metavar = "double"),
 
-  make_option(c("-l", "--min_len"),
+  make_option(c("-l", "--min_len_fr"),
               type = "integer",
-              default = 1500,
-              help = "min hit length",
+              default = 500,
+              help = "min FR length allowed",
+              metavar = "int"),
+
+  make_option(c("-k", "--min_len_repunit"),
+              type = "integer",
+              default = 700,
+              help = "min REP UNIT length allowed",
               metavar = "int"),
 
   make_option(c("-i", "--identity"),
               type = "integer",
               default = 75,
               help = "min identity",
-              metavar = "integer")
+              metavar = "integer"),
+
+  make_option(c("-d", "--max_distance"),
+              type = "integer",
+              default = 20,
+              help = "max allowed distance between FR and REP UNIT",
+              metavar = "int")
 )
 
 opt_parser <- OptionParser(option_list = option_list)
@@ -50,9 +62,9 @@ if (is.null(opt$blast_red)) {
   print_help(opt_parser)
   stop("Input file 1 must be provided", call. = FALSE)
 }
-if (is.null(opt$blast_green)) {
+if (is.null(opt$blast_repunit)) {
   print_help(opt_parser)
-  stop("Input file 2 must be provided", call. = FALSE)
+  stop("Input file 2 (rep.unit) must be provided", call. = FALSE)
 }
 if (is.null(opt$output)) {
   print_help(opt_parser)
@@ -105,8 +117,8 @@ filter_blast_part1 <- function(blast_df, min_len, max_e_value, min_identity) {
 }
 
 filter_rep_unit_flanking_region <-
-  function(fr_df, ru_df, min_distance) {
-    left_join(blast_red, blast_repunit, by = 'subject') %>%
+  function(fr_df, ru_df, max_distance) {
+    left_join(fr_df, ru_df, by = 'subject') %>%
       filter(orientation.x == orientation.y) %>%
       mutate(
         distance = if_else(
@@ -115,25 +127,24 @@ filter_rep_unit_flanking_region <-
           start.subject.x - end.subject.y + 1
         )
       ) %>%
-      filter(abs(distance) <= min_distance)
+      filter(abs(distance) <= max_distance)
   }
 
 ####
 
 # filter rep unite table
 # NB: min length is different from FR's min length
-blast_red <- parse_blast("results/tables/76595_D_mh/blast_red.tsv", "FR_red") %>% 
-  filter_blast_part1(min_len = 500, max_e_value = 0.00001, min_identity = 0.75)
+blast_red <- parse_blast(opt$blast_red, "FR_red") %>%
+  filter_blast_part1(min_len = opt$min_len_fr, max_e_value = opt$evalue, min_identity = opt$identity)
 
-blast_repunit <- parse_blast("results/tables/76595_D_mh/blast_repeat_unit.tsv", "Rep_unit") %>% 
-  filter_blast_part1(min_len = 700, max_e_value = 0.00001, min_identity = 0.75)
+blast_repunit <- parse_blast(opt$blast_repunit, "Rep_unit") %>%
+  filter_blast_part1(min_len = opt$min_len_repunit, max_e_value = opt$evalue, min_identity = opt$identity)
 
 # filter combination of both FR and rep unit
 # 1st: same orientation
-# 2nd: next to each other
+# 2nd: close to each other
+blast_joined <- filter_rep_unit_flanking_region(blast_red, blast_repunit, max_distance = opt$max_distance)
 
-red_repunit <- filter_rep_unit_flanking_region(blast_red, blast_repunit, min_distance = 20)
-
-# write it down?
-# what the next script expects as input?
-
+# Save results
+write_delim(blast_joined, file = opt$output, delim = "\t")
+print("Fininshed. No erorrs.")
