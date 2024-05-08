@@ -1162,8 +1162,8 @@ parse_blast <- function(file_path, region_name) {
   return(df)
 }
 
-blast_red <- parse_blast("results/tables/76595_D_mh/blast_red.tsv", "FR_red")
-blast_repunit <- parse_blast("results/tables/76595_D_mh/blast_repeat_unit.tsv", "Rep_unit")
+blast_red <- parse_blast("../results/tables/76595_D_mh/blast_red.tsv", "FR_red")
+blast_repunit <- parse_blast("../results/tables/76595_D_mh/blast_repeat_unit.tsv", "Rep_unit")
 
 blast_repunit %>% 
   ggplot(aes(length)) +
