@@ -1,4 +1,4 @@
-from snakemake.io import expand, directory, touch
+from snakemake.io import expand, directory, touch, temp
 
 rule all:
     input:
@@ -6,7 +6,7 @@ rule all:
 
 rule merge_reads:
     input: "resources/reads_separate/{sample}"
-    output: "resources/reads/{sample}/reads_all.fastq.gz"
+    output: temp("resources/reads/{sample}/reads_all.fastq.gz")
     threads: 10
     log: "results/logs/{sample}_zcat.log"
     benchmark: "results/benchmarks/zcat_reads/{sample}.tsv"
@@ -14,7 +14,7 @@ rule merge_reads:
 
 # rule chop_reads:
 #     input: "resources/reads/{sample}/reads_all.fastq.gz"
-#     output: "results/reads/{sample}/reads_chopped.fastq.gz"
+#     output: temp("results/reads/{sample}/reads_chopped.fastq.gz")
 #     threads: 10
 #     log: "results/logs/{sample}_porechop.log"
 #     benchmark: "results/benchmarks/porechop_reads/{sample}.tsv"
@@ -22,8 +22,8 @@ rule merge_reads:
 #     shell: "porechop -i {input} -o {output} --threads {threads} &> {log}"
 
 rule filter_reads:
-    input: "results/reads/{sample}/reads_all.fastq.gz"
-    output: "results/reads/{sample}/reads_filtered.fastq.gz"
+    input: "resources/reads/{sample}/reads_all.fastq.gz"
+    output: temp("results/reads/{sample}/reads_filtered.fastq.gz")
     threads: 10
     log: "results/logs/{sample}_filtlong.log"
     benchmark: "results/benchmarks/filtlong_filter/{sample}.tsv"
@@ -51,12 +51,12 @@ rule read_quality_histogram:
 
 rule fq2fasta:
     input: "results/reads/{sample}/reads_filtered.fastq.gz"
-    output: "results/reads/{sample}/reads_filtered.fasta"
+    output: "results/reads/{sample}/reads_filtered.fasta.gz"
     threads: 10
     log: "results/logs/{sample}_seqkit_fq2fa.log"
     benchmark: "results/benchmarks/seqkit_convert/{sample}.tsv"
     conda: "seqkit-env"
-    shell: "seqkit fq2fa -j {threads} {input} 1> {output} 2> {log}"
+    shell: "seqkit fq2fa -j {threads} {input} | pigz -c -p {threads} 1> {output} 2> {log}"
 
 rule create_fr_red:
     input: "resources/plasmid/DA61218_plasmid.fa"
@@ -77,7 +77,7 @@ rule create_fr_green:
     shell: "seqkit subseq -j {threads} -r {params.start}:{params.end} {input} 1> {output} 2> {log}"
 
 rule make_blast_db:
-    input: "results/reads/{sample}/reads_filtered.fasta"
+    input: "results/reads/{sample}/reads_filtered.fasta.gz"
     output: directory("results/blast_databases/{sample}")
     log: "results/logs/{sample}_blastdb.log"
     conda: "blast-env"
