@@ -1,0 +1,262 @@
+---
+title: "BL-CNV analysis, part V"
+author: "AG"
+date: "`r Sys.Date()`"
+format:
+  html:
+    toc: true
+    toc_float: true
+    theme: minty
+    embed-resources: true
+    code-fold: true
+    code-summary: "show code"
+    df-print: kable
+    cap-location: top
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+## Scheme of the region of interest
+
+Compared to part 2, here I use longer both red and green regions. 
+For the red one I will use all available length (1677 bp). 
+The green region will have the same length.
+
+![the region](figures/pDA61218-116_long_flanking_regions.png)
+
+## Objective
+
+Here I will outline all the filtering steps that we have decided to include into the pipeline
+
+## Data set
+
+As an example I will use sample `76595_D_mh`
+
+## Filtering 1: minimal length
+
+Keep only reads longer than 1820 nt (500 nt of FR red hit + 820 nt of IS + 500 nt of anything else, possibly FR green)
+
+```{bash}
+#| eval: false
+# the following line is taken from the snakemake pipline
+# input: "results/reads/{sample}/reads_all.fastq.gz"
+# output: "results/reads/{sample}/reads_filtered.fastq.gz"
+filtlong --min_length {params.min_len} {input} 2> {log} | pigz -c -p {threads} > {output}
+```
+
+
+## Filtering 2: FR red + IS
+
+Keep the reads containing read and IS hits in the same orientation AND within a certain distance
+
+```{r}
+parse_blast <- function(file_path, region_name) {
+  # read blast table
+  df <- read_delim(file_path, col_names = FALSE, show_col_types = FALSE)
+  # check if the table is empty
+  stopifnot(nrow(df) > 0)
+  # check if nrow is wrong
+  stopifnot(ncol(df) == 12)
+  # assign names
+  names(df) <- c("query", "subject", "identity", "length", "mismatch",
+                 "gaps", "start.query", "end.query", "start.subject",
+                 "end.subject", "e.value", "bit.score")
+  # create orientation column
+  df$orientation <- ifelse(df$start.subject < df$end.subject, "direct", "reverse") # nolint: line_length_linter.
+  # rename query
+  df$query <- region_name
+  return(df)
+}
+
+blast_red <- parse_blast("../results/tables/76595_D_mh/blast_red.tsv", "FR_red")
+blast_repunit <- parse_blast("../results/tables/76595_D_mh/blast_repeat_unit.tsv", "Rep_unit")
+```
+
+### IS hits length
+
+```{r}
+blast_repunit %>% 
+  ggplot(aes(length)) +
+  geom_histogram(bins = 100) +
+  geom_rug()
+```
+
+### IS hits per read
+
+```{r}
+blast_repunit %>% 
+  group_by(subject) %>% 
+  count() %>% 
+  ggplot(aes(n)) +
+  geom_histogram(bins = 50) +
+  geom_rug() + 
+  ylab("n rep units per read")
+```
+
+### Filter the RED and IS hits by quality
+
+```{r}
+# NB: min length is different from FR's min length
+blast_repunit <- blast_repunit %>%
+  filter(length > 700, e.value < 0.00001, identity > 0.75) %>%
+  select(query, contains("subject"), orientation)
+
+# FR has different length
+blast_red <- blast_red %>%
+  filter(length > 500, e.value < 0.00001, identity > 0.75) %>%
+  select(query, contains("subject"), orientation)
+
+# join 
+# there will be one-to-many matches, apply the 2nd filtering step
+# look at the distances between start.subject.x and end.subject.y
+# subject.x and subject.y should be close to next after each other 
+red_repunit <- left_join(blast_red, blast_repunit, by = 'subject') %>%
+  filter(orientation.x == orientation.y) %>% 
+  mutate(distance = if_else(orientation.x == "reverse", 
+                            end.subject.y - start.subject.x + 1, 
+                            start.subject.x - end.subject.y + 1)) 
+```
+
+
+### Distance btw RED and IS 
+
+```{r}
+red_repunit %>% 
+  ggplot(aes(distance)) +
+  geom_histogram(bins = 100) +
+  geom_rug()
+```
+
+```{r}
+tibble(
+  stat = names(summary(red_repunit$distance)), 
+  value = as.numeric(summary(red_repunit$distance))
+)
+```
+
+### Minimal distance in each read
+
+```{r}
+red_repunit %>% 
+  group_by(subject) %>% 
+  mutate(min_dist = min(abs(distance))) %>% 
+  select(subject, min_dist) %>% 
+  distinct() %>% 
+  ggplot(aes(min_dist)) +
+  geom_histogram(bins=100) +
+  geom_rug()
+```
+
+```{r}
+red_repunit %>% 
+  group_by(subject) %>% 
+  mutate(min_dist = min(abs(distance))) %>% 
+  select(subject, min_dist) %>% 
+  distinct() %>%
+  pull(min_dist) %>% 
+  summary()
+```
+
+### Apply distance filter
+
+Optimal distance cut-off
+
+```{r}
+distance_filter <- function(max_distance, df){
+  # unique reads only
+  length(unique(filter(df, distance <= max_distance) %>% pull(subject)))
+}
+
+tibble(
+  max.dist = seq(0, 100, 1), 
+  n.reads = map_int(
+    seq(0, 100, 1), ~ distance_filter(., red_repunit)
+    )) %>%
+  ggplot(aes(max.dist, n.reads)) +
+  geom_point() +
+  scale_x_continuous(breaks = c(0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100))
+         
+```
+
+Let's use `max.distance = 30`
+
+```{r}
+max_dist <- 30
+
+red_repunit_dir_dist <- red_repunit %>% 
+  filter(distance <= max_dist)
+
+nrow(red_repunit_dir_dist)
+```
+
+### Read lengths distribution
+
+```{r}
+file_path <- "../results/reads/76595_D_mh/reads_all.fasta"
+# Read the file
+read_lengths <- Biostrings::width(Biostrings::readDNAStringSet(file_path))
+
+reads_len_df <- tibble("subject" = sub("^(.*?) runid=.*", "\\1", names(Biostrings::readDNAStringSet(file_path))), 
+                       "read.len" = read_lengths)
+
+red_repunit_dir_dist <- left_join(red_repunit_dir_dist, reads_len_df, by = "subject")
+
+red_repunit_dir_dist %>% 
+  ggplot(aes(read.len)) +
+  geom_histogram(bins = 100) +
+  geom_rug()
+```
+
+## Filtering 3: FR + IS + 1820 towards the repeats
+
+Keep the reads containing RED and IS in the same orientation AND at least 1820 (500 + 820 + 500) from the start of the RED towards the repeats (IS).
+
+i.e.: 
+
+- if direct: keep if `end.subject.x` > 1820
+
+- if reverse: keep if `start.subject.y` > 1820
+
+Check it out here:
+
+```{r}
+# if direct: keep if end.subject.x > 1820
+# if reverse: keep if start.subject.y > 1820
+red_repunit_dir_dist %>% 
+  filter(orientation.x == "direct") %>% 
+  select(-orientation.y) %>% 
+  arrange(read.len) %>% 
+  head()
+```
+
+```{r}
+red_repunit_dir_dist %>% 
+  filter(orientation.x == "reverse") %>% 
+  select(-orientation.y) %>%
+  arrange(read.len) %>% 
+  head()
+```
+
+### Filtering itself
+
+```{r}
+red_repunit_dir_dist_len <-
+  red_repunit_dir_dist %>%
+  mutate(keep = if_else(
+    orientation.x == "direct",
+    end.subject.x > 1820,
+    start.subject.y > 1820
+  )) %>%
+  filter(keep)
+
+nrow(red_repunit_dir_dist_len)
+```
+
+
+Which is `r nrow(red_repunit_dir_dist_len)/nrow(red_repunit_dir_dist)` of the previous filtering
+
+
+
