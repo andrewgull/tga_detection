@@ -1,4 +1,4 @@
-# script to filter reads containng correct combiation of
+# script to filter reads containing correct combination of
 # the red flanking region and the repeat unit
 # the 'correct combination' that is 'a red FR first and a repeat unit right next to it'
 
@@ -50,7 +50,7 @@ option_list <- list(
 
   make_option(c("-d", "--max_distance"),
               type = "integer",
-              default = 20,
+              default = 30,
               help = "max allowed distance between FR and REP UNIT",
               metavar = "int")
 )
