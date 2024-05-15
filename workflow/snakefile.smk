@@ -79,9 +79,10 @@ rule create_fr_green:
 rule make_blast_db:
     input: "results/reads/{sample}/reads_filtered.fasta.gz"
     output: directory("results/blast_databases/{sample}")
+    threads: 10
     log: "results/logs/{sample}_blastdb.log"
     conda: "blast-env"
-    shell: "makeblastdb -in {input} -dbtype nucl -out {output}/blastdb &> {log}"
+    shell: "pigz -p {threads} {input} | makeblastdb -in stdin -dbtype nucl -out {output}/blastdb &> {log}"
 
 rule blast_red:
     input: query="results/flanking_regions/fr_red.fa", database="results/blast_databases/{sample}"
@@ -90,6 +91,17 @@ rule blast_red:
     params: fmt=config['format'], n_alns=config['n_fr_aligns']
     log: "results/logs/{sample}_blast_red.log"
     benchmark: "results/benchmarks/blast_red/{sample}.tsv"
+    conda: "blast-env"
+    shell: "blastn -query {input.query} -db {input.database}/blastdb -outfmt {params.fmt} "
+           "-num_threads {threads} -num_alignments {params.n_alns} 1> {output} 2> {log}"
+
+rule blast_green:
+    input: query="results/flanking_regions/fr_green.fa", database="results/blast_databases/{sample}"
+    output: "results/tables/{sample}/blast_green.tsv"
+    threads: 10
+    params: fmt = config['format'], n_alns = config['n_fr_aligns']
+    log: "results/logs/{sample}_blast_green.log"
+    benchmark: "results/benchmarks/blast_green/{sample}.tsv"
     conda: "blast-env"
     shell: "blastn -query {input.query} -db {input.database}/blastdb -outfmt {params.fmt} "
            "-num_threads {threads} -num_alignments {params.n_alns} 1> {output} 2> {log}"
@@ -110,7 +122,7 @@ rule filter_red_and_repeat_unit_blast:
     input: script="workflow/scripts/filter_red_repunit.R",
            red = "results/tables/{sample}/blast_red.tsv",
            repunit = "results/tables/{sample}/blast_repeat_unit.tsv"
-    output: "results/tables/{sample}/blast_joined.tsv"
+    output: "results/tables/{sample}/blast_joined_red_repunit.tsv"
     log: "results/logs/{sample}_blast_joined.log"
     benchmark: "results/benchmarks/filter_fr/{sample}.tsv"
     conda: "rscripts-env"
@@ -119,6 +131,38 @@ rule filter_red_and_repeat_unit_blast:
             distance = config['max_dist']
     shell: "Rscript {input.script} -r {input.red} -u {input.repunit} -i {params.identity} -e {params.e_val} "
            "-l {params.length_fr} -k {params.length_ru} -d {params.distance} -o {output} &> {log}"
+
+# get read lengths which passed the previous filtering step
+rule filtered_read_length:
+    input: script = "workflow/scripts/get_read_lengths.R",
+           table = "results/tables/{sample}/blast_joined_red_repunit.tsv",
+           reads = "results/reads/{sample}/reads_filtered.fasta.gz"
+    output: "results/tables/{sample}/filtered_read_lengths.tsv"
+    log: "results/logs/{sample}_filt_read_len.log"
+    conda: "biostrings-env"
+    shell: "Rscript {input.script} -d {input.table} -r {input.reads} -o {output} &> {log}"
+
+# filter RED+RU+Oriented length
+rule filter_min_orient_length:
+    input: script = "workflow/scripts/filter_1820.R",
+           table = "results/tables/{sample}/blast_joined_red_repunit.tsv"
+    output: "results/tables/{sample}/blast_joined_red_repunit_orient_len.tsv"
+    log: "results/logs/{sample}_filt_min_orient_len.log"
+    conda: "rscripts-env"
+    params: orient_dist = config['orient_dist']
+    shell: "Rscript {input.script} -i {input.table} -d {params.orient_dist} -o {output} &> {log}"
+
+# filter GREEN
+rule filter_flanking_regions:
+    input: script="workflow/scripts/filter_fr_hits.R",
+           red_ru = "results/tables/{sample}/blast_joined_red_repunit_orient_len.tsv",
+           green = "results/tables/{sample}/blast_green.tsv"
+    output: "results/tables/{sample}/blast_joined.tsv"
+    log: "results/logs/{sample}_blast_joined.log"
+    conda: "rscripts-env"
+    params: identity = config['min_identity'], e_val = config['max_e_value'], length = config['min_fr_len']
+    shell: "Rscript {input.script} -r {input.red_ru} -g {input.green} -i {params.identity} -e {params.e_val} "
+           "-l {params.length} -o {output} &> {log}"
 
 rule blast_blaSHV:
     input: query="resources/genes/blaSHV.fa",
@@ -213,6 +257,7 @@ rule final:
             blast_join="results/tables/{sample}/blast_joined.tsv",
             plot_dist="results/plots/{sample}/FR_distances.png",
             plot_len_dist="results/plots/{sample}/reads_FR_distances.png",
+            filt_read_len="results/tables/{sample}/filtered_read_lengths.tsv",
             bla_counts="results/plots/{sample}/blaSHV_counts.png",
             save_counts="results/tables/{sample}/blaSHV_counts.tsv",
             table_counts_all="results/tables/{sample}/blaSHV_counts_all.tsv"
