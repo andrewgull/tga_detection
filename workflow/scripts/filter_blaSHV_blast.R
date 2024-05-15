@@ -12,7 +12,7 @@ option_list <- list(
   make_option(c("-f", "--blast_fr"),
               type = "character",
               default = NULL,
-              help = "joined and filtered table of blast hits of FRs",
+              help = "a table of RED+RU+filt+GREEN",
               metavar = "file.tsv"),
   make_option(c("-e", "--evalue"),
               type = "double",
