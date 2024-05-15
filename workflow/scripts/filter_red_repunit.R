@@ -15,7 +15,7 @@ option_list <- list(
   make_option(c("-u", "--blast_repunit"),
               type = "character",
               default = NULL,
-              help = "blast hits table for FR2 (green)",
+              help = "blast hits table for repeat unit (IS)",
               metavar = "character"),
 
   make_option(c("-o", "--output"),
@@ -107,7 +107,7 @@ parse_blast <- function(file_path, region_name) {
   return(df)
 }
 
-filter_blast_part1 <- function(blast_df, min_len, max_e_value, min_identity) {
+filter_blast <- function(blast_df, min_len, max_e_value, min_identity) {
   # return: a blast table filtered by minimal length, evalue and hit identity
   filt_df <- filter(blast_df,
                     length >= min_len,
@@ -118,6 +118,9 @@ filter_blast_part1 <- function(blast_df, min_len, max_e_value, min_identity) {
 
 filter_rep_unit_flanking_region <-
   function(fr_df, ru_df, max_distance) {
+    # filters red blast and rep unit blast by orientation and max
+    # distance btw the red region and the rep.unit
+    # return: filtered tibble
     left_join(fr_df, ru_df, by = 'subject') %>%
       filter(orientation.x == orientation.y) %>%
       mutate(
@@ -135,15 +138,29 @@ filter_rep_unit_flanking_region <-
 # filter rep unite table
 # NB: min length is different from FR's min length
 blast_red <- parse_blast(opt$blast_red, "FR_red") %>%
-  filter_blast_part1(min_len = opt$min_len_fr, max_e_value = opt$evalue, min_identity = opt$identity)
+  filter_blast(min_len = opt$min_len_fr,
+                     max_e_value = opt$evalue, 
+                     min_identity = opt$identity)
 
 blast_repunit <- parse_blast(opt$blast_repunit, "Rep_unit") %>%
-  filter_blast_part1(min_len = opt$min_len_repunit, max_e_value = opt$evalue, min_identity = opt$identity)
+  filter_blast(min_len = opt$min_len_repunit,
+                     max_e_value = opt$evalue, 
+                     min_identity = opt$identity)
 
 # filter combination of both FR and rep unit
 # 1st: same orientation
 # 2nd: close to each other
-blast_joined <- filter_rep_unit_flanking_region(blast_red, blast_repunit, max_distance = opt$max_distance)
+blast_joined <-
+  filter_rep_unit_flanking_region(blast_red,
+                                  blast_repunit,
+                                  max_distance = opt$max_distance) %>% 
+  # keep some columns
+  select(subject, start.subject.x, end.subject.x, 
+         start.subject.y, end.subject.y, distance, orientation.x)
+
+# give them better names
+names(blast_joined) <- c("subject", "start.red", "end.red", 
+                         "start.rep.unit", "end.rep.unit", "dist", "orient")
 
 # Save results
 write_delim(blast_joined, file = opt$output, delim = "\t")
