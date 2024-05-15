@@ -35,7 +35,7 @@ Here I will outline all the filtering steps that we have decided to include into
 
 As an example I will use sample `76595_D_mh`
 
-## Filtering 1: minimal length
+## Filtering 1: minimal length of reads
 
 Keep only reads longer than 1820 nt (500 nt of FR red hit + 820 nt of IS + 500 nt of anything else, possibly FR green)
 
@@ -192,6 +192,19 @@ red_repunit_dir_dist <- red_repunit %>%
 nrow(red_repunit_dir_dist)
 ```
 
+```{r}
+# give this table nicer names
+# keep only columns that are needed
+red_repunit_dir_dist <- 
+  red_repunit_dir_dist %>% 
+  select(subject, start.subject.x, end.subject.x, start.subject.y, end.subject.y, distance, orientation.x)
+
+names(red_repunit_dir_dist) <- c("subject", "start.red", "end.red", "start.rep.unit", "end.rep.unit", "dist", "orient")
+
+head(red_repunit_dir_dist)
+```
+
+
 ### Read lengths distribution
 
 ```{r}
@@ -216,9 +229,9 @@ Keep the reads containing RED and IS in the same orientation AND at least 1820 (
 
 i.e.: 
 
-- if direct: keep if `end.subject.x` > 1820
+- if direct: keep if `end.red` > 1820
 
-- if reverse: keep if `start.subject.y` > 1820
+- if reverse: keep if `start.rep.unit` > 1820
 
 Check it out here:
 
@@ -226,17 +239,17 @@ Check it out here:
 # if direct: keep if end.subject.x > 1820
 # if reverse: keep if start.subject.y > 1820
 red_repunit_dir_dist %>% 
-  filter(orientation.x == "direct") %>% 
-  select(-orientation.y) %>% 
-  arrange(read.len) %>% 
+  filter(orient == "direct") %>% 
+  #select(-orientation.y) %>% 
+  #arrange(read.len) %>% 
   head()
 ```
 
 ```{r}
 red_repunit_dir_dist %>% 
-  filter(orientation.x == "reverse") %>% 
-  select(-orientation.y) %>%
-  arrange(read.len) %>% 
+  filter(orient == "reverse") %>% 
+  #select(-orientation.y) %>%
+  #arrange(read.len) %>% 
   head()
 ```
 
@@ -246,9 +259,9 @@ red_repunit_dir_dist %>%
 red_repunit_dir_dist_len <-
   red_repunit_dir_dist %>%
   mutate(keep = if_else(
-    orientation.x == "direct",
-    end.subject.x > 1820,
-    start.subject.y > 1820
+    orient == "direct",
+    end.red > 1820,
+    start.rep.unit > 1820
   )) %>%
   filter(keep)
 
@@ -258,5 +271,54 @@ nrow(red_repunit_dir_dist_len)
 
 Which is `r nrow(red_repunit_dir_dist_len)/nrow(red_repunit_dir_dist)` of the previous filtering
 
+```{r}
+head(red_repunit_dir_dist_len)
+```
 
+## Test of compatibility
+
+New filtering of FR+RU+1820 and old FR green blast table
+
+```{r}
+get_multihits_ids <- function(df) {
+  # df: filtered blast table
+  # return: subject (read ids) containing multiple query hits
+  df %>%
+    group_by(subject) %>%
+    count() %>%
+    filter(n > 1) %>%
+    pull(subject)
+}
+
+# here's the updated filtering function
+filter_red_green <- function(df_red_ru, df_green) {
+  # find read IDs containing multiple query hits
+  reads_multiple_hits <- union(get_multihits_ids(df_red_ru),
+                               get_multihits_ids(df_green))
+  # filter out reads with multiple query hits
+  # df_red_ru have differen column names!
+  df_red_ru_filt <- df_red_ru %>%
+    filter(!subject %in% reads_multiple_hits)
+  df_green_filt <- df_green %>%
+    filter(!subject %in% reads_multiple_hits)
+  
+  # Filter by orientation
+  # Add distance between FRs
+  df_joined <- full_join(df_red_ru_filt, df_green_filt, by = "subject") %>%
+    filter(!is.na(query.x), !is.na(query.y), orient == orientation) %>%
+    mutate(green.red.distance = end.red - start.subject,
+           distance.btw.FR = if_else(green.red.distance < 0, 
+                                     green.red.distance * -1, 
+                                     green.red.distance * 1))
+  return(df_joined)
+}
+
+blast_green <- parse_blast(file = "../results/tables/76595_D_mh/blast_green.tsv", "FR_green")
+blast_red <- red_repunit_dir_dist
+blast_red$query <- "FR_RU_filt"
+
+# test the function
+filter_red_green(blast_red, blast_green)
+# it works!
+```
 
