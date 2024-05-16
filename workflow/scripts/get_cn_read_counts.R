@@ -90,9 +90,9 @@ stopifnot(nrow(fr_repunit_table) != 0)
 
 # array of copies
 cn_array <- seq(0, opt$max_cn, 1)
-# count the reads
-n_reads_w_cn <- map_int(number_of_copies,
-                        ~ count_reads_with_cn(test_df,
+# count the reads for each CNV
+n_reads_w_cn <- map_int(cn_array,
+                        ~ count_reads_with_cn(fr_repunit_table,
                                               cn = .,
                                               base_len = opt$base_len,
                                               increment = opt$increment))
