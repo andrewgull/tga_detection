@@ -257,7 +257,7 @@ rule final:
             blast_join="results/tables/{sample}/blast_joined.tsv",
             plot_dist="results/plots/{sample}/FR_distances.png",
             plot_len_dist="results/plots/{sample}/reads_FR_distances.png",
-            filt_read_len="results/tables/{sample}/filtered_read_lengths.tsv",
+            read_cn="results/tables/{sample}/number_reads_containing_CN.tsv",
             bla_counts="results/plots/{sample}/blaSHV_counts.png",
             save_counts="results/tables/{sample}/blaSHV_counts.tsv",
             table_counts_all="results/tables/{sample}/blaSHV_counts_all.tsv"
