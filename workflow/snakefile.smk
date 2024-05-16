@@ -132,16 +132,6 @@ rule filter_red_and_repeat_unit_blast:
     shell: "Rscript {input.script} -r {input.red} -u {input.repunit} -i {params.identity} -e {params.e_val} "
            "-l {params.length_fr} -k {params.length_ru} -d {params.distance} -o {output} &> {log}"
 
-# get read lengths which passed the previous filtering step
-rule filtered_read_length:
-    input: script = "workflow/scripts/get_read_lengths.R",
-           table = "results/tables/{sample}/blast_joined_red_repunit.tsv",
-           reads = "results/reads/{sample}/reads_filtered.fasta.gz"
-    output: "results/tables/{sample}/filtered_read_lengths.tsv"
-    log: "results/logs/{sample}_filt_read_len.log"
-    conda: "biostrings-env"
-    shell: "Rscript {input.script} -d {input.table} -r {input.reads} -o {output} &> {log}"
-
 # filter RED+RU+Oriented length
 rule filter_min_orient_length:
     input: script = "workflow/scripts/filter_1820.R",
@@ -151,6 +141,16 @@ rule filter_min_orient_length:
     conda: "rscripts-env"
     params: orient_dist = config['orient_dist']
     shell: "Rscript {input.script} -i {input.table} -d {params.orient_dist} -o {output} &> {log}"
+
+# get read lengths which passed the previous filtering step
+rule cn_reads_bins:
+    input: script = "workflow/scripts/get_cn_read_counts.R",
+           table = "results/tables/{sample}/blast_joined_red_repunit_orient_len.tsv",
+           reads = "results/reads/{sample}/reads_filtered.fasta.gz"
+    output: "results/tables/{sample}/number_reads_containing_CN.tsv"
+    log: "results/logs/{sample}_filt_read_len.log"
+    conda: "biostrings-env"
+    shell: "Rscript {input.script} -d {input.table} -r {input.reads} -o {output} &> {log}"
 
 # filter GREEN
 rule filter_flanking_regions:
