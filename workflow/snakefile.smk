@@ -149,7 +149,7 @@ rule cn_reads_bins:
            reads = "results/reads/{sample}/reads_filtered.fasta.gz"
     output: "results/tables/{sample}/number_reads_containing_CN.tsv"
     log: "results/logs/{sample}_filt_read_len.log"
-    conda: "biostrings-env"
+    conda: "rscripts-env"
     shell: "Rscript {input.script} -d {input.table} -r {input.reads} -o {output} &> {log}"
 
 # filter GREEN
