@@ -311,7 +311,7 @@ count_reads_with_cn <- function(df, cn = 0) {
   return(nrow(df_filt))
 }
 
-n_reads_w_cn <- tibble("CN" = number_of_copies, "n.reads" = map_int(number_of_copies, ~ count_reads_with_cn(test_df, cn = .)))
+n_reads_w_cn <- data.frame("CN" = number_of_copies, "n.reads" = map_int(number_of_copies, ~ count_reads_with_cn(test_df, cn = .)))
 
 # this is the table with so called 'length distribution'
 n_reads_w_cn
