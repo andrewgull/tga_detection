@@ -139,18 +139,19 @@ rule filter_min_orient_length:
     output: "results/tables/{sample}/blast_joined_red_repunit_orient_len.tsv"
     log: "results/logs/{sample}_filt_min_orient_len.log"
     conda: "rscripts-env"
-    params: orient_dist = config['orient_dist']
-    shell: "Rscript {input.script} -i {input.table} -d {params.orient_dist} -o {output} &> {log}"
+    params: base_len = config['base_len']
+    shell: "Rscript {input.script} -i {input.table} -d {params.base_len} -o {output} &> {log}"
 
-# get read lengths which passed the previous filtering step
+# get counts of read possibly containing various CNs
 rule cn_reads_bins:
     input: script = "workflow/scripts/get_cn_read_counts.R",
-           table = "results/tables/{sample}/blast_joined_red_repunit_orient_len.tsv",
-           reads = "results/reads/{sample}/reads_filtered.fasta.gz"
+           table = "results/tables/{sample}/blast_joined_red_repunit_orient_len.tsv"
     output: "results/tables/{sample}/number_reads_containing_CN.tsv"
-    log: "results/logs/{sample}_filt_read_len.log"
+    log: "results/logs/{sample}_cn_reads_bins.log"
     conda: "rscripts-env"
-    shell: "Rscript {input.script} -d {input.table} -r {input.reads} -o {output} &> {log}"
+    params: max_cn = config['max_cn'], incr = config['increment'], base_len=config['base_len']
+    shell: "Rscript {input.script} -t {input.table} -c {params.max_cn} -i {params.incr} "
+           "-b {params.base_len} -o {output} &> {log}"
 
 # filter GREEN
 rule filter_flanking_regions:
