@@ -49,7 +49,8 @@ filter_by_distance <- function(df, dist=1820) {
       end.red > dist,
       start.rep.unit > dist
     )) %>%
-    filter(keep)
+    filter(keep) %>%
+    select(-keep)
 }
 
 # read the iput table
