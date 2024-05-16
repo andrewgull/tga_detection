@@ -204,26 +204,7 @@ names(red_repunit_dir_dist) <- c("subject", "start.red", "end.red", "start.rep.u
 head(red_repunit_dir_dist)
 ```
 
-
-### Read lengths distribution
-
-```{r}
-file_path <- "../results/reads/76595_D_mh/reads_all.fasta"
-# Read the file
-read_lengths <- Biostrings::width(Biostrings::readDNAStringSet(file_path))
-
-reads_len_df <- tibble("subject" = sub("^(.*?) runid=.*", "\\1", names(Biostrings::readDNAStringSet(file_path))), 
-                       "read.len" = read_lengths)
-
-red_repunit_dir_dist <- left_join(red_repunit_dir_dist, reads_len_df, by = "subject")
-
-red_repunit_dir_dist %>% 
-  ggplot(aes(read.len)) +
-  geom_histogram(bins = 100) +
-  geom_rug()
-```
-
-## Filtering 3: FR + IS + 1820 towards the repeats
+## Filtering 3: FR + IS + 1820/5270/8720 etc towards the repeats
 
 Keep the reads containing RED and IS in the same orientation AND at least 1820 (500 + 820 + 500) from the start of the RED towards the repeats (IS).
 
@@ -275,6 +256,75 @@ Which is `r nrow(red_repunit_dir_dist_len)/nrow(red_repunit_dir_dist)` of the pr
 head(red_repunit_dir_dist_len)
 ```
 
+### Read lengths distribution
+
+Having just a distribution of lengths is not enough
+
+We need bins (i.e. number of reads in each bin) of reads:
+ - able to contain 0 blaSHV copies (all reads)
+ - able to contain 1 blaSHV copy (min length of 5270 bp from the beginning of RED towards RU)
+ - able to contain 2 bla SHV copies (min len. 8720...)
+ 
+ and so on
+
+```{r}
+file_path <- "../results/reads/76595_D_mh/reads_filtered.fasta.gz" # reads after the 1st filtering by length
+# Read the file
+read_lengths <- Biostrings::width(Biostrings::readDNAStringSet(file_path))
+
+reads_len_df <- tibble("subject" = sub("^(.*?) runid=.*", "\\1", names(Biostrings::readDNAStringSet(file_path))), 
+                       "read.len" = read_lengths)
+
+#red_repunit_dir_dist <- left_join(red_repunit_dir_dist, reads_len_df, by = "subject")
+
+reads_len_df %>% 
+  ggplot(aes(read.len)) +
+  geom_histogram(bins = 100) +
+  geom_rug()
+```
+
+Function
+
+```{r}
+library(tidyverse)
+# data for testing is the table from filtering step no. 3
+test_df <- read_tsv(
+  file = "../results/tables/76595_D_mh/blast_joined_red_repunit_orient_len.tsv", 
+  show_col_types = FALSE
+  )
+
+# let's consider up to 12 copies
+number_of_copies <- seq(0, 12, 1)
+
+count_reads_with_cn <- function(df, cn = 0) {
+  # calculate min length 
+  min_len <- 1820 + 3450*cn
+  # filter the input table
+  df_filt <- df %>%
+  mutate(keep = if_else(
+    orient == "direct",
+    end.red > min_len,
+    start.rep.unit > min_len
+  )) %>%
+  filter(keep)
+  
+  return(nrow(df_filt))
+}
+
+n_reads_w_cn <- tibble("CN" = number_of_copies, "n.reads" = map_int(number_of_copies, ~ count_reads_with_cn(test_df, cn = .)))
+
+# this is the table with so called 'length distribution'
+n_reads_w_cn
+```
+
+```{r}
+n_reads_w_cn %>% 
+  ggplot(aes(CN, n.reads)) +
+  geom_col(fill="darkgreen", alpha = 0.5)
+```
+
+
+
 ## Test of compatibility
 
 New filtering of FR+RU+1820 and old FR green blast table
@@ -321,4 +371,26 @@ blast_red$query <- "FR_RU_filt"
 filter_red_green(blast_red, blast_green)
 # it works!
 ```
+
+## Calculations
+
+reads that have passed through filtering step no. 3: R + IS + orient + 1820 incl.R
+
+```{r}
+library(tidyverse)
+
+file_path <- "../results/tables/76595_D_mh/blast_joined_red_repunit_orient_len.tsv"
+
+df_f3 <- read_tsv(file_path, show_col_types = F)
+
+head(df_f3)
+```
+
+unique reads
+
+```{r}
+length(unique(df_f3$subject))
+```
+
+For the actual calculations see the Excel file
 
