@@ -8,3 +8,4 @@ dependencies:
   - r-dplyr
   - r-readr
   - r-optparse=1.7.4
+  - r-purrr=1.0.2
