@@ -394,3 +394,91 @@ length(unique(df_f3$subject))
 
 For the actual calculations see the Excel file
 
+Binned reads: number of reads capable of containing certain number of blaSHV copies
+
+```{r}
+file <- "../results/tables/76595_D_mh/number_reads_containing_CN.tsv"
+
+cn_bins <- read_delim(file, show_col_types = F)
+cn_bins
+```
+
+Now I need reads that actually contain 0, 1, 2 etc copies of blaSHV
+
+
+```{r}
+# the last table produced by the pipeline - with blaSHV counts
+file <- "../results/tables/76595_D_mh/blaSHV_counts.tsv"
+bla_cn <- read_delim(file, show_col_types = F) %>% 
+  filter(!is.na(n.blaSHV.merged)) # why do you have NAs there?
+
+unique(bla_cn$n.blaSHV.merged)
+```
+
+
+How many reads that were input of this step (i.e. from step 3) did not have any blaSHV?
+
+```{r}
+length(unique(df_f3$subject)) - length(unique(bla_cn$subject))
+```
+
+How many had different number of blaSHV copies?
+
+```{r}
+cn0 <- length(unique(df_f3$subject)) - length(unique(bla_cn$subject))
+
+bla_cn_freq <- 
+  bla_cn %>% 
+  group_by(n.blaSHV.merged) %>% 
+  count(name = "counts") %>% 
+  ungroup() %>% 
+  mutate(counts = counts + c(cn0, rep(0, 9))) %>% 
+  rename("CN" = n.blaSHV.merged,
+         "reads_counts" = counts)
+
+bla_cn_freq
+```
+
+Calculation of the final table from the Excel file
+
+```{r}
+# total - n reads with 0 CN from the cn_bins table
+total <- cn_bins %>% 
+  filter(CN == 0) %>% 
+  pull(n.reads)
+
+# find observed CN frequency
+bla_cn_freq <- 
+  bla_cn_freq %>% 
+  mutate(reads_freq_obs = reads_counts / total)
+
+# find frequency of reads that might contain certain CN
+cn_bins <- 
+  cn_bins %>% 
+  mutate(reads_freq_possible = n.reads / total)
+
+# adjust CN frequency
+bla_cn_freq <- 
+  bla_cn_freq %>% 
+  left_join(cn_bins, by = "CN") %>% 
+  mutate(reads_freq_adj = reads_freq_obs / reads_freq_possible)
+
+bla_cn_freq
+```
+
+Plot
+
+```{r}
+bla_cn_freq %>% 
+  select(CN, reads_freq_obs,reads_freq_adj) %>% 
+  pivot_longer(cols = 2:3, names_to = "group", values_to = "freq") %>% 
+  ggplot(aes(CN, freq)) + 
+  geom_col(aes(fill = group), position = "dodge") +
+  scale_x_continuous(breaks = c(0:11)) +
+  geom_rug(sides = "b", length = unit(0.03, "npc")) +
+  scale_fill_brewer(palette = "Dark2") +
+  theme_bw()
+```
+
+
+
