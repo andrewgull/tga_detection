@@ -103,4 +103,4 @@ output_table <- data.frame("CN" = cn_array,
 
 # save results
 write.table(output_table, file = opt$output, sep = "\t", row.names = FALSE, quote = FALSE)
-print("Fininshed. No erorrs.")
+print("Finished. No erorrs.")

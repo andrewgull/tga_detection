@@ -164,4 +164,4 @@ names(blast_joined) <- c("subject", "start.red", "end.red",
 
 # Save results
 write_delim(blast_joined, file = opt$output, delim = "\t")
-print("Fininshed. No erorrs.")
+print("Finished. No erorrs.")

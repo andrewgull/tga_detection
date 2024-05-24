@@ -144,4 +144,4 @@ blast_joined <- filter_red_green(blast_red, blast_green)
 
 # Save results
 write_delim(blast_joined, file = opt$output, delim = "\t")
-print("Fininshed. No erorrs.")
+print("Finished. No erorrs.")

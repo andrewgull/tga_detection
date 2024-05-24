@@ -60,4 +60,4 @@ names(bla_df_filt) <- c("query", "subject", "identity", "length", "mismatch",
                         "end.subject", "e.value", "bit.score")
 # save results of filtering
 readr::write_delim(bla_df_filt, file = opt$output, delim = "\t")
-print("Fininshed. No erorrs.")
+print("Finished. No erorrs.")

@@ -64,4 +64,4 @@ output_table <- filter_by_distance(input_table, dist = opt$distance)
 
 # save results
 write_delim(output_table, file = opt$output, delim = "\t")
-print("Fininshed. No erorrs.")
+print("Finished. No erorrs.")
