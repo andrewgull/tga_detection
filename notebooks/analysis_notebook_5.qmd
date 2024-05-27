@@ -399,7 +399,9 @@ Binned reads: number of reads capable of containing certain number of blaSHV cop
 ```{r}
 file <- "../results/tables/76595_D_mh/number_reads_containing_CN.tsv"
 
-cn_bins <- read_delim(file, show_col_types = F)
+cn_bins <- read_delim(file, show_col_types = F) %>% 
+  rename("reads_counts_theor" = n.reads)
+
 cn_bins
 ```
 
@@ -434,7 +436,7 @@ bla_cn_freq <-
   ungroup() %>% 
   mutate(counts = counts + c(cn0, rep(0, 9))) %>% 
   rename("CN" = n.blaSHV.merged,
-         "reads_counts" = counts)
+         "reads_counts_obs" = counts)
 
 bla_cn_freq
 ```
@@ -445,23 +447,24 @@ Calculation of the final table from the Excel file
 # total - n reads with 0 CN from the cn_bins table
 total <- cn_bins %>% 
   filter(CN == 0) %>% 
-  pull(n.reads)
+  pull(reads_counts_theor)
 
 # find observed CN frequency
 bla_cn_freq <- 
   bla_cn_freq %>% 
-  mutate(reads_freq_obs = reads_counts / total)
+  mutate(reads_freq_obs = reads_counts_obs / total)
 
 # find frequency of reads that might contain certain CN
 cn_bins <- 
   cn_bins %>% 
-  mutate(reads_freq_possible = n.reads / total)
+  mutate(reads_freq_theor = reads_counts_theor / total)
 
 # adjust CN frequency
 bla_cn_freq <- 
   bla_cn_freq %>% 
   left_join(cn_bins, by = "CN") %>% 
-  mutate(reads_freq_adj = reads_freq_obs / reads_freq_possible)
+  mutate(reads_counts_adj = reads_counts_obs / reads_freq_theor,
+         reads_freq_adj = reads_counts_adj/sum(reads_counts_adj))
 
 bla_cn_freq
 ```
@@ -470,14 +473,15 @@ Plot
 
 ```{r}
 bla_cn_freq %>% 
-  select(CN, reads_freq_obs,reads_freq_adj) %>% 
+  select(CN, reads_freq_obs, reads_freq_adj) %>% 
   pivot_longer(cols = 2:3, names_to = "group", values_to = "freq") %>% 
   ggplot(aes(CN, freq)) + 
-  geom_col(aes(fill = group), position = "dodge") +
+  geom_line(aes(color = group)) +
   scale_x_continuous(breaks = c(0:11)) +
   geom_rug(sides = "b", length = unit(0.03, "npc")) +
   scale_fill_brewer(palette = "Dark2") +
-  theme_bw()
+  theme_bw() 
+  #coord_trans(y = "log")
 ```
 
 
