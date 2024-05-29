@@ -82,7 +82,7 @@ rule make_blast_db:
     threads: 10
     log: "results/logs/{sample}_blastdb.log"
     conda: "blast-env"
-    shell: "pigz -p {threads} {input} | makeblastdb -in stdin -dbtype nucl -out {output}/blastdb &> {log}"
+    shell: "pigz -d -p {threads} {input} | makeblastdb -in - -dbtype nucl -title blastdb -out {output}/blastdb && pigz -p {threads} {input}[:-3] &> {log}"
 
 rule blast_red:
     input: query="results/flanking_regions/fr_red.fa", database="results/blast_databases/{sample}"
