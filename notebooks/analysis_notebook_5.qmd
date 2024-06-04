@@ -256,7 +256,7 @@ Which is `r nrow(red_repunit_dir_dist_len)/nrow(red_repunit_dir_dist)` of the pr
 head(red_repunit_dir_dist_len)
 ```
 
-### Read lengths distribution
+## Read counts in bins
 
 Having just a distribution of lengths is not enough
 
@@ -266,60 +266,95 @@ We need bins (i.e. number of reads in each bin) of reads:
  - able to contain 2 bla SHV copies (min len. 8720...)
  
  and so on
-
-```{r}
-file_path <- "../results/reads/76595_D_mh/reads_filtered.fasta.gz" # reads after the 1st filtering by length
-# Read the file
-read_lengths <- Biostrings::width(Biostrings::readDNAStringSet(file_path))
-
-reads_len_df <- tibble("subject" = sub("^(.*?) runid=.*", "\\1", names(Biostrings::readDNAStringSet(file_path))), 
-                       "read.len" = read_lengths)
-
-#red_repunit_dir_dist <- left_join(red_repunit_dir_dist, reads_len_df, by = "subject")
-
-reads_len_df %>% 
-  ggplot(aes(read.len)) +
-  geom_histogram(bins = 100) +
-  geom_rug()
-```
-
-Function
+ 
+ 
+If the hit is direct, then `red.end` > (1820+3450*CN)  is enough
+If the hit is reverse, then I need the distance between `red.end` and the opposite end of this read, which is `read.length` - `red.end`, in other words: (`read.length` - `red.end`) > (1820+3450*CN)
 
 ```{r}
 library(tidyverse)
-# data for testing is the table from filtering step no. 3
-test_df <- read_tsv(
-  file = "../results/tables/76595_D_mh/blast_joined_red_repunit_orient_len.tsv", 
+
+# read the table with reads filtered by red fr + rep.unit + orientation
+table_path <- "../results/tables/76595_D_mh/blast_joined_red_repunit_orient_len.tsv"
+
+blast_df <- read_tsv(
+  file = table_path, 
   show_col_types = FALSE
   )
 
+# filter direct hits
+blast_df_direct <- 
+  blast_df %>% 
+  filter(orient == "direct")
+# filter those that have the required distance
+# here's a function
+count_reads_with_cn <- function(df, cn = 0) {
+  # only for direct hits!
+  df %>%
+    mutate(keep = end.red > (1820 + 3450 * cn)) %>%
+    filter(keep) %>% 
+    nrow()
+}
 # let's consider up to 12 copies
 number_of_copies <- seq(0, 12, 1)
+# apply the function above
+n_reads_w_cn_direct <-
+  data.frame("CN" = number_of_copies,
+             "n.reads" = map_int(
+               number_of_copies,
+               ~ count_reads_with_cn(blast_df_direct, cn = .)
+             ))
 
-count_reads_with_cn <- function(df, cn = 0) {
-  # calculate min length 
-  min_len <- 1820 + 3450*cn
-  # filter the input table
-  df_filt <- df %>%
-  mutate(keep = if_else(
-    orient == "direct",
-    end.red > min_len,
-    start.rep.unit > min_len
-  )) %>%
-  filter(keep)
-  
-  return(nrow(df_filt))
+#### now do different kind of filtering/counting using reverse reads ####
+# these are the reads after the 1st filtering by length
+reads_path <- "../results/reads/76595_D_mh/reads_filtered.fasta"
+read_lengths <-
+  Biostrings::width(Biostrings::readDNAStringSet(reads_path))
+
+reads_len_df <-
+  tibble("subject" = sub(
+    "^(.*?) runid=.*",
+    "\\1",
+    names(Biostrings::readDNAStringSet(reads_path))
+  ),
+  "read.len" = read_lengths)
+
+# filter reverse reads and
+# join with reads lengths
+blast_df_reverse <- 
+  blast_df %>% 
+  filter(orient == "reverse") %>% 
+  left_join(reads_len_df, by = "subject")
+
+# function to get the counts
+count_reads_with_cn_reverse <- function(df, cn = 0) {
+  # only for reverse hits!
+  df %>%
+    mutate(keep = (read.len - end.red) > (1820 + 3450 * cn)) %>%
+    filter(keep) %>% 
+    nrow()
 }
 
-n_reads_w_cn <- data.frame("CN" = number_of_copies, "n.reads" = map_int(number_of_copies, ~ count_reads_with_cn(test_df, cn = .)))
+# apply it
+n_reads_w_cn_reverse <-
+  data.frame("CN" = number_of_copies,
+             "n.reads" = map_int(
+               number_of_copies,
+               ~ count_reads_with_cn_reverse(blast_df_reverse, cn = .)
+             ))
 
-# this is the table with so called 'length distribution'
+n_reads_w_cn <- full_join(n_reads_w_cn_direct, n_reads_w_cn_reverse, by = "CN") %>% 
+  mutate(n.reads.total = n.reads.x + n.reads.y)
+
+write_delim(n_reads_w_cn, file = "../results/tables/76595_D_mh/number_reads_containing_CN.tsv")
+
 n_reads_w_cn
 ```
 
+
 ```{r}
 n_reads_w_cn %>% 
-  ggplot(aes(CN, n.reads)) +
+  ggplot(aes(CN, n.reads.total)) +
   geom_col(fill="darkgreen", alpha = 0.5)
 ```
 
@@ -372,7 +407,7 @@ filter_red_green(blast_red, blast_green)
 # it works!
 ```
 
-## Calculations
+## Calculations: way no. 1
 
 reads that have passed through filtering step no. 3: R + IS + orient + 1820 incl.R
 
@@ -400,7 +435,8 @@ Binned reads: number of reads capable of containing certain number of blaSHV cop
 file <- "../results/tables/76595_D_mh/number_reads_containing_CN.tsv"
 
 cn_bins <- read_delim(file, show_col_types = F) %>% 
-  rename("reads_counts_theor" = n.reads)
+  select(CN, n.reads.total) %>% 
+  rename("reads_counts_theor" = n.reads.total)
 
 cn_bins
 ```
@@ -436,7 +472,7 @@ bla_cn_freq <-
   ungroup() %>% 
   mutate(counts = counts + c(cn0, rep(0, 9))) %>% 
   rename("CN" = n.blaSHV.merged,
-         "reads_counts_obs" = counts)
+         "bla_counts_obs" = counts)
 
 bla_cn_freq
 ```
@@ -452,37 +488,191 @@ total <- cn_bins %>%
 # find observed CN frequency
 bla_cn_freq <- 
   bla_cn_freq %>% 
-  mutate(reads_freq_obs = reads_counts_obs / total)
+  mutate(bla_freq_obs = bla_counts_obs / total)
 
 # find frequency of reads that might contain certain CN
 cn_bins <- 
   cn_bins %>% 
-  mutate(reads_freq_theor = reads_counts_theor / total)
+  mutate(bla_freq_theor = reads_counts_theor / total)
 
-# adjust CN frequency
+# adjust CN counts and then calculate frequency
 bla_cn_freq <- 
   bla_cn_freq %>% 
   left_join(cn_bins, by = "CN") %>% 
-  mutate(reads_counts_adj = reads_counts_obs / reads_freq_theor,
-         reads_freq_adj = reads_counts_adj/sum(reads_counts_adj))
+  mutate(bla_counts_adj = bla_counts_obs / bla_freq_theor,
+         bla_freq_adj = bla_counts_adj/sum(bla_counts_adj))
 
 bla_cn_freq
 ```
 
-Plot
-
 ```{r}
-bla_cn_freq %>% 
-  select(CN, reads_freq_obs, reads_freq_adj) %>% 
-  pivot_longer(cols = 2:3, names_to = "group", values_to = "freq") %>% 
-  ggplot(aes(CN, freq)) + 
-  geom_line(aes(color = group)) +
-  scale_x_continuous(breaks = c(0:11)) +
-  geom_rug(sides = "b", length = unit(0.03, "npc")) +
-  scale_fill_brewer(palette = "Dark2") +
-  theme_bw() 
-  #coord_trans(y = "log")
+sum(bla_cn_freq$bla_freq_adj)
 ```
 
 
+### Plot
+
+```{r, fig.width=10, fig.height=10}
+library(patchwork)
+
+plot_line_full <- bla_cn_freq %>%
+  select(CN, bla_freq_obs, bla_freq_adj) %>%
+  pivot_longer(cols = 2:3,
+               names_to = "group",
+               values_to = "freq") %>%
+  ggplot(aes(CN, freq)) +
+  geom_line(aes(color = group)) +
+  scale_x_continuous(breaks = c(0:12)) +
+  geom_rug(sides = "b", length = unit(0.03, "npc")) +
+  scale_color_brewer(palette = "Dark2") +
+  theme_bw() +
+  theme(legend.position="top", legend.title = element_blank())
+
+plot_line_part <- bla_cn_freq %>% 
+  select(CN, bla_freq_obs, bla_freq_adj) %>% 
+  filter(CN >= 5) %>% 
+  pivot_longer(cols = 2:3, names_to = "group", values_to = "freq") %>% 
+  ggplot(aes(CN, freq)) + 
+  geom_line(aes(color = group)) +
+  scale_x_continuous(breaks = c(0:12)) +
+  geom_rug(sides = "b", length = unit(0.03, "npc")) +
+  scale_color_brewer(palette = "Dark2") +
+  theme_bw() +
+  theme(legend.position="top", legend.title = element_blank())
+
+plot_line_log10 <- bla_cn_freq %>%
+  select(CN, bla_freq_obs, bla_freq_adj) %>%
+  pivot_longer(cols = 2:3,
+               names_to = "group",
+               values_to = "freq") %>%
+  ggplot(aes(CN, log10(freq))) +
+  geom_line(aes(color = group)) +
+  scale_x_continuous(breaks = c(0:12)) +
+  geom_rug(sides = "b", length = unit(0.03, "npc")) +
+  scale_color_brewer(palette = "Dark2") +
+  theme_bw() +
+  theme(legend.position="top", legend.title = element_blank())
+
+(plot_line_full | plot_line_part) / plot_line_log10
+```
+
+
+```{r, fig.width=10}
+plot_col_full <- bla_cn_freq %>% 
+  select(CN, bla_freq_obs, bla_freq_adj) %>% 
+  pivot_longer(cols = 2:3, names_to = "group", values_to = "freq") %>% 
+  ggplot(aes(CN, freq)) + 
+  geom_col(aes(fill = group), position = "dodge") +
+  scale_fill_brewer(palette = "Dark2") +
+  scale_x_continuous(breaks = c(0:12)) +
+  theme_bw() +
+  geom_rug(sides = "b", length = unit(0.03, "npc")) + 
+  theme(legend.position="top", legend.title = element_blank())
+
+plot_col_part <- bla_cn_freq %>% 
+  select(CN, bla_freq_obs, bla_freq_adj) %>% 
+  filter(CN >= 5) %>% 
+  pivot_longer(cols = 2:3, names_to = "group", values_to = "freq") %>% 
+  ggplot(aes(CN, freq)) + 
+  geom_col(aes(fill = group), position = "dodge") +
+  scale_fill_brewer(palette = "Dark2") +
+  scale_x_continuous(breaks = c(0:12)) +
+  theme_bw() +
+  geom_rug(sides = "b", length = unit(0.03, "npc")) + 
+  theme(legend.position="top", legend.title = element_blank())
+
+(plot_col_full | plot_col_part)
+```
+
+## Calculations: way no. 2
+
+We take into consideration only the reads that can contains the biggest CN of bla genes and calculate CN frequencies.
+This new distribution should look similar to the one above.
+
+
+```{r}
+# this function returns a table of reads possibly containing 
+# specified number of bla genes
+# input: a table with direct hist and a table with reverse hits + corresponding reads lengths
+reads_with_cn <- function(df_dir, df_rev, cn = 0) {
+  min_len <- (1820 + 3450 * cn)
+  bind_rows(
+    # only for direct hits!
+    df_dir %>%
+      mutate(keep = end.red > min_len) %>%
+      filter(keep),
+    # only for reverse hits!
+    df_rev %>%
+      mutate(keep = (read.len - end.red) > min_len) %>%
+      filter(keep)
+  )
+}
+
+# biggest CN is 11
+reads_cn11 <- reads_with_cn(blast_df_direct, blast_df_reverse, cn = 11) %>% 
+  left_join(bla_cn, by = "subject") %>% 
+  select(-c(keep, read.len))
+
+# some reads do not contain blaSHV as expected
+reads_cn11 %>% filter(is.na(n.blaSHV.merged)) %>% nrow()
+
+# observed bla counts
+reads_cn11 %>% 
+  filter(!is.na(n.blaSHV.merged)) %>% 
+  ggplot(aes(n.blaSHV.merged)) +
+  geom_histogram(binwidth = 1) +
+  scale_x_continuous(breaks = c(0:12)) +
+  theme_bw() +
+  geom_rug(sides = "b", length = unit(0.03, "npc"))
+```
+
+Get the actual frequencies
+
+```{r}
+reads_cn11_freq <- reads_cn11 %>% 
+  filter(!is.na(n.blaSHV.merged)) %>% 
+  select(subject, n.blaSHV.merged) %>% 
+  group_by(n.blaSHV.merged) %>% 
+  count() %>% 
+  ungroup() %>% 
+  mutate(freq_by_longest = n/sum(n)) %>% 
+  rename("CN" = n.blaSHV.merged)
+
+reads_cn11_freq %>% 
+  ggplot(aes(CN, freq_by_longest)) +
+  geom_line() +
+  scale_x_continuous(breaks = c(0:12)) +
+  theme_bw() +
+  geom_rug(sides = "b", length = unit(0.03, "npc"))
+  
+```
+
+Compare with the other way of calculating bla CN frequency
+
+```{r}
+bla_freq_2ways <-
+  full_join(bla_cn_freq %>%
+              select(CN, bla_freq_obs, bla_freq_adj),
+            reads_cn11_freq %>% 
+              select(-n),
+            by = "CN") %>% 
+  mutate(freq_by_longest = map_dbl(freq_by_longest, ~replace(., is.na(.), 0)))
+
+bla_freq_2ways %>% 
+  pivot_longer(cols = 2:4,
+               names_to = "group",
+               values_to = "frequency") %>%
+  ggplot(aes(CN, log10(frequency))) +
+  geom_line(aes(color = group)) +
+  scale_x_continuous(breaks = c(0:12)) +
+  geom_rug(sides = "b", length = unit(0.03, "npc")) +
+  scale_color_brewer(palette = "Dark2") +
+  theme_bw() +
+  theme(legend.position="top", legend.title = element_blank())
+```
+
+
+```{r}
+bla_freq_2ways
+```
 
