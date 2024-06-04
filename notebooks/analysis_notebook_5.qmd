@@ -664,7 +664,7 @@ bla_freq_2ways %>%
                values_to = "frequency") %>%
   ggplot(aes(CN, log10(frequency))) +
   geom_line(aes(color = group)) +
-  scale_x_continuous(breaks = c(0:12)) +
+  scale_x_continuous(breaks = c(0:8, 11)) +
   geom_rug(sides = "b", length = unit(0.03, "npc")) +
   scale_color_brewer(palette = "Dark2") +
   theme_bw() +
