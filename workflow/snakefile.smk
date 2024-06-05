@@ -145,12 +145,13 @@ rule filter_min_orient_length:
 # get counts of read possibly containing various CNs
 rule cn_reads_bins:
     input: script = "workflow/scripts/get_cn_read_counts.R",
-           table = "results/tables/{sample}/blast_joined_red_repunit_orient_len.tsv"
+           table = "results/tables/{sample}/blast_joined_red_repunit_orient_len.tsv",
+           reads = "results/reads/{sample}/reads_filtered.fasta"
     output: "results/tables/{sample}/number_reads_containing_CN.tsv"
     log: "results/logs/{sample}_cn_reads_bins.log"
     conda: "rscripts-env"
     params: max_cn = config['max_cn'], incr = config['increment'], base_len=config['base_len']
-    shell: "Rscript {input.script} -t {input.table} -c {params.max_cn} -i {params.incr} "
+    shell: "Rscript {input.script} -t {input.table} -r {input.reads} -c {params.max_cn} -i {params.incr} "
            "-b {params.base_len} -o {output} &> {log}"
 
 # filter GREEN
