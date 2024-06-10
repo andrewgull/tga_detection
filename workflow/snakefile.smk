@@ -31,24 +31,6 @@ rule filter_reads:
     params: min_len=config['min_read_len']
     shell: "filtlong --min_length {params.min_len} {input} 2> {log} | pigz -c -p {threads} > {output}"
 
-rule read_length_histogram:
-    input: "results/reads/{sample}/reads_filtered.fastq.gz"
-    output: "results/plots/{sample}/reads_length_histogram.png"
-    threads: 10
-    log: "results/logs/{sample}_seqkit_length.log"
-    benchmark: "results/benchmarks/seqkit_length_filter/{sample}.tsv"
-    conda: "seqkit-env"
-    shell: "seqkit watch {input} -O {output} -j {threads} &> {log}"
-
-rule read_quality_histogram:
-    input: "results/reads/{sample}/reads_filtered.fastq.gz"
-    output: "results/plots/{sample}/reads_quality_histogram.png"
-    threads: 10
-    log: "results/logs/{sample}_seqkit_quality.log"
-    benchmark: "results/benchmarks/seqkit_quality/{sample}.tsv"
-    conda: "seqkit-env"
-    shell: "seqkit watch {input} -O {output} -j {threads} -f MeanQual &> {log}"
-
 rule fq2fasta:
     input: "results/reads/{sample}/reads_filtered.fastq.gz"
     output: "results/reads/{sample}/reads_filtered.fasta.gz"
