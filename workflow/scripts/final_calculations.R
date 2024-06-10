@@ -22,7 +22,7 @@ option_list <- list(
   make_option(c("-f", "--filt3"),
               type = "character",
               default = NULL,
-              help = "reads passed filtering step no.3 (red+dist+orient)",
+              help = "blast table of reads passed filtering step no.3 (red+repunit+orient)",
               metavar = "character"),
   
   make_option(c("-o", "--output"),
