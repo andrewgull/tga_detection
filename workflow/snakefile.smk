@@ -206,11 +206,17 @@ rule blaSHV_counts:
     params: length=config["bla_len"]
     shell: "Rscript {input.script} -i {input.bed} -b {input.blast} -l {params.length} -p {output.plot} -a {output.table} &> {log}"
 
-rule final:
-    input:  read_cn="results/tables/{sample}/number_reads_containing_CN.tsv",
-            save_counts="results/tables/{sample}/blaSHV_counts.tsv",
-            table_counts_all="results/tables/{sample}/blaSHV_counts_all.tsv"
+rule frequency_calculation:
+    input: script="workflow/scripts/final_calculations.R",
+           bins="results/tables/{sample}/number_reads_containing_CN.tsv",
+           bla="results/tables/{sample}/blaSHV_counts.tsv",
+           rrol="results/tables/{sample}/blast_joined_red_repunit_orient_len.tsv"
+    output: "results/tables/{sample}/frequencies.tsv"
+    log: "results/logs/{sample}_frequencies.log"
+    shell: "Rscript {input.script} -c {input.bins} -b {input.bla} -f {input.rrol} -o {output} &> {log}"
 
+rule final:
+    input: freqs="results/tables/{sample}/frequencies.tsv"
     output: touch("results/final/{sample}_all.done")
     shell: "echo 'DONE'"
 
