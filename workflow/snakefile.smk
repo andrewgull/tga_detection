@@ -176,15 +176,6 @@ rule filter_blaSHV_hits:
     params: e_val=config["max_e_value"]
     shell: "Rscript {input.script} -b {input.bla} -f {input.fr} -e {params.e_val} -o {output} &> {log}"
 
-# rule plot_blaSHV_counts:
-#     input: script="workflow/scripts/plot_blaSHV_counts.R",
-#            bla="results/tables/{sample}/blast_blaSHV_filtered.tsv"
-#     output: "results/plots/{sample}/blaSHV_counts.png"
-#     log: "results/logs/{sample}_blaSHV_counts.log"
-#     params: length=config["bla_len"]
-#     conda: "rscripts-env"
-#     shell: "Rscript {input.script} -i {input.bla} -l {params.length} -o {output} &> {log}"
-
 rule make_bed_blaSHV_filtered:
     input: script="workflow/scripts/make_bed.R",
            bla="results/tables/{sample}/blast_blaSHV_filtered.tsv"
@@ -215,38 +206,8 @@ rule blaSHV_counts:
     params: length=config["bla_len"]
     shell: "Rscript {input.script} -i {input.bed} -b {input.blast} -l {params.length} -p {output.plot} -a {output.table} &> {log}"
 
-# rule make_bed_blaSHV_all:
-#     input: script="workflow/scripts/make_bed.R",
-#            bla="results/tables/{sample}/blast_blaSHV.tsv"
-#     output: "results/bedfiles/{sample}/blaSHV_hits_all.bed"
-#     log: "results/logs/{sample}_make_bed_all.log"
-#     conda: "rscripts-env"
-#     shell: "Rscript {input.script} -i {input.bla} -o {output} &> {log}"
-#
-# rule merge_blaSHV_all:
-#     input: "results/bedfiles/{sample}/blaSHV_hits_all.bed"
-#     output: sorted="results/bedfiles/{sample}/blaSHV_hits_all_sorted.bed",
-#             merged="results/bedfiles/{sample}/blaSHV_hits_all_merged.bed"
-#     log: "results/logs/{sample}_bedtools_merge_all.log"
-#     conda: "varcalling-env"
-#     params: dist=config["dist"]
-#     shell: "sort -k1,1 -k2,2n {input} > {output.sorted} && bedtools merge -i {output.sorted} -s -d {params.dist} > {output.merged} 2> {log}"
-#
-# rule blaSHV_counts_all:
-#     input: script="workflow/scripts/plot_save_blaSHV_counts_all.R",
-#            bed="results/bedfiles/{sample}/blaSHV_hits_all_merged.bed"
-#     output: table="results/tables/{sample}/blaSHV_counts_all.tsv",
-#             plot="results/plots/{sample}/blaSHV_counts_all.png"
-#     log: "results/logs/{sample}_plot_save_blaSHV_counts_all.log"
-#     conda: "rscripts-env"
-#     shell: "Rscript {input.script} --input {input.bed} --plot {output.plot} --table {output.table} &> {log}"
-
 rule final:
-    input:  #blast_join="results/tables/{sample}/blast_joined.tsv",
-            #plot_dist="results/plots/{sample}/FR_distances.png",
-            #plot_len_dist="results/plots/{sample}/reads_FR_distances.png",
-            read_cn="results/tables/{sample}/number_reads_containing_CN.tsv",
-            #="results/plots/{sample}/blaSHV_counts.png",
+    input:  read_cn="results/tables/{sample}/number_reads_containing_CN.tsv",
             save_counts="results/tables/{sample}/blaSHV_counts.tsv",
             table_counts_all="results/tables/{sample}/blaSHV_counts_all.tsv"
 
