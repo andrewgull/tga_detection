@@ -106,8 +106,16 @@ rule blast_green:
     shell: "blastn -query {input.query} -db {input.database}/blastdb -outfmt {params.fmt} "
            "-num_threads {threads} -num_alignments {params.n_alns} 1> {output} 2> {log}"
 
+rule create_repeat_unit:
+    input: "resources/plasmid/DA61218_plasmid.fa"
+    output: "results/flanking_regions/repeat_unit.fa"
+    conda: "seqkit-env"
+    log: "results/logs/seqkit_repunit.log"
+    params: start=config["ru_start"], end=config["ru_end"]
+    shell:  "seqkit subseq -r {params.start}:{params.end} {input} 1> {output} 2> {log}"
+
 rule blast_repeat_unit:
-    input: query="resources/flanking_regions/repeat_unit.fa",
+    input: query="results/flanking_regions/repeat_unit.fa",
            database="results/blast_databases/{sample}"
     output: "results/tables/{sample}/blast_repeat_unit.tsv"
     threads: 10
