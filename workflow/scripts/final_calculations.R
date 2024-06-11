@@ -75,7 +75,8 @@ bla_cn_freq <-
   group_by(n.blaSHV.merged) %>% 
   count(name = "counts") %>% 
   ungroup() %>% 
-  mutate(counts = counts + c(cn0, rep(0, 9))) %>% 
+  # add cn0 to the first value of counts
+  mutate(counts = ifelse(row_number() == 1, counts + cn0, counts)) %>% 
   rename("CN" = n.blaSHV.merged,
          "reads_counts" = counts)
 
