@@ -41,17 +41,19 @@ read_many_tables <- function(table_name) {
 }
 
 res_df <- read_many_tables("blaSHV_counts.tsv")
+freq_df <- read_many_tables("frequencies.tsv") %>% 
+  # add limits of detection
+  mutate(detection_limit = 1/n.reads)
+
+# save the table for Sofia
+write_delim(freq_df %>% select(CN, reads_freq_adj, detection_limit, group, sample), file = "../results/tables/frequencies_all.tsv")
 ```
 
 
 ```{r}
 #| tbl-cap: "N reads per sample"
 
-read_counts <- res_df %>% 
-  group_by(sample) %>% 
-  count()
-
-knitr::kable(read_counts)
+knitr::kable(freq_df)
 ```
 
 
@@ -59,211 +61,79 @@ knitr::kable(read_counts)
 res_df %>% 
   group_by(sample) %>% 
   count() %>% 
-  ggplot(aes(sample, n)) +
+  ggplot(aes(reorder(sample, -n), n)) +
   geom_col(fill="steelblue") +
   #coord_trans(y = "sqrt") +
   theme(axis.text.x = element_text(size=10, angle=45, hjust = 1)) +
   ggtitle("Reads per sample") +
-  ylab("n reads")
+  ylab("n reads") +
+  xlab("") +
+  theme_bw()
 ```
 
-## Mean counts
 
-```{r}
-#| tbl-cap: "mean gene counts"
+## CNV frequency plots
 
-all_df <- read_many_tables("blaSHV_counts_all.tsv")
+### MH + selection
 
-counts_filt <- res_df %>% 
-  group_by(sample) %>% 
-  summarise(mean = round(mean(n.blaSHV.merged, na.rm = T), 1)) 
-
-counts_all <- all_df %>% 
-  group_by(sample) %>% 
-  summarise(mean = round(mean(n, na.rm = T), 1)) 
-
-new_names <- c(mean_filt = "mean.x", mean_all = "mean.y")
-
-left_join(counts_filt, counts_all, by = "sample") %>% 
-  rename(all_of(new_names)) %>% 
-  knitr::kable()
-```
-
-## CNV Plots
-
-### No selection
-
-```{r, fig.height=6, fig.width=8, warning=FALSE}
-res_df %>%
-  filter(group == "mh") %>%
-  ggplot(aes(n.blaSHV.merged)) +
-  geom_histogram(aes(fill=replicate), binwidth = 1, alpha=0.5) +
-  #geom_density(aes(fill=replicate), alpha=0.5) +
-  scale_fill_manual(values=c("cyan4", "firebrick2", "purple4")) +
-  geom_rug() +
-  facet_grid(rows = vars(replicate), scales = "free_x") +
-  ggtitle("No selection") +
-  xlab("n blaSHV") +
+```{r, fig.height=8, warning=FALSE}
+freq_df %>%
+  filter(grepl("x", group) | grepl("mh", group)) %>% 
+  ggplot(aes(CN, reads_freq_adj)) +
+  geom_col(aes(fill=group)) +
+  geom_rug(sides = "b", length = unit(0.06, "npc")) +
+  scale_x_continuous(breaks = c(0:19)) +
+  facet_grid(rows = vars(group)) +
+  xlab("copy number") +
+  ylab("log10 adjusted frequency") +
+  theme_bw() +
   theme(legend.position = "none")
 ```
 
-If we count all the blaSHVs in our reads
-
-```{r, fig.height=6, fig.width=8, warning=FALSE}
-all_df %>%
-  filter(group == "mh") %>%
-  ggplot(aes(n)) +
-  geom_histogram(aes(fill=replicate), binwidth = 1, alpha=0.8) +
-  #geom_density(aes(fill=replicate), alpha=0.5) +
-  scale_fill_manual(values=c("cyan4", "firebrick2", "purple4")) +
-  geom_rug() +
-  facet_grid(rows = vars(replicate), scales = "free_x") +
-  ggtitle("No selection & no filtering") +
-  xlab("n blaSHV") +
-  theme(legend.position = "none")
-```
-
-### Selection
-
-#### Altogether
-
-```{r, fig.height=8, fig.width=10, warning=FALSE}
-res_df %>%
-  filter(grepl("x", group)) %>%
-  ggplot(aes(n.blaSHV.merged)) +
-  geom_histogram(aes(fill=replicate), alpha=0.5, binwidth = 1) +
-  #geom_density(aes(fill=replicate), alpha=0.5) +
-  scale_fill_manual(values=c("cyan4", "firebrick2", "purple4")) +
-  geom_rug() +
-  facet_grid(rows = vars(replicate), cols = vars(group), scales = "free") +
-  ggtitle("Distribution of blaSHV counts", subtitle = "Selection with AB") +
-  xlab("n blaSHV") +
-  theme(legend.position = "none")
-```
-
-If we count all the blaSHV in our reads
-
-```{r, fig.height=8, fig.width=10, warning=FALSE}
-all_df %>%
-  filter(grepl("x", group)) %>%
-  ggplot(aes(n)) +
-  geom_histogram(aes(fill=replicate), alpha=0.8, binwidth = 1) +
-  #geom_density(aes(fill=replicate), alpha=0.5) +
-  scale_fill_manual(values=c("cyan4", "firebrick2", "purple4")) +
-  geom_rug() +
-  facet_grid(rows = vars(replicate), cols = vars(group), scales = "free") +
-  ggtitle("Distribution of blaSHV counts (no filtering)", subtitle = "Selection with AB") +
-  xlab("n blaSHV") +
-  theme(legend.position = "none")
-```
-
-#### Separately
-
-```{r, fig.height=8, fig.width=8, warning=FALSE}
-# function to make faceted density plots
-plot_cnv <- function(df, color, cap="", subcap=""){
-  ggplot(df, aes(n.blaSHV.merged)) +
-  geom_histogram(fill = color, alpha=0.5, binwidth = 1) +
-  #geom_density(fill=color, alpha=0.5) +
-  geom_rug() +
-  facet_grid(rows = vars(group), scales = "free") +
-  ggtitle(cap, subtitle = subcap) +
-  xlab("n blaSHV")
-}
-
-res_df %>%
-  filter(!grepl("g", group), replicate == "D") %>% 
-  plot_cnv("cyan4", "Selection", "Replicate D")
-```
-
-```{r, fig.height=8, fig.width=8, warning=FALSE}
-res_df %>%
-  filter(!grepl("g", group), replicate == "E") %>% 
-  plot_cnv("firebrick2", "Selection", "Replicate E")
-```
-
-```{r, fig.height=8, fig.width=8, warning=FALSE}
-res_df %>%
-  filter(!grepl("g", group), replicate == "F") %>% 
-  plot_cnv("purple4", "Selection", "Replicate F")
-```
-
-#### Only x4 and x8 together
-
-```{r, fig.height=8, fig.width=8, warning=FALSE}
-res_df %>%
-  filter(grepl("x8", group) | grepl("x4", group)) %>%
-  ggplot(aes(n.blaSHV.merged)) +
-  geom_histogram(aes(fill=replicate), alpha=0.5, binwidth = 1) +
-  #geom_density(aes(fill=replicate), alpha=0.5) +
-  scale_fill_manual(values=c("cyan4", "firebrick2", "purple4")) +
-  geom_rug() +
-  facet_grid(rows = vars(replicate), cols=vars(group), scales = "free") +
-  ggtitle("Selection") +
-  xlab("n blaSHV") +
-  theme(legend.position = "none")
-
-```
 
 ### Reversion
 
-#### Altogether
-
-```{r, fig.height=8, fig.width=11, warning=FALSE}
-res_df %>%
-  filter(grepl("g", group) | grepl("x8", group)) %>%
-  mutate(group = factor(group, levels=c("x8", "10g", "20g", "40g", "160g"))) %>% 
-  ggplot(aes(n.blaSHV.merged)) +
-  geom_histogram(aes(fill=replicate), alpha=0.5, binwidth = 1) +
-  #geom_density(aes(fill=replicate), alpha=0.5) +
-  scale_fill_manual(values=c("cyan4", "firebrick2", "purple4")) +
-  geom_rug() +
-  facet_grid(rows = vars(replicate), cols = vars(group), scales = "free") +
-  ggtitle("Distribution of blaSHV counts", subtitle="No selection") +
-  xlab("n blaSHV") +
+```{r,fig.height=8, warning=FALSE}
+freq_df %>%
+  filter(grepl("g", group)) %>% 
+  mutate(group = ordered(group, levels = c("10g", "20g", "40g", "80g", "160g"))) %>% 
+  ggplot(aes(CN, reads_freq_adj)) +
+  geom_col(aes(fill=group)) +
+  geom_rug(sides = "b", length = unit(0.06, "npc")) +
+  scale_x_continuous(breaks = c(0:17)) +
+  facet_grid(rows = vars(group)) +
+  xlab("copy number") +
+  ylab("log10 adjusted frequency") +
+  theme_bw() +
   theme(legend.position = "none")
 ```
 
-If we count all the blaSHV in our reads
+### With detection limit line
 
-```{r, fig.height=8, fig.width=11, warning=FALSE}
-all_df %>%
-  filter(grepl("g", group) | grepl("x8", group)) %>%
-  mutate(group = factor(group, levels=c("x8", "10g", "20g", "40g", "160g"))) %>% 
-  ggplot(aes(n)) +
-  geom_histogram(aes(fill=replicate), alpha=0.8, binwidth = 1) +
-  #geom_density(aes(fill=replicate), alpha=0.5) +
-  scale_fill_manual(values=c("cyan4", "firebrick2", "purple4")) +
-  geom_rug() +
-  facet_grid(rows = vars(replicate), cols = vars(group), scales = "free") +
-  ggtitle("Distribution of blaSHV counts (no filtering)", subtitle="No selection") +
-  xlab("n blaSHV") +
-  theme(legend.position = "none")
+```{r,fig.height=8}
+freq_df %>%
+  filter(group == "mh") %>% 
+  #mutate(group = ordered(group, levels = c("10g", "20g", "40g", "80g", "160g"))) %>% 
+  #filter(CN < 4, CN != 0) %>% 
+  ggplot(aes(CN, 6+log10(reads_freq_adj))) +
+  geom_col() +
+  geom_line(aes(CN, 6+log10(detection_limit)), color = "red", linewidth=5)
+```
+
+### CN change across groups
+
+```{r,fig.height=8}
+freq_df %>%
+  filter(grepl("g", group), CN == 4) %>% 
+  mutate(group = ordered(group, levels = c("10g", "20g", "40g", "80g", "160g"))) %>% 
+  ggplot(aes(group, reads_freq_adj)) +
+  geom_col(fill = "#B1676D")+
+  #facet_grid(rows = vars(CN)) +
+  scale_fill_brewer(palette = "Set2") +
+  theme_bw() +
+  ggtitle("CN = 4") +
+  xlab("") +
+  ylab("adjusted frequency")
 ```
 
 
-#### Seprately
-
-```{r, fig.height=8, fig.width=8, warning=FALSE}
-res_df %>%
-  filter(replicate == "D", 
-         grepl("x8", group) | grepl("g", group)) %>%
-  mutate(group = factor(group, levels=c("x8", "10g", "20g", "40g", "160g"))) %>% 
-  plot_cnv("cyan4", "Reversion", "Replicate D")
-```
-
-```{r, fig.height=8, fig.width=8, warning=FALSE}
-res_df %>%
-  filter(replicate == "E", 
-         grepl("x8", group) | grepl("g", group)) %>%
-  mutate(group = factor(group, levels=c("x8", "10g", "20g", "40g", "160g"))) %>% 
-  plot_cnv("firebrick2", "Reversion", "Replicate E")
-```
-
-```{r, fig.height=8, fig.width=8, warning=FALSE}
-res_df %>%
-  filter(replicate == "F", 
-         grepl("x8", group) | grepl("g", group)) %>%
-  mutate(group = factor(group, levels=c("x8", "10g", "20g", "40g", "160g"))) %>% 
-  plot_cnv("purple4", "Reversion", "Replicate F")
-```
