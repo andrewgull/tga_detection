@@ -66,27 +66,12 @@ bla_cn <- read_delim(opt$bla_counts, show_col_types = F) %>%
 # find number of reads capable of containing each bla CN variant
 # including zeroes
 
-# reads containing zero and more bla copies
-cn0 <- length(unique(filt3$subject)) - length(unique(bla_cn$subject))
-
 # find number of reads containing each CN
 bla_cn_freq <- 
   bla_cn %>% 
   group_by(n.blaSHV.merged) %>% 
   count(name = "counts") %>% 
-  ungroup()
-
-# check if the first element in the 'n.blaSHV.merged' != 0
-# if so, add a row (0, 0)
-if (bla_cn_freq[1, 1] != 0) {
-  bla_cn_freq <-
-    bind_rows(tibble('n.blaSHV.merged' = 0, 'counts' = 0),
-              bla_cn_freq)
-}
-
-bla_cn_freq <- bla_cn_freq %>%
-  # add cn0 to the first value of counts
-  mutate(counts = ifelse(row_number() == 1, counts + cn0, counts)) %>%
+  ungroup() %>% 
   rename("CN" = n.blaSHV.merged,
          "reads_counts" = counts)
 
@@ -105,12 +90,14 @@ cn_bins <-
   cn_bins %>% 
   mutate(reads_freq_possible = n.reads / total)
 
-# adjust CN frequency
+# correct CN frequency
+# add detection limit
 bla_cn_freq <- 
   bla_cn_freq %>% 
   left_join(cn_bins, by = "CN") %>% 
-  mutate(reads_freq_adj = reads_freq_obs / reads_freq_possible)
-
+  mutate(reads_freq_adj = reads_freq_obs / reads_freq_possible,
+         detection_limit = 1/n.reads)
+  
 # freq_obs and freq_adj is what you need
 # save
 write_delim(bla_cn_freq, file = opt$output, delim = "\t")
