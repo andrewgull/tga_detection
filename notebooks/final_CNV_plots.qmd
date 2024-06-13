@@ -43,10 +43,10 @@ read_many_tables <- function(table_name) {
 res_df <- read_many_tables("blaSHV_counts.tsv")
 freq_df <- read_many_tables("frequencies.tsv") %>% 
   # add limits of detection
-  mutate(detection_limit = 1/n.reads)
+  mutate(detection_limit = 1/n_reads_theoretical)
 
 # save the table for Sofia
-write_delim(freq_df %>% select(CN, reads_freq_adj, detection_limit, group, sample), file = "../results/tables/frequencies_all.tsv")
+write_delim(freq_df %>% select(CN, freq_corrected, detection_limit, group, sample), file = "../results/tables/frequencies_all.tsv")
 ```
 
 
@@ -79,7 +79,7 @@ res_df %>%
 ```{r, fig.height=8, warning=FALSE}
 freq_df %>%
   filter(grepl("x", group) | grepl("mh", group)) %>% 
-  ggplot(aes(CN, reads_freq_adj)) +
+  ggplot(aes(CN, freq_corrected)) +
   geom_col(aes(fill=group)) +
   geom_rug(sides = "b", length = unit(0.06, "npc")) +
   scale_x_continuous(breaks = c(0:19)) +
@@ -97,7 +97,7 @@ freq_df %>%
 freq_df %>%
   filter(grepl("g", group)) %>% 
   mutate(group = ordered(group, levels = c("10g", "20g", "40g", "80g", "160g"))) %>% 
-  ggplot(aes(CN, reads_freq_adj)) +
+  ggplot(aes(CN, freq_corrected)) +
   geom_col(aes(fill=group)) +
   geom_rug(sides = "b", length = unit(0.06, "npc")) +
   scale_x_continuous(breaks = c(0:17)) +
@@ -115,25 +115,68 @@ freq_df %>%
   filter(group == "mh") %>% 
   #mutate(group = ordered(group, levels = c("10g", "20g", "40g", "80g", "160g"))) %>% 
   #filter(CN < 4, CN != 0) %>% 
-  ggplot(aes(CN, 6+log10(reads_freq_adj))) +
+  ggplot(aes(CN, 6+log10(freq_corrected))) +
   geom_col() +
   geom_line(aes(CN, 6+log10(detection_limit)), color = "red", linewidth=5)
 ```
 
 ### CN change across groups
 
-```{r,fig.height=8}
-freq_df %>%
-  filter(grepl("g", group), CN == 4) %>% 
-  mutate(group = ordered(group, levels = c("10g", "20g", "40g", "80g", "160g"))) %>% 
-  ggplot(aes(group, reads_freq_adj)) +
-  geom_col(fill = "#B1676D")+
-  #facet_grid(rows = vars(CN)) +
-  scale_fill_brewer(palette = "Set2") +
-  theme_bw() +
-  ggtitle("CN = 4") +
-  xlab("") +
-  ylab("adjusted frequency")
+```{r, fig.height=10, fig.width=5}
+plot_change_across_groups <- function(fdf, X, selection = TRUE) {
+  # fdfd: frequency df
+  # X: CN of interest
+  if (selection) {
+    fdf %>%
+      filter(grepl("x", group) | grepl("mh", group), CN == X) %>%
+      ggplot(aes(group, freq_corrected)) +
+      geom_col(fill = "#87A96B") +
+      theme_bw() +
+      ggtitle(paste0("Selection, CN = ", X)) +
+      xlab("") +
+      ylab("corrected frequency")
+  } else {
+    fdf %>%
+      filter(grepl("g", group), CN == X) %>%
+      mutate(group = ordered(group, levels = c("10g", "20g", "40g", "80g", "160g"))) %>%
+      ggplot(aes(group, freq_corrected)) +
+      geom_col(fill = "#B1676D") +
+      theme_bw() +
+      ggtitle(paste0("No selection, CN = ", X)) +
+      xlab("") +
+      ylab("corrected frequency")
+  }
+}
+
+reversion_plots <-
+  map(c(1, 2, 3, 4, 5, 6, 7, 8, 9),
+      ~ plot_change_across_groups(freq_df, ., selection = FALSE))
+
+ggpubr::ggarrange(plotlist = reversion_plots, ncol = 2, nrow = 5)
 ```
 
+```{r, fig.height=10, fig.width=5}
+selection_plots <-
+  map(c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10),
+      ~ plot_change_across_groups(freq_df, ., selection = TRUE))
+
+ggpubr::ggarrange(plotlist = selection_plots, ncol = 2, nrow = 5)
+```
+
+
+## Average blaSHV
+
+to compare with ddPCR
+
+$$M_{gene} = \frac{\sum_{i=0}^n CN_{i}\frac{reads\_counts_{i}}{reads\_possible_{i}}}{\sum_{i=0}^n\frac{reads\_counts_{i}}{reads\_possible_{i}}}$$
+
+```{r}
+freq_df %>%
+  group_by(group) %>%
+  mutate(avg_gene_count = sum(CN * (counts_obs / freq_theoretical)) / sum((counts_obs /
+                                                                             freq_theoretical))) %>%
+  select(group, avg_gene_count) %>% 
+  distinct() %>% 
+  knitr::kable()
+```
 
