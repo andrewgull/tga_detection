@@ -346,7 +346,7 @@ n_reads_w_cn_reverse <-
 n_reads_w_cn <- full_join(n_reads_w_cn_direct, n_reads_w_cn_reverse, by = "CN") %>% 
   mutate(n.reads.total = n.reads.x + n.reads.y)
 
-write_delim(n_reads_w_cn, file = "../results/tables/76595_D_mh/number_reads_containing_CN.tsv")
+#write_delim(n_reads_w_cn, file = "../results/tables/76595_D_mh/number_reads_containing_CN.tsv")
 
 n_reads_w_cn
 ```
@@ -435,8 +435,7 @@ Binned reads: number of reads capable of containing certain number of blaSHV cop
 file <- "../results/tables/76595_D_mh/number_reads_containing_CN.tsv"
 
 cn_bins <- read_delim(file, show_col_types = F) %>% 
-  select(CN, n.reads.total) %>% 
-  rename("reads_counts_theor" = n.reads.total)
+  select(CN, n_reads_theoretical)
 
 cn_bins
 ```
@@ -463,16 +462,16 @@ length(unique(df_f3$subject)) - length(unique(bla_cn$subject))
 How many had different number of blaSHV copies?
 
 ```{r}
-cn0 <- length(unique(df_f3$subject)) - length(unique(bla_cn$subject))
+#cn0 <- length(unique(df_f3$subject)) - length(unique(bla_cn$subject))
 
 bla_cn_freq <- 
   bla_cn %>% 
   group_by(n.blaSHV.merged) %>% 
   count(name = "counts") %>% 
   ungroup() %>% 
-  mutate(counts = counts + c(cn0, rep(0, 9))) %>% 
+  #mutate(counts = counts + c(cn0, rep(0, 9))) %>% 
   rename("CN" = n.blaSHV.merged,
-         "bla_counts_obs" = counts)
+         "counts_obs" = counts)
 
 bla_cn_freq
 ```
@@ -483,30 +482,30 @@ Calculation of the final table from the Excel file
 # total - n reads with 0 CN from the cn_bins table
 total <- cn_bins %>% 
   filter(CN == 0) %>% 
-  pull(reads_counts_theor)
+  pull(n_reads_theoretical)
 
 # find observed CN frequency
 bla_cn_freq <- 
   bla_cn_freq %>% 
-  mutate(bla_freq_obs = bla_counts_obs / total)
+  mutate(freq_obs = counts_obs / total) # shouldn't it be sum(bla_counts_obs), not total?
 
 # find frequency of reads that might contain certain CN
 cn_bins <- 
   cn_bins %>% 
-  mutate(bla_freq_theor = reads_counts_theor / total)
+  mutate(freq_theoretical = n_reads_theoretical / total)
 
 # adjust CN counts and then calculate frequency
 bla_cn_freq <- 
   bla_cn_freq %>% 
   left_join(cn_bins, by = "CN") %>% 
-  mutate(bla_counts_adj = bla_counts_obs / bla_freq_theor,
-         bla_freq_adj = bla_counts_adj/sum(bla_counts_adj))
+  mutate(counts_corrected = counts_obs / freq_theoretical,
+         freq_corrected = counts_corrected/sum(counts_corrected))
 
 bla_cn_freq
 ```
 
 ```{r}
-sum(bla_cn_freq$bla_freq_adj)
+sum(bla_cn_freq$freq_corrected)
 ```
 
 
@@ -516,7 +515,7 @@ sum(bla_cn_freq$bla_freq_adj)
 library(patchwork)
 
 plot_line_full <- bla_cn_freq %>%
-  select(CN, bla_freq_obs, bla_freq_adj) %>%
+  select(CN, freq_obs, freq_corrected) %>%
   pivot_longer(cols = 2:3,
                names_to = "group",
                values_to = "freq") %>%
@@ -529,7 +528,7 @@ plot_line_full <- bla_cn_freq %>%
   theme(legend.position="top", legend.title = element_blank())
 
 plot_line_part <- bla_cn_freq %>% 
-  select(CN, bla_freq_obs, bla_freq_adj) %>% 
+  select(CN, freq_obs, freq_corrected) %>% 
   filter(CN >= 5) %>% 
   pivot_longer(cols = 2:3, names_to = "group", values_to = "freq") %>% 
   ggplot(aes(CN, freq)) + 
@@ -541,7 +540,7 @@ plot_line_part <- bla_cn_freq %>%
   theme(legend.position="top", legend.title = element_blank())
 
 plot_line_log10 <- bla_cn_freq %>%
-  select(CN, bla_freq_obs, bla_freq_adj) %>%
+  select(CN, freq_obs, freq_corrected) %>%
   pivot_longer(cols = 2:3,
                names_to = "group",
                values_to = "freq") %>%
@@ -559,7 +558,7 @@ plot_line_log10 <- bla_cn_freq %>%
 
 ```{r, fig.width=10}
 plot_col_full <- bla_cn_freq %>% 
-  select(CN, bla_freq_obs, bla_freq_adj) %>% 
+  select(CN, freq_obs, freq_corrected) %>% 
   pivot_longer(cols = 2:3, names_to = "group", values_to = "freq") %>% 
   ggplot(aes(CN, freq)) + 
   geom_col(aes(fill = group), position = "dodge") +
@@ -570,7 +569,7 @@ plot_col_full <- bla_cn_freq %>%
   theme(legend.position="top", legend.title = element_blank())
 
 plot_col_part <- bla_cn_freq %>% 
-  select(CN, bla_freq_obs, bla_freq_adj) %>% 
+  select(CN, freq_obs, freq_corrected) %>% 
   filter(CN >= 5) %>% 
   pivot_longer(cols = 2:3, names_to = "group", values_to = "freq") %>% 
   ggplot(aes(CN, freq)) + 
@@ -588,6 +587,47 @@ plot_col_part <- bla_cn_freq %>%
 
 We take into consideration only the reads that can contains the biggest CN of bla genes and calculate CN frequencies.
 This new distribution should look similar to the one above.
+
+```{r}
+# read the table with reads filtered by red fr + rep.unit + orientation
+table_path <- "../results/tables/76595_D_mh/blast_joined_red_repunit_orient_len.tsv"
+
+blast_df <- read_tsv(
+  file = table_path, 
+  show_col_types = FALSE
+  )
+
+# filter direct hits
+blast_df_direct <- 
+  blast_df %>% 
+  filter(orient == "direct")
+
+#### now do different kind of filtering/counting using reverse reads ####
+# these are the reads after the 1st filtering by length
+reads_path <- "../results/reads/76595_D_mh/reads_filtered.fasta.gz"
+read_lengths <-
+  Biostrings::width(Biostrings::readDNAStringSet(reads_path))
+
+reads_len_df <-
+  tibble("subject" = sub(
+    "^(.*?) runid=.*",
+    "\\1",
+    names(Biostrings::readDNAStringSet(reads_path))
+  ),
+  "read.len" = read_lengths)
+
+# filter reverse reads and
+# join with reads lengths
+blast_df_reverse <- 
+  blast_df %>% 
+  filter(orient == "reverse") %>% 
+  left_join(reads_len_df, by = "subject")
+
+# the last table produced by the pipeline - with blaSHV counts
+file <- "../results/tables/76595_D_mh/blaSHV_counts.tsv"
+bla_cn <- read_delim(file, show_col_types = F) %>% 
+  filter(!is.na(n.blaSHV.merged)) # why do you have NAs there?
+```
 
 
 ```{r}
@@ -635,11 +675,11 @@ reads_cn11_freq <- reads_cn11 %>%
   group_by(n.blaSHV.merged) %>% 
   count() %>% 
   ungroup() %>% 
-  mutate(freq_by_longest = n/sum(n)) %>% 
+  mutate(freq_by_srhcn = n/sum(n)) %>% 
   rename("CN" = n.blaSHV.merged)
 
 reads_cn11_freq %>% 
-  ggplot(aes(CN, freq_by_longest)) +
+  ggplot(aes(CN, freq_by_srhcn)) +
   geom_line() +
   scale_x_continuous(breaks = c(0:12)) +
   theme_bw() +
@@ -652,11 +692,11 @@ Compare with the other way of calculating bla CN frequency
 ```{r}
 bla_freq_2ways <-
   full_join(bla_cn_freq %>%
-              select(CN, bla_freq_obs, bla_freq_adj),
+              select(CN, freq_obs, freq_corrected),
             reads_cn11_freq %>% 
               select(-n),
             by = "CN") %>% 
-  mutate(freq_by_longest = map_dbl(freq_by_longest, ~replace(., is.na(.), 0)))
+  mutate(freq_by_srhcn = map_dbl(freq_by_srhcn, ~replace(., is.na(.), 0)))
 
 bla_freq_2ways %>% 
   pivot_longer(cols = 2:4,
@@ -676,3 +716,56 @@ bla_freq_2ways %>%
 bla_freq_2ways
 ```
 
+## Table of frequencies and plots
+
+```{r}
+
+config <- yaml::read_yaml("../workflow/config.yaml")
+samples <- unlist(config$samples)
+
+read_many_tables <- function(table_name) {
+  out_df <- map_dfr(samples, function(x) {
+    df <-
+      read_tsv(paste0("../results/tables/", x, "/", table_name),
+               show_col_types = F)
+    df$sample <- x
+    return(df)
+  }) %>%
+    mutate(replicate = str_split_i(sample, "_", i = 2),
+           group = str_split_i(sample, "_", i = 3))
+  
+  return(out_df)
+}
+
+freq_df <- read_many_tables("frequencies.tsv") %>% 
+  # add limits of detection
+  mutate(detection_limit = 1/n.reads)
+
+freq_df
+```
+
+
+
+```{r}
+freq_df %>% 
+  group_by(group) %>% 
+  summarise(sum(freq_corrected))
+  
+```
+
+## Average number of blaSHV
+
+to compare with ddPCR
+
+$$M_{gene} = \frac{\sum_{i=0}^n CN_{i}\frac{reads\_counts_{i}}{reads\_possible_{i}}}{\sum_{i=0}^n\frac{reads\_counts_{i}}{reads\_possible_{i}}}$$
+
+```{r}
+freq_df %>%
+  group_by(group) %>%
+  mutate(avg_gene_count = sum(CN * (counts_obs / freq_theoretical)) / sum((counts_obs /
+                                                                             freq_theoretical))) %>%
+  select(group, avg_gene_count) %>% 
+  distinct() 
+```
+
+Seprate script for that?
