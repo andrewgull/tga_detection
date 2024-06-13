@@ -165,7 +165,7 @@ n_reads_cn_tot <- n_reads_cn_dir + n_reads_cn_rev
 
 # make a table
 output_table <- data.frame("CN" = cn_array,
-                           "n.reads" = n_reads_cn_tot)
+                           "n_reads_theoretical" = n_reads_cn_tot)
 
 # save results
 write.table(output_table, file = opt$output, sep = "\t", row.names = FALSE, quote = FALSE)
