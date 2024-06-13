@@ -73,30 +73,31 @@ bla_cn_freq <-
   count(name = "counts") %>% 
   ungroup() %>% 
   rename("CN" = n.blaSHV.merged,
-         "reads_counts" = counts)
+         "counts_obs" = counts)
 
 # total - n reads with 0 CN from the cn_bins table
 total <- cn_bins %>% 
   filter(CN == 0) %>% 
-  pull(n.reads)
+  pull(n_reads_theoretical)
 
 # find observed CN frequency
 bla_cn_freq <- 
   bla_cn_freq %>% 
-  mutate(reads_freq_obs = reads_counts / total)
+  mutate(freq_obs = counts_obs / sum(counts_obs))
 
 # find frequency of reads that might contain certain CN
 cn_bins <- 
   cn_bins %>% 
-  mutate(reads_freq_possible = n.reads / total)
+  mutate(freq_theoretical = n_reads_theoretical / total)
 
 # correct CN frequency
 # add detection limit
 bla_cn_freq <- 
   bla_cn_freq %>% 
   left_join(cn_bins, by = "CN") %>% 
-  mutate(reads_freq_adj = reads_freq_obs / reads_freq_possible,
-         detection_limit = 1/n.reads)
+  mutate(counts_corrected = counts_obs/freq_theoretical,
+         freq_corrected = counts_corrected / sum(counts_corrected),
+         detection_limit = 1/n_reads_theoretical)
   
 # freq_obs and freq_adj is what you need
 # save
