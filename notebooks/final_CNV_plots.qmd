@@ -47,6 +47,7 @@ freq_df <- read_many_tables("frequencies.tsv") %>%
 
 # save the table for Sofia
 write_delim(freq_df %>% select(CN, freq_corrected, detection_limit, group, sample), file = "../results/tables/frequencies_all.tsv")
+write_delim(freq_df, file = "../results/tables/frequencies_all_full.tsv")
 ```
 
 
@@ -63,12 +64,11 @@ res_df %>%
   count() %>% 
   ggplot(aes(reorder(sample, -n), n)) +
   geom_col(fill="steelblue") +
-  #coord_trans(y = "sqrt") +
-  theme(axis.text.x = element_text(size=10, angle=45, hjust = 1)) +
   ggtitle("Reads per sample") +
   ylab("n reads") +
   xlab("") +
-  theme_bw()
+  theme_bw() +
+  theme(axis.text.x = element_text(size=10, angle=45, hjust = 1))
 ```
 
 
@@ -78,7 +78,7 @@ res_df %>%
 
 ```{r, fig.height=8, warning=FALSE}
 freq_df %>%
-  filter(grepl("x", group) | grepl("mh", group)) %>% 
+  filter(grepl("x", group) | grepl("mh", group) | grepl("9", group)) %>% 
   ggplot(aes(CN, freq_corrected)) +
   geom_col(aes(fill=group)) +
   geom_rug(sides = "b", length = unit(0.06, "npc")) +
