@@ -1,15 +1,15 @@
 # Barcodes CNV seq Stepwise selection multiplexing 2023-12-22,,
 # Flow cell: FAX84406,,
 Barcode,Sample,Path
-1,76595_D_x1,~/Data/Argos/imb_sal_raw/Nanopore/Sofia/CNV\ Seq\ Project/Experiment\ 2/cnvseq_sw_sel_20231222/no_sample/20231222_1707_MC-115588_FAX84406_283acb5a/fastq_pass/barcode01
-2,76595_E_x1,~/Data/Argos/imb_sal_raw/Nanopore/Sofia/CNV\ Seq\ Project/Experiment\ 2/cnvseq_sw_sel_20231222/no_sample/20231222_1707_MC-115588_FAX84406_283acb5a/fastq_pass/barcode02
-3,76595_F_x1,~/Data/Argos/imb_sal_raw/Nanopore/Sofia/CNV\ Seq\ Project/Experiment\ 2/cnvseq_sw_sel_20231222/no_sample/20231222_1707_MC-115588_FAX84406_283acb5a/fastq_pass/barcode03
-4,76595_D_x2,~/Data/Argos/imb_sal_raw/Nanopore/Sofia/CNV\ Seq\ Project/Experiment\ 2/cnvseq_sw_sel_20231222/no_sample/20231222_1707_MC-115588_FAX84406_283acb5a/fastq_pass/barcode04
-5,76595_E_x2,~/Data/Argos/imb_sal_raw/Nanopore/Sofia/CNV\ Seq\ Project/Experiment\ 2/cnvseq_sw_sel_20231222/no_sample/20231222_1707_MC-115588_FAX84406_283acb5a/fastq_pass/barcode05
-6,76595_F_x2,~/Data/Argos/imb_sal_raw/Nanopore/Sofia/CNV\ Seq\ Project/Experiment\ 2/cnvseq_sw_sel_20231222/no_sample/20231222_1707_MC-115588_FAX84406_283acb5a/fastq_pass/barcode06
-7,76595_D_x4,~/Data/Argos/imb_sal_raw/Nanopore/Sofia/CNV\ Seq\ Project/Experiment\ 2/cnvseq_sw_sel_20231222/no_sample/20231222_1707_MC-115588_FAX84406_283acb5a/fastq_pass/barcode07
-8,76595_E_x4,~/Data/Argos/imb_sal_raw/Nanopore/Sofia/CNV\ Seq\ Project/Experiment\ 2/cnvseq_sw_sel_20231222/no_sample/20231222_1707_MC-115588_FAX84406_283acb5a/fastq_pass/barcode08
-9,76595_F_x4,~/Data/Argos/imb_sal_raw/Nanopore/Sofia/CNV\ Seq\ Project/Experiment\ 2/cnvseq_sw_sel_20231222/no_sample/20231222_1707_MC-115588_FAX84406_283acb5a/fastq_pass/barcode09
-10,76595_D_x8,~/Data/Argos/imb_sal_raw/Nanopore/Sofia/CNV\ Seq\ Project/Experiment\ 2/cnvseq_sw_sel_20231222/no_sample/20231222_1707_MC-115588_FAX84406_283acb5a/fastq_pass/barcode10
-11,76595_E_x8,~/Data/Argos/imb_sal_raw/Nanopore/Sofia/CNV\ Seq\ Project/Experiment\ 2/cnvseq_sw_sel_20231222/no_sample/20231222_1707_MC-115588_FAX84406_283acb5a/fastq_pass/barcode11
-12,76595_F_x8,~/Data/Argos/imb_sal_raw/Nanopore/Sofia/CNV\ Seq\ Project/Experiment\ 2/cnvseq_sw_sel_20231222/no_sample/20231222_1707_MC-115588_FAX84406_283acb5a/fastq_pass/barcode12
+1,76595_D_x1,/home/andrei/Data/Argos/imb_sal_raw/Nanopore/Sofia/CNV_Seq_Project/Experiment_2/cnvseq_sw_sel_20231222/no_sample/20231222_1707_MC-115588_FAX84406_283acb5a/fastq_pass/barcode01
+2,76595_E_x1,/home/andrei/Data/Argos/imb_sal_raw/Nanopore/Sofia/CNV_Seq_Project/Experiment_2/cnvseq_sw_sel_20231222/no_sample/20231222_1707_MC-115588_FAX84406_283acb5a/fastq_pass/barcode02
+# 3,76595_F_x1,/home/andrei/Data/Argos/imb_sal_raw/Nanopore/Sofia/CNV_Seq_Project/Experiment_2/cnvseq_sw_sel_20231222/no_sample/20231222_1707_MC-115588_FAX84406_283acb5a/fastq_pass/barcode03
+4,76595_D_x2,/home/andrei/Data/Argos/imb_sal_raw/Nanopore/Sofia/CNV_Seq_Project/Experiment_2/cnvseq_sw_sel_20231222/no_sample/20231222_1707_MC-115588_FAX84406_283acb5a/fastq_pass/barcode04
+5,76595_E_x2,/home/andrei/Data/Argos/imb_sal_raw/Nanopore/Sofia/CNV_Seq_Project/Experiment_2/cnvseq_sw_sel_20231222/no_sample/20231222_1707_MC-115588_FAX84406_283acb5a/fastq_pass/barcode05
+# 6,76595_F_x2,/home/andrei/Data/Argos/imb_sal_raw/Nanopore/Sofia/CNV_Seq_Project/Experiment_2/cnvseq_sw_sel_20231222/no_sample/20231222_1707_MC-115588_FAX84406_283acb5a/fastq_pass/barcode06
+7,76595_D_x4,/home/andrei/Data/Argos/imb_sal_raw/Nanopore/Sofia/CNV_Seq_Project/Experiment_2/cnvseq_sw_sel_20231222/no_sample/20231222_1707_MC-115588_FAX84406_283acb5a/fastq_pass/barcode07
+8,76595_E_x4,/home/andrei/Data/Argos/imb_sal_raw/Nanopore/Sofia/CNV_Seq_Project/Experiment_2/cnvseq_sw_sel_20231222/no_sample/20231222_1707_MC-115588_FAX84406_283acb5a/fastq_pass/barcode08
+# 9,76595_F_x4,/home/andrei/Data/Argos/imb_sal_raw/Nanopore/Sofia/CNV_Seq_Project/Experiment_2/cnvseq_sw_sel_20231222/no_sample/20231222_1707_MC-115588_FAX84406_283acb5a/fastq_pass/barcode09
+10,76595_D_x8,/home/andrei/Data/Argos/imb_sal_raw/Nanopore/Sofia/CNV_Seq_Project/Experiment_2/cnvseq_sw_sel_20231222/no_sample/20231222_1707_MC-115588_FAX84406_283acb5a/fastq_pass/barcode10
+11,76595_E_x8,/home/andrei/Data/Argos/imb_sal_raw/Nanopore/Sofia/CNV_Seq_Project/Experiment_2/cnvseq_sw_sel_20231222/no_sample/20231222_1707_MC-115588_FAX84406_283acb5a/fastq_pass/barcode11
+# 12,76595_F_x8,/home/andrei/Data/Argos/imb_sal_raw/Nanopore/Sofia/CNV_Seq_Project/Experiment_2/cnvseq_sw_sel_20231222/no_sample/20231222_1707_MC-115588_FAX84406_283acb5a/fastq_pass/barcode12
