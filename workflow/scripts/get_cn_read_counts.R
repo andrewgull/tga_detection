@@ -96,14 +96,15 @@ count_reads_cn <-
 # read fasta file and return a table with read ID and length
 # requires Biostrings
 read_length <- function(fasta) {
+  # use memory efficient way of retrieving lengths
   lengths <-
-    Biostrings::width(Biostrings::readDNAStringSet(fasta))
-  
+    Biostrings::fasta.seqlengths(fasta)
+  # read IDs are inside the name attributes of each length
   len_df <-
     tibble("subject" = sub(
       "^(.*?) runid=.*",
       "\\1",
-      names(Biostrings::readDNAStringSet(fasta))
+      names(lengths)
     ),
     "read.len" = lengths)
   return(len_df)
