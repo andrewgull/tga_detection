@@ -7,7 +7,7 @@ rule all:
 rule merge_reads:
     input: "resources/reads_separate/{sample}"
     output: temp("resources/reads/{sample}/reads_all.fastq.gz")
-    threads: 10
+    threads: 18
     log: "results/logs/{sample}_zcat.log"
     benchmark: "results/benchmarks/zcat_reads/{sample}.tsv"
     shell: "zcat {input}/*.gz | pigz -c -p {threads} 1> {output} 2> {log}"
@@ -15,7 +15,7 @@ rule merge_reads:
 # rule chop_reads:
 #     input: "resources/reads/{sample}/reads_all.fastq.gz"
 #     output: temp("results/reads/{sample}/reads_chopped.fastq.gz")
-#     threads: 10
+#     threads: 18
 #     log: "results/logs/{sample}_porechop.log"
 #     benchmark: "results/benchmarks/porechop_reads/{sample}.tsv"
 #     conda: "porechop-env"
@@ -24,7 +24,7 @@ rule merge_reads:
 rule filter_reads:
     input: "resources/reads/{sample}/reads_all.fastq.gz"
     output: temp("results/reads/{sample}/reads_filtered.fastq.gz")
-    threads: 10
+    threads: 18
     log: "results/logs/{sample}_filtlong.log"
     benchmark: "results/benchmarks/filtlong_filter/{sample}.tsv"
     conda: "filtlong-env"
@@ -34,7 +34,7 @@ rule filter_reads:
 rule fq2fasta:
     input: "results/reads/{sample}/reads_filtered.fastq.gz"
     output: "results/reads/{sample}/reads_filtered.fasta.gz"
-    threads: 10
+    threads: 18
     log: "results/logs/{sample}_seqkit_fq2fa.log"
     benchmark: "results/benchmarks/seqkit_convert/{sample}.tsv"
     conda: "seqkit-env"
@@ -43,7 +43,7 @@ rule fq2fasta:
 rule create_fr_red:
     input: "resources/plasmid/DA61218_plasmid.fa"
     output: "results/flanking_regions/fr_red.fa" # the same for every sample
-    threads: 10
+    threads: 18
     log: "results/logs/seqkit_subseq_fr_red.log"
     conda: "seqkit-env"
     params: start = config['fr_red_start'], end = config['fr_red_end']
@@ -52,7 +52,7 @@ rule create_fr_red:
 rule create_fr_green:
     input: "resources/plasmid/DA61218_plasmid.fa"
     output: "results/flanking_regions/fr_green.fa" # the same for every sample
-    threads: 10
+    threads: 18
     log: "results/logs/seqkit_subseq_fr_green.log"
     conda: "seqkit-env"
     params: start = config['fr_green_start'], end = config['fr_green_end']
@@ -61,7 +61,7 @@ rule create_fr_green:
 rule make_blast_db:
     input: "results/reads/{sample}/reads_filtered.fasta.gz"
     output: directory("results/blast_databases/{sample}")
-    threads: 10
+    threads: 18
     log: "results/logs/{sample}_blastdb.log"
     conda: "blast-env"
     shell: "pigz -c -d -p {threads} {input} | makeblastdb -in - -dbtype nucl -title blastdb -out {output}/blastdb 2> {log}"
@@ -69,7 +69,7 @@ rule make_blast_db:
 rule blast_red:
     input: query="results/flanking_regions/fr_red.fa", database="results/blast_databases/{sample}"
     output: "results/tables/{sample}/blast_red.tsv"
-    threads: 10
+    threads: 18
     params: fmt=config['format'], n_alns=config['n_fr_aligns']
     log: "results/logs/{sample}_blast_red.log"
     benchmark: "results/benchmarks/blast_red/{sample}.tsv"
@@ -80,7 +80,7 @@ rule blast_red:
 rule blast_green:
     input: query="results/flanking_regions/fr_green.fa", database="results/blast_databases/{sample}"
     output: "results/tables/{sample}/blast_green.tsv"
-    threads: 10
+    threads: 18
     params: fmt = config['format'], n_alns = config['n_fr_aligns']
     log: "results/logs/{sample}_blast_green.log"
     benchmark: "results/benchmarks/blast_green/{sample}.tsv"
@@ -100,7 +100,7 @@ rule blast_repeat_unit:
     input: query="results/flanking_regions/repeat_unit.fa",
            database="results/blast_databases/{sample}"
     output: "results/tables/{sample}/blast_repeat_unit.tsv"
-    threads: 10
+    threads: 18
     log: "results/logs/{sample}_blast_repeat_unit.log"
     conda: "blast-env"
     params: fmt=config["format"], n_alns=config["n_bla_aligns"]
@@ -158,7 +158,7 @@ rule blast_blaSHV:
     input: query="resources/genes/blaSHV.fa",
            database="results/blast_databases/{sample}"
     output: "results/tables/{sample}/blast_blaSHV.tsv"
-    threads: 10
+    threads: 18
     log: "results/logs/{sample}_blast_blaSHV.log"
     benchmark: "results/benchmarks/blast_blaSHV/{sample}.tsv"
     conda: "blast-env"
