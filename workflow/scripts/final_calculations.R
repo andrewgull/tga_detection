@@ -88,14 +88,21 @@ bla_cn_freq <-
 # find frequency of reads that might contain certain CN
 cn_bins <- 
   cn_bins %>% 
+  # remove those that are theoretically impossible (no such long reads)
+  filter(n_reads_theoretical != 0) %>% 
   mutate(freq_theoretical = n_reads_theoretical / total)
 
 # correct CN frequency
 # add detection limit
 bla_cn_freq <- 
   bla_cn_freq %>% 
-  left_join(cn_bins, by = "CN") %>% 
-  mutate(counts_corrected = counts_obs/freq_theoretical,
+  full_join(cn_bins, by = "CN") %>% 
+  # replace NA with 0
+  mutate(counts_obs = tidyr::replace_na(counts_obs, 0),
+         freq_obs = tidyr::replace_na(freq_obs, 0)) %>% 
+  arrange(CN) %>% 
+  # do the rest of the calculations
+  mutate(counts_corrected = counts_obs / freq_theoretical,
          freq_corrected = counts_corrected / sum(counts_corrected),
          detection_limit = 1/n_reads_theoretical)
   
