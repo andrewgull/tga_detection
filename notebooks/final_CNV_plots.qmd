@@ -41,9 +41,7 @@ read_many_tables <- function(table_name) {
 }
 
 res_df <- read_many_tables("blaSHV_counts.tsv")
-freq_df <- read_many_tables("frequencies.tsv") %>% 
-  # add limits of detection
-  mutate(detection_limit = 1/n_reads_theoretical)
+freq_df <- read_many_tables("frequencies.tsv")
 
 # save the table for Sofia
 write_delim(freq_df %>% select(CN, freq_corrected, detection_limit, group, sample), file = "../results/tables/frequencies_all.tsv")
