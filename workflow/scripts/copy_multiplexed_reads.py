@@ -13,7 +13,8 @@ def get_args():
     """
 
     parser = argparse.ArgumentParser(
-        description="Script for copying multiplexed (i.e. with barcodes) read files from Argos to the local computer using cp.\n",
+        description="Script for copying multiplexed (i.e. with barcodes) read files from Argos to the local computer using cp.\n"
+                    "It looks for both fastq and fastq.gz extensions",
         formatter_class=argparse.RawTextHelpFormatter
     )
 
