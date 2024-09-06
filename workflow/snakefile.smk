@@ -1,8 +1,9 @@
 from snakemake.io import expand, directory, touch, temp
+import pandas as pd
 
 rule all:
     input:
-        expand("results/final/{sample}_all.done", sample=config['samples'])
+        expand("results/final/{sample}_all.done", sample=config['samples']), "results/tables/aggregate/frequencies_full_table.tsv"
 
 rule merge_reads:
     input: "resources/reads_separate/{sample}"
@@ -214,6 +215,16 @@ rule frequency_calculation:
     output: "results/tables/{sample}/frequencies.tsv"
     log: "results/logs/{sample}_frequencies.log"
     shell: "Rscript {input.script} -c {input.bins} -b {input.bla} -f {input.rrol} -o {output} &> {log}"
+
+rule aggregate_freq_tables:
+    input: expand("results/tables/{sample}/frequencies.tsv", sample=config['samples'])
+    output: "results/tables/aggregate/frequencies_full_table.tsv"
+    run:
+        dfs = [pd.read_csv(f, sep='\t') for f in input]
+        # for df in dfs:
+        #    df["Sample"] = "{sample}"
+        merged_df = pd.concat(dfs, axis=0)
+        merged_df.to_csv(output[0], index=False, sep='\t')
 
 rule final:
     input: freqs="results/tables/{sample}/frequencies.tsv"
