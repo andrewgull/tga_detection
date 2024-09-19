@@ -13,22 +13,13 @@ rule merge_reads:
     benchmark: "results/benchmarks/zcat_reads/{sample}.tsv"
     shell: "zcat {input}/*.gz | pigz -c -p {threads} 1> {output} 2> {log}"
 
-# rule chop_reads:
-#     input: "resources/reads/{sample}/reads_all.fastq.gz"
-#     output: temp("results/reads/{sample}/reads_chopped.fastq.gz")
-#     threads: 18
-#     log: "results/logs/{sample}_porechop.log"
-#     benchmark: "results/benchmarks/porechop_reads/{sample}.tsv"
-#     conda: "porechop-env"
-#     shell: "porechop -i {input} -o {output} --threads {threads} &> {log}"
-
 rule filter_reads:
     input: "resources/reads/{sample}/reads_all.fastq.gz"
     output: temp("results/reads/{sample}/reads_filtered.fastq.gz")
     threads: 18
     log: "results/logs/{sample}_filtlong.log"
     benchmark: "results/benchmarks/filtlong_filter/{sample}.tsv"
-    conda: "filtlong-env"
+    container: "filtlong.sif"
     params: min_len=config['min_read_len']
     shell: "filtlong --min_length {params.min_len} {input} 2> {log} | pigz -c -p {threads} > {output}"
 
