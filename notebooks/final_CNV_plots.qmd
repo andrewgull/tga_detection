@@ -41,11 +41,9 @@ read_many_tables <- function(table_name) {
 }
 
 res_df <- read_many_tables("blaSHV_counts.tsv")
-freq_df <- read_many_tables("frequencies.tsv")
 
-# save the table for Sofia
-write_delim(freq_df %>% select(CN, freq_corrected, detection_limit, group, sample), file = "../results/tables/frequencies_all.tsv")
-write_delim(freq_df, file = "../results/tables/frequencies_all_full.tsv")
+# this table is ready if the pipeline finished
+freq_df <- read_tsv("../results/tables/aggregate/frequencies_full_table.tsv")
 ```
 
 
@@ -76,7 +74,7 @@ res_df %>%
 
 ```{r, fig.height=8, warning=FALSE}
 freq_df %>%
-  filter(grepl("x", group) | grepl("mh", group) | grepl("9", group)) %>% 
+  filter(grepl("x", group) | grepl("mh", group)) %>% 
   ggplot(aes(CN, freq_corrected)) +
   geom_col(aes(fill=group)) +
   geom_rug(sides = "b", length = unit(0.06, "npc")) +
