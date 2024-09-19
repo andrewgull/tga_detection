@@ -218,13 +218,18 @@ rule frequency_calculation:
 
 rule aggregate_freq_tables:
     input: expand("results/tables/{sample}/frequencies.tsv", sample=config['samples'])
-    output: "results/tables/aggregate/frequencies_full_table.tsv"
+    output: tsv = "results/tables/aggregate/frequencies_full_table.tsv",
+            xlsx = "results/tables/aggregate/frequencies_full_table.xlsx"
     run:
-        dfs = [pd.read_csv(f, sep='\t') for f in input]
-        # for df in dfs:
-        #    df["Sample"] = "{sample}"
+        dfs = []
+        for sample, file in zip(config['samples'], input):
+            df = pd.read_csv(file, sep='\t')
+            df['sample'] = sample
+            dfs.append(df)
         merged_df = pd.concat(dfs, axis=0)
-        merged_df.to_csv(output[0], index=False, sep='\t')
+        merged_df.to_csv(output.tsv, index=False, sep='\t')
+        # requires openpyxl
+        merged_df.to_excel(output.xlsx,index=False, sheet_name='Frequencies')
 
 rule final:
     input: freqs="results/tables/{sample}/frequencies.tsv"
