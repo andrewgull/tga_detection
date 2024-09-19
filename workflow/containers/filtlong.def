@@ -1,0 +1,10 @@
+Bootstrap: docker
+From: ubuntu:22.04
+
+%post
+    apt-get update
+
+    apt install filtlong
+
+%runscript
+    exec "$@"
