@@ -1,0 +1,12 @@
+samples:
+  76595_D_mh: 76595_D_mh
+  76595_Exp1_MH: 76595_Exp1_MH
+
+regions:
+  CR1: CR1
+  CR2: CR2
+  CR3: CR3
+  CR4: CR4
+
+n_cc_alns: 900000
+format: 6
