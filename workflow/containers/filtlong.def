@@ -1,10 +1,5 @@
 Bootstrap: docker
-From: ubuntu:22.04
+From: continuumio/miniconda3
 
-%post
-    apt-get update
-
-    apt install filtlong
-
-%runscript
-    exec "$@"
+%files workflow/envs/filtlong.yaml
+%post /opt/conda/bin/conda env create -f workflow/envs/filtlong.yaml

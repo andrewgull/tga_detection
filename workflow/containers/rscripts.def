@@ -1,0 +1,5 @@
+Bootstrap: docker
+From: continuumio/miniconda3
+
+%files workflow/envs/rscripts.yaml
+%post /opt/conda/bin/conda env create -f workflow/envs/rscripts.yaml
