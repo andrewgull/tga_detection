@@ -12,6 +12,8 @@ format:
     code-summary: "show code"
     df-print: kable
     cap-location: top
+    self-contained: true
+    standalone: true
 editor: visual
 ---
 
@@ -30,16 +32,12 @@ Our hypothesis is that coverage upstream the DS is higher than in the three remo
 
 Sequences of the regions CR1 - CR4 are in `resources/control_regions`
 
-sample 76595_D\_mh
+All control regions (CR) were blasted against each samples' reads.
+See `workflow/covcontrol.smk` for details.
 
-## BLAST commands
+## Overview of BLAST results:
 
-all control regions (CR) were blasted against each samples' reads.
-See `covcontrol.smk` for details.
-
-## BLAST results:
-
-reads have been filtered by length (min 3757 bp)
+The blast tables look like this:
 
 ```{r}
 #| message: false
@@ -55,91 +53,71 @@ blast_cr %>%
 ### Identity
 
 ```{r}
-ggplot(blast_cr, aes(...0, ...2)) +
-  geom_boxplot(aes(fill = ...0)) +
+ggplot(blast_cr, aes(control_region, identity)) +
+  geom_boxplot(alpha = 1, outliers = F) +
+  geom_violin(aes(fill = control_region), alpha=0.2) +
   facet_grid(rows = vars(sample)) +
-  theme(legend.position = "none")
+  theme_minimal() +
+  theme(legend.position = "none") +
+  scale_fill_brewer(palette = "Set2") +
+  labs(x = "", y = "identity, %") +
+  ggtitle("Identity of hits") +
+  geom_hline(yintercept = 80, color = "red", linetype="dashed")
 ```
 
 ### Length
 
 ```{r}
-#| fig-width: 12
-#| fig-height: 6
-ggplot(blast_cr, aes(X4)) +
-  geom_histogram(aes(fill = X1), bins = 100) +
-  facet_grid(cols = vars(X1)) +
+ggplot(blast_cr, aes(control_region, length)) +
+  geom_boxplot(alpha = 1, outliers = F) +
+  geom_violin(aes(fill = control_region), alpha=0.2) +
+  facet_grid(rows = vars(sample)) +
+  theme_minimal() +
   theme(legend.position = "none") +
-  scale_fill_brewer(palette = "Set2")
+  scale_fill_brewer(palette = "Set2") +
+  labs(x = "", y = "length, nt") +
+  ggtitle("Length of hits") +
+  geom_hline(yintercept = 1500, color = "red", linetype="dashed")
 ```
 
-## Number of reads containing each CR & FR (red)
+## Number of reads containing each CR
+
+### Bar plot
 
 hits shorter than 1500 and less 80% identity have been removed
 
 ```{r}
 blast_cr %>% 
-  filter(X4 >= 1500,
-         X3 >= 80) %>% 
-  select(X1, X2) %>% 
+  filter(length >= 1500,
+         identity >= 80) %>% 
+  select(sample, control_region, read_ID) %>% 
   distinct() %>% 
-  dplyr::group_by(X1) %>% 
+  dplyr::group_by(sample, control_region) %>% 
   dplyr::count() %>% 
-  ggplot(aes(X1, n)) +
-  geom_col(aes(fill = X1)) +
-  theme(legend.position = "none") +
+  ggplot(aes(control_region, n)) +
+  geom_col(aes(fill = control_region), alpha = 0.7) +
+  facet_grid(rows = vars(sample)) +
   xlab("") +
-  ylab("N reads") +
-  scale_fill_brewer(palette = "Set2")
+  ylab("coverage") +
+  scale_fill_brewer(palette = "Set2") +
+  theme_minimal() +
+  theme(legend.position = "none") +
+  ggtitle("Read coverage")
   
 ```
 
-Table of read counts:
+### Table of read counts per sample and region:
+
+hits shorter than 1500 and less 80% identity have been removed
 
 ```{r}
 blast_cr %>% 
-  filter(X4 >= 1500,
-         X3 >= 80) %>% 
-  select(X1, X2) %>% 
+  filter(length >= 1500,
+         identity >= 80) %>% 
+  select(sample, control_region, read_ID) %>% 
   distinct() %>% 
-  group_by(X1) %>% 
-  count() %>% 
+  dplyr::group_by(sample, control_region) %>% 
+  dplyr::count() %>% 
   knitr::kable()
 ```
 
-H1 is confirmed
-
-## Read lengths
-
-```{r}
-#| message: false
-#| eval: false
-#| cache: true
-#| fig-width: 16
-#| fig-height: 6
-
-#library(Biostrings)
-
-reads_path <- "results/reads/76595_D_mh/reads_all.fasta" 
-
-# Read the file
-reads <- Biostrings::readDNAStringSet(paste0(project_path, reads_path))
-read_lengths <- Biostrings::width(reads)
-
-reads_len_df <- tibble("X2" = sub("^(.*?) runid=.*", "\\1", names(reads)), 
-                       "read.len" = read_lengths)
-# join and plot
-blast_cr %>% 
-  filter(X4 >= 1500,
-         X3 >= 80,
-         X1 != "FR") %>%
-  select(X1, X2) %>% 
-  distinct() %>% 
-  left_join(reads_len_df, by = "X2") %>% 
-  ggplot(aes(read.len)) +
-  geom_histogram(aes(fill = X1), bins = 100) +
-  facet_grid(cols = vars(X1)) +
-  theme(legend.position = "none") +
-  scale_fill_brewer(palette = "Set2") +
-  xlab("read length")
-```
