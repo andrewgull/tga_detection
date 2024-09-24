@@ -19,7 +19,7 @@ rule filter_reads:
     threads: 18
     log: "results/logs/{sample}_filtlong.log"
     benchmark: "results/benchmarks/filtlong_filter/{sample}.tsv"
-    container: "filtlong.sif"
+    container: "workflow/images/filtlong.sif"
     params: min_len=config['min_read_len']
     shell: "filtlong --min_length {params.min_len} {input} 2> {log} | pigz -c -p {threads} > {output}"
 
@@ -29,7 +29,7 @@ rule fq2fasta:
     threads: 18
     log: "results/logs/{sample}_seqkit_fq2fa.log"
     benchmark: "results/benchmarks/seqkit_convert/{sample}.tsv"
-    conda: "seqkit-env"
+    container: "workflow/images/seqkit.sif"
     shell: "seqkit fq2fa -j {threads} {input} | pigz -c -p {threads} 1> {output} 2> {log}"
 
 rule create_fr_red:
@@ -37,7 +37,7 @@ rule create_fr_red:
     output: "results/flanking_regions/fr_red.fa" # the same for every sample
     threads: 18
     log: "results/logs/seqkit_subseq_fr_red.log"
-    conda: "seqkit-env"
+    container: "workflow/images/seqkit.sif"
     params: start = config['fr_red_start'], end = config['fr_red_end']
     shell: "seqkit subseq -r {params.start}:{params.end} {input} 1> {output} 2> {log}"
 
@@ -46,7 +46,7 @@ rule create_fr_green:
     output: "results/flanking_regions/fr_green.fa" # the same for every sample
     threads: 18
     log: "results/logs/seqkit_subseq_fr_green.log"
-    conda: "seqkit-env"
+    container: "workflow/images/seqkit.sif"
     params: start = config['fr_green_start'], end = config['fr_green_end']
     shell: "seqkit subseq -j {threads} -r {params.start}:{params.end} {input} 1> {output} 2> {log}"
 
@@ -55,7 +55,7 @@ rule make_blast_db:
     output: directory("results/blast_databases/{sample}")
     threads: 18
     log: "results/logs/{sample}_blastdb.log"
-    conda: "blast-env"
+    container: "workflow/images/blast.sif"
     shell: "pigz -c -d -p {threads} {input} | makeblastdb -in - -dbtype nucl -title blastdb -out {output}/blastdb 2> {log}"
 
 rule blast_red:
@@ -65,7 +65,7 @@ rule blast_red:
     params: fmt=config['format'], n_alns=config['n_fr_aligns']
     log: "results/logs/{sample}_blast_red.log"
     benchmark: "results/benchmarks/blast_red/{sample}.tsv"
-    conda: "blast-env"
+    container: "workflow/images/blast.sif"
     shell: "blastn -query {input.query} -db {input.database}/blastdb -outfmt {params.fmt} "
            "-num_threads {threads} -num_alignments {params.n_alns} 1> {output} 2> {log}"
 
@@ -76,14 +76,14 @@ rule blast_green:
     params: fmt = config['format'], n_alns = config['n_fr_aligns']
     log: "results/logs/{sample}_blast_green.log"
     benchmark: "results/benchmarks/blast_green/{sample}.tsv"
-    conda: "blast-env"
+    container: "workflow/images/blast.sif"
     shell: "blastn -query {input.query} -db {input.database}/blastdb -outfmt {params.fmt} "
            "-num_threads {threads} -num_alignments {params.n_alns} 1> {output} 2> {log}"
 
 rule create_repeat_unit:
     input: "resources/plasmid/DA61218_plasmid.fa"
     output: "results/flanking_regions/repeat_unit.fa"
-    conda: "seqkit-env"
+    container: "workflow/images/seqkit.sif"
     log: "results/logs/seqkit_repunit.log"
     params: start=config["ru_start"], end=config["ru_end"]
     shell:  "seqkit subseq -r {params.start}:{params.end} {input} 1> {output} 2> {log}"
@@ -94,7 +94,7 @@ rule blast_repeat_unit:
     output: "results/tables/{sample}/blast_repeat_unit.tsv"
     threads: 18
     log: "results/logs/{sample}_blast_repeat_unit.log"
-    conda: "blast-env"
+    container: "workflow/images/blast.sif"
     params: fmt=config["format"], n_alns=config["n_bla_aligns"]
     shell: "blastn -query {input.query} -db {input.database}/blastdb -outfmt {params.fmt} "
            "-num_threads {threads} -num_alignments {params.n_alns} 1> {output} 2> {log}"
@@ -105,7 +105,7 @@ rule filter_red_and_repeat_unit_blast:
            repunit = "results/tables/{sample}/blast_repeat_unit.tsv"
     output: "results/tables/{sample}/blast_joined_red_repunit.tsv"
     log: "results/logs/{sample}_blast_joined.log"
-    conda: "rscripts-env"
+    container: "workflow/images/rscripts.sif"
     params: identity = config['min_identity'], e_val = config['max_e_value'],
             length_fr = config['min_fr_len'], length_ru = config['min_ru_len'],
             distance = config['max_dist']
@@ -118,7 +118,7 @@ rule filter_min_orient_length:
            table = "results/tables/{sample}/blast_joined_red_repunit.tsv"
     output: "results/tables/{sample}/blast_joined_red_repunit_orient_len.tsv"
     log: "results/logs/{sample}_filt_min_orient_len.log"
-    conda: "rscripts-env"
+    container: "workflow/images/rscripts.sif"
     params: base_len = config['base_len']
     shell: "Rscript {input.script} -i {input.table} -d {params.base_len} -o {output} &> {log}"
 
@@ -129,7 +129,7 @@ rule cn_reads_bins:
            reads = "results/reads/{sample}/reads_filtered.fasta.gz"
     output: "results/tables/{sample}/number_reads_containing_CN.tsv"
     log: "results/logs/{sample}_cn_reads_bins.log"
-    conda: "biostrings-env"
+    container: "workflow/images/biostrings.sif"
     params: max_cn = config['max_cn'], incr = config['increment'], base_len=config['base_len']
     shell: "Rscript {input.script} -t {input.table} -r {input.reads} -c {params.max_cn} -i {params.incr} "
            "-b {params.base_len} -o {output} &> {log}"
@@ -141,7 +141,7 @@ rule filter_flanking_regions:
            green = "results/tables/{sample}/blast_green.tsv"
     output: "results/tables/{sample}/blast_joined.tsv"
     log: "results/logs/{sample}_blast_joined.log"
-    conda: "rscripts-env"
+    container: "workflow/images/rscripts.sif"
     params: identity = config['min_identity'], e_val = config['max_e_value'], length = config['min_fr_len']
     shell: "Rscript {input.script} -r {input.red_ru} -g {input.green} -i {params.identity} -e {params.e_val} "
            "-l {params.length} -o {output} &> {log}"
@@ -153,7 +153,7 @@ rule blast_blaSHV:
     threads: 18
     log: "results/logs/{sample}_blast_blaSHV.log"
     benchmark: "results/benchmarks/blast_blaSHV/{sample}.tsv"
-    conda: "blast-env"
+    container: "workflow/images/blast.sif"
     params: fmt=config["format"], n_alns=config["n_bla_aligns"]
     shell: "blastn -query {input.query} -db {input.database}/blastdb -outfmt {params.fmt} "
            "-num_threads {threads} -num_alignments {params.n_alns} 1> {output} 2> {log}"
@@ -164,7 +164,7 @@ rule filter_blaSHV_hits:
            fr="results/tables/{sample}/blast_joined.tsv"
     output: "results/tables/{sample}/blast_blaSHV_filtered.tsv"
     log: "results/logs/{sample}_blast_blaSHV_filter.log"
-    conda: "rscripts-env"
+    container: "workflow/images/rscripts.sif"
     params: e_val=config["max_e_value"]
     shell: "Rscript {input.script} -b {input.bla} -f {input.fr} -e {params.e_val} -o {output} &> {log}"
 
@@ -174,7 +174,7 @@ rule make_bed_blaSHV_filtered:
     output: "results/bedfiles/{sample}/blaSHV_hits.bed"
     log: "results/logs/{sample}_make_bed.log"
     benchmark: "results/benchmarks/make_bed/{sample}.tsv"
-    conda: "rscripts-env"
+    container: "workflow/images/rscripts.sif"
     shell: "Rscript {input.script} -i {input.bla} -o {output} &> {log}"
 
 rule merge_blaSHV_filtered:
@@ -183,7 +183,7 @@ rule merge_blaSHV_filtered:
             merged="results/bedfiles/{sample}/blaSHV_hits_merged.bed"
     log: "results/logs/{sample}_bedtools_merge.log"
     benchmark: "results/benchmarks/bedtools_merge/{sample}.tsv"
-    conda: "varcalling-env"
+    container: "workflow/images/bedtools.sif"
     params: dist=config["dist"]
     shell: "sort -k1,1 -k2,2n {input} > {output.sorted} && bedtools merge -i {output.sorted} -s -d {params.dist} > {output.merged} 2> {log}"
 
@@ -194,7 +194,7 @@ rule blaSHV_counts:
     output: plot="results/plots/{sample}/blaSHV_merged_counts.png",
             table="results/tables/{sample}/blaSHV_counts.tsv"
     log: "results/logs/{sample}_blaSHV_counts.log"
-    conda: "rscripts-env"
+    container: "workflow/images/rscripts.sif"
     params: length=config["bla_len"]
     shell: "Rscript {input.script} -i {input.bed} -b {input.blast} -l {params.length} -p {output.plot} -a {output.table} &> {log}"
 
@@ -205,6 +205,7 @@ rule frequency_calculation:
            rrol="results/tables/{sample}/blast_joined_red_repunit_orient_len.tsv"
     output: "results/tables/{sample}/frequencies.tsv"
     log: "results/logs/{sample}_frequencies.log"
+    container: "workflow/images/rscripts.sif"
     shell: "Rscript {input.script} -c {input.bins} -b {input.bla} -f {input.rrol} -o {output} &> {log}"
 
 rule aggregate_freq_tables:
