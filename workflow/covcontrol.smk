@@ -30,10 +30,10 @@ rule aggregate_сс_tables:
     run:
         dfs = []
         for sample, file in zip(config['samples'], input):
-            df = pd.read_csv(file, sep='\t')
+            df = pd.read_csv(file, sep='\t', header=None) # ensure no headers to avoid wrong concatenating
             df['sample'] = sample
             dfs.append(df)
-        merged_df = pd.concat(dfs, axis=0)
+        merged_df = pd.concat(dfs, axis=0, ignore_index=True)
         merged_df.to_csv(output.tsv, index=False, sep='\t')
         # requires openpyxl
         merged_df.to_excel(output.xlsx, index=False, sheet_name='coverage')
