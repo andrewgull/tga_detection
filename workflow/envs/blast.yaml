@@ -1,5 +1,7 @@
 name: blast-env
 channels:
   - bioconda
+  - conda-forge
 dependencies:
   - blast=2.12.0
+  - pigz=2.6
