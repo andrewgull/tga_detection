@@ -13,5 +13,5 @@ for sample, file in zip(sample_names, table_names):
     df['sample'] = sample
     dfs.append(df)
 merged_df = pd.concat(dfs, axis=0)
-merged_df.to_csv(output.tsv, index=False, sep='\t')
-merged_df.to_excel(output.xlsx,index=False, sheet_name='Frequencies')
+merged_df.to_csv(output_tsv, index=False, sep='\t')
+merged_df.to_excel(output_xlsx, index=False, sheet_name='Frequencies')
