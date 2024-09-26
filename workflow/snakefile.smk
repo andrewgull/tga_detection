@@ -57,7 +57,7 @@ rule make_blast_db:
     threads: 18
     log: "results/logs/{sample}_blastdb.log"
     conda: "blast-env"
-    shell: "pigz -c -d -p {threads} {input} | makeblastdb -in - -dbtype nucl -title blastdb -out {output}/blastdb 2> {log}"
+    shell: "pigz -c -d -p {threads} {input} | makeblastdb -in - -dbtype nucl -title blastdb -out {output}/blastdb &> {log}"
 
 rule blast_red:
     input: query="results/flanking_regions/fr_red.fa", database="results/blast_databases/{sample}"
@@ -215,7 +215,7 @@ rule aggregate_freq_tables:
             xlsx = "results/tables/aggregate/frequencies_full_table.xlsx"
     log: "results/logs/aggregate_freq_tables.log"
     conda: "pandas-env"
-    shell: "scripts/aggregate_frequency_tables.py"
+    script: "scripts/aggregate_frequency_tables.py"
 
 rule final:
     input: freqs="results/tables/{sample}/frequencies.tsv"
