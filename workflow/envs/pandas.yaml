@@ -1,0 +1,6 @@
+name: pandas-env
+channels: 
+  - conda-forge
+dependencies:
+  - pandas=1.5.3
+  - openpyxl=3.1.5

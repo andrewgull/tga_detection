@@ -1,0 +1,6 @@
+name: compress-env
+channels:
+  - conda-forge
+dependencies:
+  - gzip=1.10
+  - pigz=2.6
