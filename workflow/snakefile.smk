@@ -11,6 +11,7 @@ rule merge_reads:
     threads: 18
     log: "results/logs/{sample}_zcat.log"
     benchmark: "results/benchmarks/zcat_reads/{sample}.tsv"
+    conda: "compress-env"
     shell: "zcat {input}/*.gz | pigz -c -p {threads} 1> {output} 2> {log}"
 
 rule filter_reads:
@@ -205,26 +206,21 @@ rule frequency_calculation:
            rrol="results/tables/{sample}/blast_joined_red_repunit_orient_len.tsv"
     output: "results/tables/{sample}/frequencies.tsv"
     log: "results/logs/{sample}_frequencies.log"
+    conda: "rscripts-env"
     shell: "Rscript {input.script} -c {input.bins} -b {input.bla} -f {input.rrol} -o {output} &> {log}"
 
 rule aggregate_freq_tables:
     input: expand("results/tables/{sample}/frequencies.tsv", sample=config['samples'])
     output: tsv = "results/tables/aggregate/frequencies_full_table.tsv",
             xlsx = "results/tables/aggregate/frequencies_full_table.xlsx"
-    run:
-        dfs = []
-        for sample, file in zip(config['samples'], input):
-            df = pd.read_csv(file, sep='\t')
-            df['sample'] = sample
-            dfs.append(df)
-        merged_df = pd.concat(dfs, axis=0)
-        merged_df.to_csv(output.tsv, index=False, sep='\t')
-        # requires openpyxl
-        merged_df.to_excel(output.xlsx,index=False, sheet_name='Frequencies')
+    log: "results/logs/aggregate_freq_tables.log"
+    conda: "pandas-env"
+    shell: "scripts/aggregate_frequency_tables.py"
 
 rule final:
     input: freqs="results/tables/{sample}/frequencies.tsv"
     output: touch("results/final/{sample}_all.done")
+    log: "results/logs/{sample}_final.log"
     shell: "echo 'DONE'"
 
 onsuccess:
