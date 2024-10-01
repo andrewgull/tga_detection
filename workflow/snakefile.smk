@@ -21,6 +21,7 @@ rule filter_reads:
     log: "results/logs/{sample}_filtlong.log"
     benchmark: "results/benchmarks/filtlong_filter/{sample}.tsv"
     conda: "filtlong-env"
+    container: "containers/filtlong.sif"
     params: min_len=config['min_read_len']
     shell: "filtlong --min_length {params.min_len} {input} 2> {log} | pigz -c -p {threads} > {output}"
 
