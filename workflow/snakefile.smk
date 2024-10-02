@@ -1,5 +1,4 @@
 from snakemake.io import expand, directory, touch, temp
-import pandas as pd
 
 rule all:
     input:
