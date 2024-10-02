@@ -4,11 +4,6 @@ From: ubuntu:22.04
 %help 
    SEQkit container with miniconda
 
-%setup
-    #Create the .condarc file where the environments/channels from conda are specified, these are pulled with preference to root
-    cd ~/
-    touch .condarc
-
 %post
     apt update && apt -y upgrade
     apt -y install \
