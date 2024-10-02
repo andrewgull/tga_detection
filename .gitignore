@@ -7,8 +7,8 @@ examples/**
 .Rhistory
 .Rproj.user
 .snakemake
-notebooks/fasta/
-notebooks/tables/
+workflow/notebooks/fasta/
+workflow/notebooks/tables/
 *.sif
 
 # PyCharm
