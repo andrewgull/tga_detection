@@ -10,6 +10,8 @@ examples/**
 workflow/notebooks/fasta/
 workflow/notebooks/tables/
 *.sif
+samples_list.txt
+copy_reads_multiple_source_paths.py
 
 # PyCharm
 .idea
