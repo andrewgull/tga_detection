@@ -1,0 +1,178 @@
+---
+title: "CNV plots"
+author: "AG"
+date: "`r Sys.Date()`"
+format:
+  html:
+    toc: true
+    toc_float: true
+    theme: cyborg
+    embed-resources: true
+    code-fold: true
+    code-summary: "show code"
+    df-print: kable
+    cap-location: top
+---
+
+## Data
+
+```{r, message=FALSE}
+library(purrr)
+library(readr)
+library(dplyr)
+library(stringr)
+library(ggplot2)
+
+config <- yaml::read_yaml("../workflow/config.yaml")
+samples <- unlist(config$samples)
+
+read_many_tables <- function(table_name) {
+  out_df <- map_dfr(samples, function(x) {
+    df <-
+      read_tsv(paste0("../results/tables/", x, "/", table_name),
+               show_col_types = F)
+    df$sample <- x
+    return(df)
+  }) %>%
+    mutate(replicate = str_split_i(sample, "_", i = 2),
+           group = str_split_i(sample, "_", i = 3))
+  
+  return(out_df)
+}
+
+res_df <- read_many_tables("blaSHV_counts.tsv")
+
+# this table is ready if the pipeline finished
+freq_df <- read_tsv("../results/tables/aggregate/frequencies_full_table.tsv")
+```
+
+
+```{r}
+#| tbl-cap: "N reads per sample"
+
+knitr::kable(freq_df)
+```
+
+
+```{r, fig.width=10, fig.height=6}
+res_df %>% 
+  group_by(sample) %>% 
+  count() %>% 
+  ggplot(aes(reorder(sample, -n), n)) +
+  geom_col(fill="steelblue") +
+  ggtitle("Reads per sample") +
+  ylab("n reads") +
+  xlab("") +
+  theme_bw() +
+  theme(axis.text.x = element_text(size=10, angle=45, hjust = 1))
+```
+
+
+## CNV frequency plots
+
+### MH + selection
+
+```{r, fig.height=8, warning=FALSE}
+freq_df %>%
+  filter(grepl("x", group) | grepl("mh", group)) %>% 
+  ggplot(aes(CN, freq_corrected)) +
+  geom_col(aes(fill=group)) +
+  geom_rug(sides = "b", length = unit(0.06, "npc")) +
+  scale_x_continuous(breaks = c(0:19)) +
+  facet_grid(rows = vars(group)) +
+  xlab("copy number") +
+  ylab("log10 adjusted frequency") +
+  theme_bw() +
+  theme(legend.position = "none")
+```
+
+
+### Reversion
+
+```{r,fig.height=8, warning=FALSE}
+freq_df %>%
+  filter(grepl("g", group)) %>% 
+  mutate(group = ordered(group, levels = c("10g", "20g", "40g", "80g", "160g"))) %>% 
+  ggplot(aes(CN, freq_corrected)) +
+  geom_col(aes(fill=group)) +
+  geom_rug(sides = "b", length = unit(0.06, "npc")) +
+  scale_x_continuous(breaks = c(0:17)) +
+  facet_grid(rows = vars(group)) +
+  xlab("copy number") +
+  ylab("log10 adjusted frequency") +
+  theme_bw() +
+  theme(legend.position = "none")
+```
+
+### With detection limit line
+
+```{r,fig.height=8}
+freq_df %>%
+  filter(group == "mh") %>% 
+  #mutate(group = ordered(group, levels = c("10g", "20g", "40g", "80g", "160g"))) %>% 
+  #filter(CN < 4, CN != 0) %>% 
+  ggplot(aes(CN, 6+log10(freq_corrected))) +
+  geom_col() +
+  geom_line(aes(CN, 6+log10(detection_limit)), color = "red", linewidth=5)
+```
+
+### CN change across groups
+
+```{r, fig.height=10, fig.width=5}
+plot_change_across_groups <- function(fdf, X, selection = TRUE) {
+  # fdfd: frequency df
+  # X: CN of interest
+  if (selection) {
+    fdf %>%
+      filter(grepl("x", group) | grepl("mh", group), CN == X) %>%
+      ggplot(aes(group, freq_corrected)) +
+      geom_col(fill = "#87A96B") +
+      theme_bw() +
+      ggtitle(paste0("Selection, CN = ", X)) +
+      xlab("") +
+      ylab("corrected frequency")
+  } else {
+    fdf %>%
+      filter(grepl("g", group), CN == X) %>%
+      mutate(group = ordered(group, levels = c("10g", "20g", "40g", "80g", "160g"))) %>%
+      ggplot(aes(group, freq_corrected)) +
+      geom_col(fill = "#B1676D") +
+      theme_bw() +
+      ggtitle(paste0("No selection, CN = ", X)) +
+      xlab("") +
+      ylab("corrected frequency")
+  }
+}
+
+reversion_plots <-
+  map(c(1, 2, 3, 4, 5, 6, 7, 8, 9),
+      ~ plot_change_across_groups(freq_df, ., selection = FALSE))
+
+ggpubr::ggarrange(plotlist = reversion_plots, ncol = 2, nrow = 5)
+```
+
+```{r, fig.height=10, fig.width=5}
+selection_plots <-
+  map(c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10),
+      ~ plot_change_across_groups(freq_df, ., selection = TRUE))
+
+ggpubr::ggarrange(plotlist = selection_plots, ncol = 2, nrow = 5)
+```
+
+
+## Average blaSHV
+
+to compare with ddPCR
+
+$$M_{gene} = \frac{\sum_{i=0}^n CN_{i}\frac{reads\_counts_{i}}{reads\_possible_{i}}}{\sum_{i=0}^n\frac{reads\_counts_{i}}{reads\_possible_{i}}}$$
+
+```{r}
+freq_df %>%
+  group_by(group) %>%
+  mutate(avg_gene_count = sum(CN * (counts_obs / freq_theoretical)) / sum((counts_obs /
+                                                                             freq_theoretical))) %>%
+  select(group, avg_gene_count) %>% 
+  distinct() %>% 
+  knitr::kable()
+```
+
