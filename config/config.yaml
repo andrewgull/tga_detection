@@ -65,30 +65,12 @@ fr_green_start: 6600
 fr_green_end: 7100
 
 # location of RU
-ru_start: 10570
-ru_end: 11389
+ru_start: 1955
+ru_end: 2774
 
 # location of blaSHV
 bla_start: 1
 bla_end: 861
-
-# location of CRs
-# CR length = 1678
-# coordinates are included
-cr1_start: 60155
-cr1_end: 61832
-
-cr2_start: 93175
-cr2_end: 94852
-
-cr3_start: 31478
-cr3_end: 33155
-
-cr4_start: 4726
-cr4_end: 6403
-
-cr5_start:
-cr5_end:
 
 # FR blast settings
 format: 6
