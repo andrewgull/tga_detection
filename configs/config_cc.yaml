@@ -1,0 +1,28 @@
+samples:
+  76595_D_mh: 76595_D_mh
+  76595_Exp1_MH: 76595_Exp1_MH
+
+regions:
+  CR1:
+    name: CR1
+    start: 60155
+    end: 61832
+  CR2:
+    name: CR2
+    start: 93175
+    end: 94852
+  CR3:
+    name: CR3
+    start: 31478
+    end: 33155
+  CR4:
+    name: CR4
+    start: 4726
+    end: 6403
+  CR5:
+    name: CR5
+    start: 171
+    end: 1849
+
+n_cc_alns: 900000
+format: 6
