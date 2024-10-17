@@ -45,9 +45,11 @@ rule aggregate_сс_tables:
         dfs = []
         samples_count = len(input) / len(config['samples']) # there should be the same number of samples as input files
         samples = [key for key in config['samples'] for _ in range(int(samples_count))]
-        for sample, file in zip(samples, input):
+        regions = [key for key in config['regions']] * len(config['samples'])
+        for sample, file, region in zip(samples, input, regions):
             df = pd.read_csv(file, sep='\t', header=None) # ensure no headers to avoid wrong concatenating
             df['sample'] = sample
+            df[0] = region
             dfs.append(df)
         merged_df = pd.concat(dfs, axis=0, ignore_index=True)
         merged_df.to_csv(output.tsv, index=False, sep='\t')
