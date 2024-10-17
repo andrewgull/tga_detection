@@ -21,19 +21,19 @@ editor: visual
 
 Here I will check coverage and proportion of reads that exceed the length threshold (3577 bp) and containing:
 
-1.  a region approx. 500 bp downstream the DS (CR4, pos. 31071 + 500 + 1677)
-2.  a region exactly opposite of the DS (CR1, pos. 87000 + 1677)
-3.  a region between the DS and the opposite end (clockwise) (CR3, pos. 60000 - 1677)
-4.  a region between the DS and the opposite end (anti-clockwise) (CR2, pos. 5000 + 1677)
+1.  a region approx. 500 bp *downstream* the DS (CR4, pos. 4726 - 6403)
+2.  a region exactly opposite of the DS (CR1, pos. 60155 - 61832)
+3.  a region between the DS and the opposite end (clockwise) (CR3, pos. 31478 - 33155)
+4.  a region between the DS and the opposite end (anti-clockwise) (CR2, pos. 93175 - 94852)
+5.  a region 500 nt *upstream* the DS (CR5, pos. 171 - 1849)*
 
-Our hypothesis is that coverage upstream the DS is higher than in the three remote regions (?)
+*all coordinates relative to the sequence deposited in NCBI (CP061207.1)
 
-![Fig.1. Plasmid DA61218 and the location of control regions](figures/pDA61218_full_size_annotated.png)
+Our hypothesis is that coverage of the regions close to the DS is higher than in the three remote regions
 
-Sequences of the regions CR1 - CR4 are in `resources/control_regions`
+![Fig.1. Plasmid DA61218 and the location of control regions](figures/plasmid_full_map.png)
 
-All control regions (CR) were blasted against each samples' reads.
-See `workflow/covcontrol.smk` for details.
+All control regions (CR) were blasted against each samples' reads. See `workflow/covcontrol.smk` for details.
 
 ## Overview of BLAST results:
 
@@ -43,7 +43,7 @@ The blast tables look like this:
 #| message: false
 library(tidyverse)
 
-blast_cr <- read_tsv("../results/cc/coverage_control_table.tsv", col_names = c('control_region', 'read_ID', 'identity', 'length', 'mismatch', 'gaps', 'qstart', 'qend', 'sstart', 'send', 'e_value', 'bit_score', 'sample'), skip = 1)
+blast_cr <- read_tsv("../../results/cc/coverage_control_table.tsv", col_names = c('control_region', 'read_ID', 'identity', 'length', 'mismatch', 'gaps', 'qstart', 'qend', 'sstart', 'send', 'e_value', 'bit_score', 'sample'), skip = 1)
 
 blast_cr %>% 
   head(n = 10) %>% 
@@ -120,4 +120,3 @@ blast_cr %>%
   dplyr::count() %>% 
   knitr::kable()
 ```
-
