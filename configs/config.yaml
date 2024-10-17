@@ -58,11 +58,11 @@ min_read_len: 1820
 # location of FRs
 # FR length = 500 nt
 # coordinates are included
-fr_red_start: 11400
-fr_red_end: 11900
+fr_red_start: 2785
+fr_red_end: 3285
 
-fr_green_start: 6600
-fr_green_end: 7100
+fr_green_start: 114451
+fr_green_end: 114951
 
 # location of RU
 ru_start: 1955
