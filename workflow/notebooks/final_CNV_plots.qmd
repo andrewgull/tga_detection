@@ -23,13 +23,13 @@ library(dplyr)
 library(stringr)
 library(ggplot2)
 
-config <- yaml::read_yaml("../workflow/config.yaml")
+config <- yaml::read_yaml("../../configs/config.yaml")
 samples <- unlist(config$samples)
 
 read_many_tables <- function(table_name) {
   out_df <- map_dfr(samples, function(x) {
     df <-
-      read_tsv(paste0("../results/tables/", x, "/", table_name),
+      read_tsv(paste0("../../results/tables/", x, "/", table_name),
                show_col_types = F)
     df$sample <- x
     return(df)
@@ -43,7 +43,7 @@ read_many_tables <- function(table_name) {
 res_df <- read_many_tables("blaSHV_counts.tsv")
 
 # this table is ready if the pipeline finished
-freq_df <- read_tsv("../results/tables/aggregate/frequencies_full_table.tsv")
+freq_df <- read_tsv("../../results/tables/aggregate/frequencies_full_table.tsv")
 ```
 
 
