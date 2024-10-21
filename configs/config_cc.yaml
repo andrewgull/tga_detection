@@ -17,12 +17,12 @@ regions:
     end: 33155
   CR4:
     name: CR4
-    start: 4726
-    end: 6403
+    start: 3789
+    end: 5466
   CR5:
     name: CR5
-    start: 171
-    end: 1849
+    start: 1109
+    end: 2786
 
 n_cc_alns: 900000
 format: 6
