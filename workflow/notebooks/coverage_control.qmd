@@ -19,21 +19,17 @@ editor: visual
 
 ## Intro
 
-Here I will check coverage and proportion of reads that exceed the length threshold (3577 bp) and containing:
+Here I will check coverage of the five *control regions* - for exact coordinates and other details see `configs/covcontrol.smk`
 
-1.  a region approx. 500 bp *downstream* the DS (CR4, pos. 4726 - 6403)
-2.  a region exactly opposite of the DS (CR1, pos. 60155 - 61832)
-3.  a region between the DS and the opposite end (clockwise) (CR3, pos. 31478 - 33155)
-4.  a region between the DS and the opposite end (anti-clockwise) (CR2, pos. 93175 - 94852)
-5.  a region 500 nt *upstream* the DS (CR5, pos. 171 - 1849)*
+Length of each control region is 500 nt
 
-*all coordinates relative to the sequence deposited in NCBI (CP061207.1)
-
-Our hypothesis is that coverage of the regions close to the DS is higher than in the three remote regions
+Our hypothesis is that coverage of the regions close to the DS (CR4 & CR5) is higher than in the three remote regions
 
 ![Fig.1. Plasmid DA61218 and the location of control regions](figures/plasmid_full_map.png)
 
-All control regions (CR) were blasted against each samples' reads. See `workflow/covcontrol.smk` for details.
+All control regions (CR) were blasted against each samples' reads. 
+
+See `configs/covcontrol.smk` for details.
 
 ## Overview of BLAST results:
 
@@ -43,7 +39,12 @@ The blast tables look like this:
 #| message: false
 library(tidyverse)
 
-blast_cr <- read_tsv("../../results/cc/coverage_control_table.tsv", col_names = c('control_region', 'read_ID', 'identity', 'length', 'mismatch', 'gaps', 'qstart', 'qend', 'sstart', 'send', 'e_value', 'bit_score', 'sample'), skip = 1)
+blast_cr <- read_tsv("../../results/cc/coverage_control_table.tsv", 
+                     col_names = c('control_region', 'read_ID', 'identity', 
+                                   'length', 'mismatch', 'gaps', 'qstart', 
+                                   'qend', 'sstart', 'send', 'e_value', 
+                                   'bit_score', 'sample'), 
+                     skip = 1)
 
 blast_cr %>% 
   head(n = 10) %>% 
@@ -76,20 +77,15 @@ ggplot(blast_cr, aes(control_region, length)) +
   theme(legend.position = "none") +
   scale_fill_brewer(palette = "Set2") +
   labs(x = "", y = "length, nt") +
-  ggtitle("Length of hits") +
-  geom_hline(yintercept = 1500, color = "red", linetype="dashed")
+  ggtitle("Length of hits")
 ```
 
 ## Number of reads containing each CR
 
 ### Bar plot
 
-hits shorter than 1500 and less 80% identity have been removed
-
 ```{r}
 blast_cr %>% 
-  filter(length >= 1500,
-         identity >= 80) %>% 
   select(sample, control_region, read_ID) %>% 
   distinct() %>% 
   dplyr::group_by(sample, control_region) %>% 
@@ -108,12 +104,8 @@ blast_cr %>%
 
 ### Table of read counts per sample and region:
 
-hits shorter than 1500 and less 80% identity have been removed
-
 ```{r}
 blast_cr %>% 
-  filter(length >= 1500,
-         identity >= 80) %>% 
   select(sample, control_region, read_ID) %>% 
   distinct() %>% 
   dplyr::group_by(sample, control_region) %>% 
