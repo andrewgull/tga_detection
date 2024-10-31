@@ -23,10 +23,11 @@ regions:
     start: 3789
     end: 4289
   CR5:
-  # inside the amplification
+  # outside the amplification
+  # the same as RR in fact
     name: CR5
-    start: 500
-    end: 1000
+    start: 2785
+    end: 3285
 
 n_cc_alns: 900000
 format: 6
