@@ -23,9 +23,10 @@ regions:
     start: 3789
     end: 4289
   CR5:
+  # inside the amplification
     name: CR5
-    start: 1109
-    end: 1609
+    start: 500
+    end: 1000
 
 n_cc_alns: 900000
 format: 6
