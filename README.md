@@ -4,7 +4,6 @@ Code to find and summarize plasmid *blaSHV-1* copy number distribution in bacter
 
 ## Map of the plasmid
 
-
 ### Full map
 
 ![full map](images/plasmid_full_map.png)
