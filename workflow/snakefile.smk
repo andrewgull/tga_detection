@@ -203,7 +203,8 @@ rule merge_blaSHV_filtered:
     conda: "bedtools-env"
     container: "containers/bedtools.sif"
     params: dist=config["dist"]
-    shell: "sort -k1,1 -k2,2n {input} > {output.sorted} && bedtools merge -i {output.sorted} -s -d {params.dist} > {output.merged} 2> {log}"
+    shell: "sort -k1,1 -k2,2n {input} > {output.sorted} && "
+           "bedtools merge -i {output.sorted} -s -d {params.dist} > {output.merged} 2> {log}"
 
 rule blaSHV_counts:
     input: script="workflow/scripts/plot_blaSHV_counts_merged.R",
