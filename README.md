@@ -6,13 +6,10 @@ Code to find and summarize plasmid *blaSHV-1* copy number distribution in bacter
 
 ### Full map
 
-![full map](images/plasmid_full_map.png)
+![full map](images/plasmid_I-scel_full_map.png)
 
-**DS** - digestion site; **blaSHV** - beta-lactamase gene; **IS/RU** - insertion sequence/repeat unit; **RR** - "red" flanking region; **GR** - "green" flanking region; **CR** - control regions (1 to 5).
+**Resistance gene** - beta-lactamase gene (*blaSHV*); **IS** - insertion sequence/repeat unit; **RR** - "red" flanking region; **GR** - "green" flanking region; **CR** - control regions (1 to 5).
 
-### Close up of the DS region
-
-![DS region](images/ds_region_annotation.png)
 
 ## The main rule graph
 
