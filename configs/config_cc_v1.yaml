@@ -1,0 +1,31 @@
+samples:
+  76595_D_mh: 76595_D_mh
+  76595_Exp1_MH: 76595_Exp1_MH
+
+regions:
+# this is variant 1: CR1-a + CR2-a + CR3-a + CR4-a + CR5-a
+# all coordinates relative to 
+# plasmid_DA61218_I-scel
+  CR1:
+    name: CR1
+    start: 94331
+    end: 94831
+  CR2:
+    name: CR2
+    start: 4220
+    end: 4720
+  CR3:
+    name: CR3
+    start: 64294
+    end: 64794
+  CR4:
+    name: CR4
+    start: 35669
+    end: 36169
+  CR5:
+    name: CR5
+    start: 32849
+    end: 33349
+
+n_cc_alns: 9000000
+format: 6
