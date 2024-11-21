@@ -13,6 +13,11 @@ workflow/notebooks/tables/
 samples_list.txt
 copy_reads_multiple_source_paths.py
 
+# shiny dashboard stuff
+*.js
+*.css
+*.woff
+
 # PyCharm
 .idea
 
