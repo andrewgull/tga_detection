@@ -1,0 +1,115 @@
+---
+title: "Coverage Control Explorer"
+author: "by A.G."
+format: dashboard
+server: shiny
+---
+
+```{r}
+#| context: setup
+#| message: false
+library(ggplot2)
+library(purrr)
+library(dplyr)
+library(readr)
+
+# read the data
+
+tables <- c("../../results/cc/coverage_control_table_v1.tsv", 
+            "../../results/cc/coverage_control_table_v2.tsv",
+            "../../results/cc/coverage_control_table_v3.tsv")
+
+names <- c("v1", "v2", "v3")
+
+read_blast <- function(blast_file, name) {
+  df <- read_tsv(
+    blast_file,
+    col_names = c(
+      'control_region',
+      'read_ID',
+      'identity',
+      'length',
+      'mismatch',
+      'gaps',
+      'qstart',
+      'qend',
+      'sstart',
+      'send',
+      'e_value',
+      'bit_score',
+      'sample'
+    ),
+    skip = 1
+  )
+  
+  df$variant <- name
+  return(df)
+}
+
+dataset1 <- map2(tables, names, ~ read_blast(.x, .y)) %>% 
+  bind_rows()
+
+dataset2 <- dataset1 %>% 
+  select(sample, control_region, read_ID, variant) %>% 
+  distinct() %>% 
+  group_by(sample, variant, control_region) %>% 
+  count(name = "coverage")
+```
+
+# {.sidebar}
+
+```{r}
+selectInput('x', 'X', names(dataset2), selected = "control_region") 
+selectInput('y', 'Y', names(dataset2), selected = "coverage")
+selectInput('color', 'Color', c('None', names(dataset2)), selected="control_region")
+```
+
+```{r}
+selectInput('facet_row', 'Facet Row',
+  c(None='.', names(dataset2[sapply(dataset2, is.character)])),
+  selected = "variant")
+selectInput('facet_col', 'Facet Column',
+  c(None='.', names(dataset2[sapply(dataset2, is.character)])),
+  selected = "sample")
+```
+
+# Plot
+
+```{r}
+plotOutput('plot')
+```
+
+# Data
+
+```{r}
+tableOutput('data')
+```
+
+```{r}
+#| context: server
+
+output$plot <- renderPlot({
+  
+  p <- ggplot(
+    dataset2, 
+    aes_string(x=input$x, y=input$y)) + 
+    geom_col() +
+    scale_fill_brewer(palette = "Set2") +
+    theme_minimal() +
+    theme(legend.position = "none")
+  
+  if (input$color != 'None')
+    p <- p + aes_string(fill=input$color)
+  
+  facets <- paste(input$facet_row, '~', input$facet_col)
+  if (facets != '. ~ .')
+    p <- p + facet_grid(facets)
+  
+  p
+  
+})
+
+output$data <- renderTable({
+  dataset2
+})
+```
