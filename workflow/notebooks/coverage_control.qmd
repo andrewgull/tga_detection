@@ -25,7 +25,7 @@ Length of each control region is 500 nt
 
 Our hypothesis is that coverage of the regions close to the DS (CR4 & CR5) is higher than in the three remote regions
 
-![Fig.1. Plasmid DA61218 and the location of control regions](figures/plasmid_full_map.png)
+![Fig.1. Plasmid DA61218 and the location of control regions](../../images/plasmid_I-scel_full_map.png)
 
 All control regions (CR) were blasted against each samples' reads. 
 
@@ -33,21 +33,57 @@ See `configs/covcontrol.smk` for details.
 
 ## Overview of BLAST results:
 
+There are 3 variants of control region arrangement:
+
+ - V1 is CR1-a + CR2-a + CR3-a + CR4-a + CR5-a
+
+ - V2 is CR1-a + CR2-a + CR3-a + CR4-b + CR5-b
+
+ - V3 is CR1-a + CR2-a + CR3-a + CR4-c + CR5-c
+
 The blast tables look like this:
 
 ```{r}
 #| message: false
 library(tidyverse)
 
-blast_cr <- read_tsv("../../results/cc/coverage_control_table.tsv", 
-                     col_names = c('control_region', 'read_ID', 'identity', 
-                                   'length', 'mismatch', 'gaps', 'qstart', 
-                                   'qend', 'sstart', 'send', 'e_value', 
-                                   'bit_score', 'sample'), 
-                     skip = 1)
+tables <- c("../../results/cc/coverage_control_table_v1.tsv", 
+            "../../results/cc/coverage_control_table_v2.tsv",
+            "../../results/cc/coverage_control_table_v3.tsv")
+
+names <- c("v1", "v2", "v3")
+
+read_blast <- function(blast_file, name) {
+  df <- read_tsv(
+    blast_file,
+    col_names = c(
+      'control_region',
+      'read_ID',
+      'identity',
+      'length',
+      'mismatch',
+      'gaps',
+      'qstart',
+      'qend',
+      'sstart',
+      'send',
+      'e_value',
+      'bit_score',
+      'sample'
+    ),
+    skip = 1
+  )
+  
+  df$variant <- name
+  return(df)
+}
+
+blast_cr <- map2(tables, names, ~ read_blast(.x, .y)) %>% 
+  bind_rows()
 
 blast_cr %>% 
-  head(n = 10) %>% 
+  group_by(variant) %>% 
+  count() %>% 
   knitr::kable()
 ```
 
@@ -57,7 +93,7 @@ blast_cr %>%
 ggplot(blast_cr, aes(control_region, identity)) +
   geom_boxplot(alpha = 1, outliers = F) +
   geom_violin(aes(fill = control_region), alpha=0.2) +
-  facet_grid(rows = vars(sample)) +
+  facet_grid(rows = vars(sample), cols = vars(variant)) +
   theme_minimal() +
   theme(legend.position = "none") +
   scale_fill_brewer(palette = "Set2") +
@@ -72,7 +108,7 @@ ggplot(blast_cr, aes(control_region, identity)) +
 ggplot(blast_cr, aes(control_region, length)) +
   geom_boxplot(alpha = 1, outliers = F) +
   geom_violin(aes(fill = control_region), alpha=0.2) +
-  facet_grid(rows = vars(sample)) +
+  facet_grid(rows = vars(sample), cols = vars(variant)) +
   theme_minimal() +
   theme(legend.position = "none") +
   scale_fill_brewer(palette = "Set2") +
@@ -85,14 +121,16 @@ ggplot(blast_cr, aes(control_region, length)) +
 ### Bar plot
 
 ```{r}
-blast_cr %>% 
-  select(sample, control_region, read_ID) %>% 
+coverage_cr <- blast_cr %>% 
+  select(sample, control_region, read_ID, variant) %>% 
   distinct() %>% 
-  dplyr::group_by(sample, control_region) %>% 
-  dplyr::count() %>% 
-  ggplot(aes(control_region, n)) +
+  group_by(sample, variant, control_region) %>% 
+  count(name = "coverage") 
+
+coverage_cr %>% 
+  ggplot(aes(control_region, coverage)) +
   geom_col(aes(fill = control_region), alpha = 0.7) +
-  facet_grid(rows = vars(sample)) +
+  facet_grid(rows = vars(sample), cols = vars(variant)) +
   xlab("") +
   ylab("coverage") +
   scale_fill_brewer(palette = "Set2") +
@@ -105,10 +143,6 @@ blast_cr %>%
 ### Table of read counts per sample and region:
 
 ```{r}
-blast_cr %>% 
-  select(sample, control_region, read_ID) %>% 
-  distinct() %>% 
-  dplyr::group_by(sample, control_region) %>% 
-  dplyr::count() %>% 
+coverage_cr %>% 
   knitr::kable()
 ```
