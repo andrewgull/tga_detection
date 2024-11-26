@@ -1,0 +1,47 @@
+---
+title: "Reads directionality"
+author: "A.G."
+format: html
+editor: visual
+---
+
+## Intro
+
+### Task description
+
+>For the analysis where you use CR4-b and CR5-b (along with CR1-a, CR2-a and CR3-a), could you detect for all 5 CR regions how many sequencing reads are going in one direction, and how many sequencing reads are going in the opposite direction?
+
+>The reads where the DNA sequence of the read is the same than the sequence on one strand of DNA, versus the reads where the DNA sequence of the read is the same than the other strand of DNA (so, the complementary sequence of the other set of reads)
+
+### CR combinations
+
+V1: CR1-a + CR2-a + CR3-a + CR4-a + CR5-a
+
+V2: CR1-a + CR2-a + CR3-a + CR4-b + CR5-b (this one)
+
+V3: CR1-a + CR2-a + CR3-a + CR4-c + CR5-c
+
+## Analysis
+
+```{r data}
+# read v2 file
+library(readr)
+
+df <- read_tsv("../../results/cc/coverage_control_table_v2.tsv", col_names = FALSE, skip = 1)
+
+head(df)
+```
+
+```{r}
+library(dplyr)
+
+strands <- df %>%
+  mutate(strand = if_else(X10 - X9 > 0, "one", "other")) %>%
+  group_by(X1, strand) %>%
+  count()
+
+write.csv(strands, "../../results/cc/directionality_CR_v2.csv", row.names = FALSE)
+
+strands
+```
+
