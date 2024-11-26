@@ -1,6 +1,6 @@
 # list of samples/replicates
 samples:
-  76595_Exp1_MH: 76595_Exp1_MH # the first experiment
+  76595_Exp1_MH: 76595_Exp1_MH
   76595_D_10g: 76595_D_10g
   76595_D_160g: 76595_D_160g
   76595_D_20g: 76595_D_20g
@@ -49,28 +49,41 @@ samples:
   76595_P9_160g: 76595_P9_160g
   76595_P_x1: 76595_P_x1
   76595_P_x2: 76595_P_x2
+  76595_M9_20g: 76595_M9_20g
+  76595_P9_20g: 76595_P9_20g
+  76595_M9_40g: 76595_M9_40g
+  76595_P9_40g: 76595_P9_40g
+  76595_M9_80g: 76595_M9_80g
+  76595_P9_80g: 76595_P9_80g
+  76595_M9_240g: 76595_M9_240g
+  76595_P9_240g: 76595_P9_240g
+  76595_M9_320g: 76595_M9_320g
+  76595_P9_320g: 76595_P9_320g
 
 
+# coordinates according to
+# plasmid_DA61218_I-scel
 # min read length
-# defined as FR+IS+FR +/- 10%
+# defined as FR+IS+FR + 10%
 min_read_len: 1820
 
 # location of FRs
 # FR length = 500 nt
 # coordinates are included
-fr_red_start: 2785
-fr_red_end: 3285
+fr_red_start: 32849
+fr_red_end: 33349
 
-fr_green_start: 114451
-fr_green_end: 114951
+fr_green_start: 24599
+fr_green_end: 25099
 
 # location of RU/IS
-ru_start: 1955
-ru_end: 2774
+# the one closest to the RR
+ru_start: 32019
+ru_end: 32838
 
 # location of blaSHV
-bla_start: 1
-bla_end: 861
+bla_start: 30065
+bla_end: 30925
 
 # FR blast settings
 format: 6
