@@ -125,14 +125,13 @@ rule filter_red_and_repeat_unit_blast:
 
 # filter RED+RU+Oriented length
 rule filter_min_orient_length:
-    input: script = "workflow/scripts/filter_1820.R",
-           table = "results/tables/{sample}/blast_joined_red_repunit.tsv"
+    input: "results/tables/{sample}/blast_joined_red_repunit.tsv"
     output: "results/tables/{sample}/blast_joined_red_repunit_orient_len.tsv"
     log: "results/logs/{sample}_filt_min_orient_len.log"
     conda: "rscripts-env"
     container: "containers/rscripts.sif"
     params: base_len = config['base_len']
-    shell: "Rscript {input.script} -i {input.table} -d {params.base_len} -o {output} &> {log}"
+    script: "scripts/filter_1820.R"
 
 # get counts of read possibly containing various CNs
 rule cn_reads_bins:
