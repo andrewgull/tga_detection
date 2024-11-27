@@ -1,4 +1,10 @@
-# script to filter blaSHV blast hits
+##############################################
+# script to filter gene (blaSHV) blast hits
+# input: blast hits table
+# input: filterd table RED+RU+filt+GREEN
+# input: max e-vlaue
+# output: filtered table of blaSHV gene hits
+##############################################
 
 library(optparse)
 
@@ -42,22 +48,41 @@ if (is.null(opt$output)) {
   stop("Output file must be provided", call. = FALSE)
 }
 
+#### OPEN LOG ####
+sink(snakemake@log[[1]])
+
+#### LIBRARIES ####
 library(ggplot2)
+library(readr)
 suppressPackageStartupMessages(library(dplyr))
 
-fr_df <- readr::read_delim(opt$blast_fr, show_col_types = FALSE)
-bla_df <- readr::read_delim(opt$blast_bla, col_names = FALSE, show_col_types = FALSE)
+#### FUNCTIONS ####
+main <- function(bla, fr, evalue) {
+  bla_df_filt <-
+    bla_df %>%
+    # leave only the reads in filtered FR blast
+    filter(X2 %in% unique(fr_df$subject)) %>%
+    # remove unreliable hits
+    filter(X11 <= evalue)
 
-bla_df_filt <-
-  bla_df %>%
-  # leave only the reads in filtered FR blast
-  filter(X2 %in% unique(fr_df$subject)) %>%
-  # remove unreliable hits
-  filter(X11 <= opt$evalue)
+  names(bla_df_filt) <- c("query", "subject", "identity", "length", "mismatch",
+                          "gaps", "start.query", "end.query", "start.subject",
+                          "end.subject", "e.value", "bit.score")
+  return(bla_df_filt)
+}
 
-names(bla_df_filt) <- c("query", "subject", "identity", "length", "mismatch",
-                        "gaps", "start.query", "end.query", "start.subject",
-                        "end.subject", "e.value", "bit.score")
-# save results of filtering
-readr::write_delim(bla_df_filt, file = opt$output, delim = "\t")
+#### RUN ####
+bla_df <- read_delim(snakemake@input[[1]],
+                     col_names = FALSE,
+                     show_col_types = FALSE)
+fr_df <- read_delim(snakemake@input[[2]],
+                    show_col_types = FALSE)
+
+main(bla = bla_df, fr = fr_df, evalue = snakemake@params[[1]])
+
+# save to file
+write_delim(bla_df_filt, file = snakemake@output[[1]], delim = "\t")
 print("Finished. No erorrs.")
+
+#### CLOSE LOG ####
+sink()
