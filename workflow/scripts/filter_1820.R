@@ -1,46 +1,20 @@
-# script to filter reads with FR+RU in correct orientation
+#############################################################################
+# script to filter reads with both FR and RU in correct orientation
 # and proximity AND at least 1820 nt from the beginning of the FR
-# requires readr & dplyr
+# input: table with blast results filtered by FR+RU orientation and distance
+# input: min distance from the start of FR towards RU (1820)
+# output: table with reads at least 1820 nt in length from the start of FR
+#############################################################################
 
-library(optparse)
+#### OPEN LOG ####
+sink(snakemake@log[[1]])
 
-#### CLI parsing ####
-option_list <- list(
-  make_option(c("-i", "--input"),
-              type = "character",
-              default = NULL,
-              help = "a table file with blast results filtered by FR+RU orientation and distance",
-              metavar = "character"),
-  make_option(c("-o", "--output"),
-              type = "character",
-              default = NULL,
-              help = "a table with reads at least 1820 nt in length from the start of FR",
-              metavar = "character"),
-  make_option(c("-d", "--distance"),
-              type = "integer",
-              default = 1820,
-              help = "min distance from the start of FR towards RU",
-              metavar = "character")
-)
-
-opt_parser <- OptionParser(option_list = option_list)
-opt <- parse_args(opt_parser)
-
-if (is.null(opt$input)) {
-  print_help(opt_parser)
-  stop("Input table file must be provided", call. = FALSE)
-}
-if (is.null(opt$output)) {
-  print_help(opt_parser)
-  stop("Output file must be provided", call. = FALSE)
-}
-
-#### Libraries ####
+#### LIBRARIES ####
 suppressPackageStartupMessages(library(dplyr))
 library(readr)
 
-#### Functions ####
-filter_by_distance <- function(df, dist=1820) {
+#### FUNCTIONS ####
+filter_by_distance <- function(df, dist = 1820) {
   # df: a table with 7 columns
   # colnames must be as follows
   df %>%
@@ -53,15 +27,29 @@ filter_by_distance <- function(df, dist=1820) {
     select(-keep)
 }
 
-# read the iput table
-input_table <- read_tsv(opt$input, show_col_types = FALSE)
-# make size checks
-stopifnot(ncol(input_table) == 7)
-stopifnot(nrow(input_table) != 0)
+main <- function(df, dist) {
+  # df: input table
+  # dist: input distance
+  # return: output table
+  # read the input table
+  input_table <- read_tsv(df, show_col_types = FALSE)
 
-# filter
-output_table <- filter_by_distance(input_table, dist = opt$distance)
+  # make size checks
+  stopifnot(ncol(input_table) == 7)
+  stopifnot(nrow(input_table) != 0)
 
-# save results
-write_delim(output_table, file = opt$output, delim = "\t")
+  # filter
+  filtered_df <- filter_by_distance(input_table, dist = dist)
+  return(filtered_df)
+}
+
+#### RUN ####
+output_table <- main(df = snakemake@input[[1]],
+                     dist = snakemake@params[[1]])
+
+# save to file
+write_delim(output_table, file = snakemake@output[[1]], delim = "\t")
 print("Finished. No erorrs.")
+
+#### CLOSE LOG ####
+sink()
