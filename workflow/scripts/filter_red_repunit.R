@@ -1,81 +1,26 @@
+#############################################################
 # script to filter reads containing correct combination of
 # the red flanking region and the repeat unit
-# the 'correct combination' that is 'a red FR first and a repeat unit right next to it'
+# the 'correct combination' that is
+# 'a red FR first and a repeat unit right next to it'
+# input: blast hits table for RR;
+# blast hits table for RU/IS
+# max evalue for blast hits
+# minimal length for RR blast hits
+# minimal length for RU/IS hits
+# minimal identity
+# max allowed distance between FR and RU/IS
+# output: filtered table of hits
+#############################################################
 
-library(optparse)
+#### OPEN LOG ####
+sink(snakemake@log[[1]])
 
-#### CLI parsing ####
-option_list <- list(
-  make_option(c("-r", "--blast_red"),
-              type = "character",
-              default = NULL,
-              help = "blast hits table for FR1 (red)",
-              metavar = "character"),
-
-  make_option(c("-u", "--blast_repunit"),
-              type = "character",
-              default = NULL,
-              help = "blast hits table for repeat unit (IS)",
-              metavar = "character"),
-
-  make_option(c("-o", "--output"),
-              type = "character",
-              default = NULL,
-              help = "filtered and joined blast tables",
-              metavar = "character"),
-
-  make_option(c("-e", "--evalue"),
-              type = "double",
-              default = 0.00001,
-              help = "max e-value",
-              metavar = "double"),
-
-  make_option(c("-l", "--min_len_fr"),
-              type = "integer",
-              default = 500,
-              help = "min FR length allowed",
-              metavar = "int"),
-
-  make_option(c("-k", "--min_len_repunit"),
-              type = "integer",
-              default = 700,
-              help = "min REP UNIT length allowed",
-              metavar = "int"),
-
-  make_option(c("-i", "--identity"),
-              type = "integer",
-              default = 75,
-              help = "min identity",
-              metavar = "integer"),
-
-  make_option(c("-d", "--max_distance"),
-              type = "integer",
-              default = 30,
-              help = "max allowed distance between FR and REP UNIT",
-              metavar = "int")
-)
-
-opt_parser <- OptionParser(option_list = option_list)
-opt <- parse_args(opt_parser)
-
-if (is.null(opt$blast_red)) {
-  print_help(opt_parser)
-  stop("Input file 1 must be provided", call. = FALSE)
-}
-if (is.null(opt$blast_repunit)) {
-  print_help(opt_parser)
-  stop("Input file 2 (rep.unit) must be provided", call. = FALSE)
-}
-if (is.null(opt$output)) {
-  print_help(opt_parser)
-  stop("Output file must be provided", call. = FALSE)
-}
-
-#### Libraries ####
+#### LIBRARIES ####
 suppressPackageStartupMessages(library(dplyr))
 library(readr)
 
-#### Functions ####
+#### FUNCTIONS ####
 parse_blast <- function(file_path, region_name) {
   # read blast table
   df <-
@@ -101,7 +46,7 @@ parse_blast <- function(file_path, region_name) {
   )
   # create orientation column
   df$orientation <-
-    ifelse(df$start.subject < df$end.subject, "direct", "reverse") # nolint: line_length_linter.
+    ifelse(df$start.subject < df$end.subject, "direct", "reverse")
   # rename query
   df$query <- region_name
   return(df)
@@ -116,12 +61,12 @@ filter_blast <- function(blast_df, min_len, max_e_value, min_identity) {
   return(filt_df)
 }
 
-filter_rep_unit_flanking_region <-
+filter_ru_fr <-
   function(fr_df, ru_df, max_distance) {
     # filters red blast and rep unit blast by orientation and max
     # distance btw the red region and the rep.unit
     # return: filtered tibble
-    left_join(fr_df, ru_df, by = 'subject') %>%
+    left_join(fr_df, ru_df, by = "subject") %>%
       filter(orientation.x == orientation.y) %>%
       mutate(
         distance = if_else(
@@ -133,35 +78,43 @@ filter_rep_unit_flanking_region <-
       filter(abs(distance) <= max_distance)
   }
 
-####
+main <- function(red, rep, ru_len, fr_len, e, identity, maxd) {
+  # filter rep unite table
+  # NB: min length is different from FR's min length
+  blast_red <- parse_blast(red, "FR_red") %>%
+    filter_blast(min_len = fr_len,
+                 max_e_value = e,
+                 min_identity = identity)
+  blast_rep <- parse_blast(rep, "Rep_unit") %>%
+    filter_blast(min_len = ru_len,
+                 max_e_value = e,
+                 min_identity = identity)
+  # filter combination of both FR and rep unit
+  # 1st: same orientation
+  # 2nd: close to each other
+  blast_joined <-
+    filter_ru_fr(blast_red, blast_rep, max_distance = maxd) %>%
+    # keep some columns
+    select(subject, start.subject.x, end.subject.x,
+           start.subject.y, end.subject.y, distance, orientation.x)
+  # give them better names
+  names(blast_joined) <- c("subject", "start.red", "end.red",
+                           "start.rep.unit", "end.rep.unit", "dist", "orient")
+  return(blast_joined)
+}
 
-# filter rep unite table
-# NB: min length is different from FR's min length
-blast_red <- parse_blast(opt$blast_red, "FR_red") %>%
-  filter_blast(min_len = opt$min_len_fr,
-                     max_e_value = opt$evalue, 
-                     min_identity = opt$identity)
+#### RUN ####
+output_table <- main(red = snakemake@input[[1]],
+                     rep = snakemake@input[[2]],
+                     identity = snakemake@params[[1]],
+                     e = snakemake@params[[2]],
+                     fr_len = snakemake@params[[3]],
+                     ru_len = snakemak@params[[4]],
+                     maxd = snakemake@params[[5]])
 
-blast_repunit <- parse_blast(opt$blast_repunit, "Rep_unit") %>%
-  filter_blast(min_len = opt$min_len_repunit,
-                     max_e_value = opt$evalue, 
-                     min_identity = opt$identity)
-
-# filter combination of both FR and rep unit
-# 1st: same orientation
-# 2nd: close to each other
-blast_joined <-
-  filter_rep_unit_flanking_region(blast_red,
-                                  blast_repunit,
-                                  max_distance = opt$max_distance) %>% 
-  # keep some columns
-  select(subject, start.subject.x, end.subject.x, 
-         start.subject.y, end.subject.y, distance, orientation.x)
-
-# give them better names
-names(blast_joined) <- c("subject", "start.red", "end.red", 
-                         "start.rep.unit", "end.rep.unit", "dist", "orient")
-
-# Save results
-write_delim(blast_joined, file = opt$output, delim = "\t")
+# Save to file
+write_delim(output_table, file = snakemake@output[[1]], delim = "\t")
 print("Finished. No erorrs.")
+
+#### CLOSE LOG ####
+sink()
