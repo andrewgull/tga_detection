@@ -109,7 +109,7 @@ rule blast_repeat_unit:
     shell: "blastn -query {input.query} -db {input.database}/blastdb -outfmt {params.fmt} "
            "-num_threads {threads} -num_alignments {params.n_alns} 1> {output} 2> {log}"
 
-rule filter_red_and_repeat_unit_blast:
+rule filter_rr_ru_blast:
     input: red = "results/tables/{sample}/blast_red.tsv",
            repunit = "results/tables/{sample}/blast_repeat_unit.tsv"
     output: "results/tables/{sample}/blast_joined_red_repunit.tsv"
