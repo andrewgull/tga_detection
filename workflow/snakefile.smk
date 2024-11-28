@@ -110,8 +110,7 @@ rule blast_repeat_unit:
            "-num_threads {threads} -num_alignments {params.n_alns} 1> {output} 2> {log}"
 
 rule filter_red_and_repeat_unit_blast:
-    input: script="workflow/scripts/filter_red_repunit.R",
-           red = "results/tables/{sample}/blast_red.tsv",
+    input: red = "results/tables/{sample}/blast_red.tsv",
            repunit = "results/tables/{sample}/blast_repeat_unit.tsv"
     output: "results/tables/{sample}/blast_joined_red_repunit.tsv"
     log: "results/logs/{sample}_blast_joined.log"
@@ -120,8 +119,7 @@ rule filter_red_and_repeat_unit_blast:
     params: identity = config['min_identity'], e_val = config['max_e_value'],
             length_fr = config['min_fr_len'], length_ru = config['min_ru_len'],
             distance = config['max_dist']
-    shell: "Rscript {input.script} -r {input.red} -u {input.repunit} -i {params.identity} -e {params.e_val} "
-           "-l {params.length_fr} -k {params.length_ru} -d {params.distance} -o {output} &> {log}"
+    script: "scripts/filter_red_repunit.R"
 
 # filter RED+RU+Oriented length
 rule filter_min_orient_length:
@@ -148,16 +146,14 @@ rule cn_reads_bins:
 
 # filter GREEN
 rule filter_flanking_regions:
-    input: script="workflow/scripts/filter_fr_hits.R",
-           red_ru = "results/tables/{sample}/blast_joined_red_repunit_orient_len.tsv",
+    input: red_ru = "results/tables/{sample}/blast_joined_red_repunit_orient_len.tsv",
            green = "results/tables/{sample}/blast_green.tsv"
     output: "results/tables/{sample}/blast_joined.tsv"
     log: "results/logs/{sample}_blast_joined.log"
     conda: "rscripts-env"
     container: "containers/rscripts.sif"
     params: identity = config['min_identity'], e_val = config['max_e_value'], length = config['min_fr_len']
-    shell: "Rscript {input.script} -r {input.red_ru} -g {input.green} -i {params.identity} -e {params.e_val} "
-           "-l {params.length} -o {output} &> {log}"
+    script: "scripts/filter_fr_hits.R"
 
 rule blast_blaSHV:
     input: query="resources/genes/blaSHV.fa",
@@ -173,15 +169,14 @@ rule blast_blaSHV:
            "-num_threads {threads} -num_alignments {params.n_alns} 1> {output} 2> {log}"
 
 rule filter_blaSHV_hits:
-    input: script="workflow/scripts/filter_blaSHV_blast.R",
-           bla="results/tables/{sample}/blast_blaSHV.tsv",
+    input: bla="results/tables/{sample}/blast_blaSHV.tsv",
            fr="results/tables/{sample}/blast_joined.tsv"
     output: "results/tables/{sample}/blast_blaSHV_filtered.tsv"
     log: "results/logs/{sample}_blast_blaSHV_filter.log"
     conda: "rscripts-env"
     container: "containers/rscripts.sif"
     params: e_val=config["max_e_value"]
-    shell: "Rscript {input.script} -b {input.bla} -f {input.fr} -e {params.e_val} -o {output} &> {log}"
+    script: "scripts/filter_blaSHV_blast.R"
 
 rule make_bed_blaSHV_filtered:
     input: script="workflow/scripts/make_bed.R",
