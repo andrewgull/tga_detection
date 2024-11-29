@@ -179,14 +179,13 @@ rule filter_blaSHV_hits:
     script: "scripts/filter_blaSHV_blast.R"
 
 rule make_bed_blaSHV_filtered:
-    input: script="workflow/scripts/make_bed.R",
-           bla="results/tables/{sample}/blast_blaSHV_filtered.tsv"
+    input: "results/tables/{sample}/blast_blaSHV_filtered.tsv"
     output: "results/bedfiles/{sample}/blaSHV_hits.bed"
     log: "results/logs/{sample}_make_bed.log"
     benchmark: "results/benchmarks/make_bed/{sample}.tsv"
     conda: "rscripts-env"
     container: "containers/rscripts.sif"
-    shell: "Rscript {input.script} -i {input.bla} -o {output} &> {log}"
+    script: "scripts/make_bed.R"
 
 rule merge_blaSHV_filtered:
     input: "results/bedfiles/{sample}/blaSHV_hits.bed"
