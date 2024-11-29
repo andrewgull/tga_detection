@@ -1,112 +1,77 @@
-# a script to make final calculations
-# input: (1) cn_bins - number of reads capable of carrying each CN variant
-# (2) bla counts - blaSHV CN on each read i.e. reads that passed all filtering steps
-# (3) reads passed filtering step #3 i.e. red+repunit+orientation
- 
-library(optparse)
+#########################################################################
+# script to make final calculations of counts, observed &
+# corrected frequencies and detection limts
+# input: cn_bins - number of reads capable of carrying each CN variant;
+# bla counts - blaSHV CN on each read i.e. reads that passed all filterings
+# reads passed filtering step #3 i.e. red+repunit+orientation
+# output: table with frequencies etc.
+#########################################################################
 
-#### CLI parsing ####
-option_list <- list(
-  make_option(c("-c", "--cn_bins"),
-              type = "character",
-              default = NULL,
-              help = "table with number of reads possibly containing each CN variant",
-              metavar = "character"),
-  
-  make_option(c("-b", "--bla_counts"),
-              type = "character",
-              default = NULL,
-              help = "table with bla gene counts in filtered reads",
-              metavar = "character"),
-  
-  make_option(c("-f", "--filt3"),
-              type = "character",
-              default = NULL,
-              help = "blast table of reads passed filtering step no.3 (red+repunit+orient)",
-              metavar = "character"),
-  
-  make_option(c("-o", "--output"),
-              type = "character",
-              default = NULL,
-              help = "output table, tab separated",
-              metavar = "character")
-)
+#### OPEN LOG ####
+sink(snakemake@log[[1]])
 
-opt_parser <- OptionParser(option_list = option_list, 
-                           description = "This script makes the final bla counts calculations including adjustments.")
-opt <- parse_args(opt_parser)
-
-if (is.null(opt$cn_bins)) {
-  print_help(opt_parser)
-  stop("Input file with CN bins must be provided", call. = FALSE)
-}
-if (is.null(opt$bla_counts)) {
-  print_help(opt_parser)
-  stop("Input file bla counts must be provided", call. = FALSE)
-}
-if (is.null(opt$filt3)) {
-  print_help(opt_parser)
-  stop("Input file with reads passed filtering no.3 must be provided", call. = FALSE)
-}
-if (is.null(opt$output)) {
-  print_help(opt_parser)
-  stop("Output file must be provided", call. = FALSE)
-}
-
-#### Libraries ####
+#### LIBRARIES ####
 suppressPackageStartupMessages(library(dplyr))
 library(readr)
-
-# read the input
-filt3 <- read_tsv(opt$filt3, show_col_types = F)
-cn_bins <- read_delim(opt$cn_bins, show_col_types = F)
-bla_cn <- read_delim(opt$bla_counts, show_col_types = F) %>% 
-  filter(!is.na(n.blaSHV.merged))
+library(tidyr)
 
 # find number of reads capable of containing each bla CN variant
 # including zeroes
-
-# find number of reads containing each CN
-bla_cn_freq <- 
-  bla_cn %>% 
-  group_by(n.blaSHV.merged) %>% 
-  count(name = "counts") %>% 
-  ungroup() %>% 
-  rename("CN" = n.blaSHV.merged,
-         "counts_obs" = counts)
-
-# total - n reads with 0 CN from the cn_bins table
-total <- cn_bins %>% 
-  filter(CN == 0) %>% 
-  pull(n_reads_theoretical)
-
-# find observed CN frequency
-bla_cn_freq <- 
-  bla_cn_freq %>% 
-  mutate(freq_obs = counts_obs / sum(counts_obs))
+counts_freq_obs <- function(bla_cn) {
+  # return bla_cn_freq
+  bla_cn %>%
+    filter(!is.na(n.blaSHV.merged)) %>%
+    group_by(n.blaSHV.merged) %>%
+    count(name = "counts") %>%
+    ungroup() %>%
+    rename("CN" = n.blaSHV.merged,
+           "counts_obs" = counts) %>%
+    # find observed CN frequency
+    mutate(freq_obs = counts_obs / sum(counts_obs))
+}
 
 # find frequency of reads that might contain certain CN
-cn_bins <- 
-  cn_bins %>% 
-  # remove those that are theoretically impossible (no such long reads)
-  filter(n_reads_theoretical != 0) %>% 
-  mutate(freq_theoretical = n_reads_theoretical / total)
+freq_theor <- function(cn_bins) {
+  # total - n reads with 0 CN from the cn_bins table
+  total_n <- cn_bins %>%
+    filter(CN == 0) %>%
+    pull(n_reads_theoretical)
+  cn_bins_theor <- cn_bins %>%
+    # remove those that are theoretically impossible (no such long reads)
+    filter(n_reads_theoretical != 0) %>%
+    mutate(freq_theoretical = n_reads_theoretical / total_n)
+  return(cn_bins_theor)
+}
 
-# correct CN frequency
-# add detection limit
-bla_cn_freq <- 
-  bla_cn_freq %>% 
-  full_join(cn_bins, by = "CN") %>% 
-  # replace NA with 0
-  mutate(counts_obs = tidyr::replace_na(counts_obs, 0),
-         freq_obs = tidyr::replace_na(freq_obs, 0)) %>% 
-  arrange(CN) %>% 
-  # do the rest of the calculations
-  mutate(counts_corrected = counts_obs / freq_theoretical,
-         freq_corrected = counts_corrected / sum(counts_corrected),
-         detection_limit = 1/n_reads_theoretical)
-  
-# freq_obs and freq_adj is what you need
-# save
-write_delim(bla_cn_freq, file = opt$output, delim = "\t")
+# put everything together
+main <- function(cn_bins, bla_cn) {
+  bla_cn_freq <- counts_freq_obs(bla_cn)
+  bins_theor <- freq_theor(cn_bins)
+  # correct CN frequency
+  # add detection limit
+  bla_cn_full <-
+    bla_cn_freq %>%
+    full_join(bins_theor, by = "CN") %>%
+    # replace NA with 0
+    mutate(counts_obs = replace_na(counts_obs, 0),
+           freq_obs = replace_na(freq_obs, 0)) %>%
+    arrange(CN) %>%
+    # do the rest of the calculations
+    mutate(counts_corrected = counts_obs / freq_theoretical,
+           freq_corrected = counts_corrected / sum(counts_corrected),
+           detection_limit = 1 / n_reads_theoretical)
+  return(bla_cn_full)
+}
+
+#### RUN ####
+cn_bins <- read_delim(snakemake@input[[1]], show_col_types = FALSE)
+bla_cn <- read_delim(snakemake@input[[2]], show_col_types = FALSE)
+
+output_table <- main(cn_bins, bla_cn)
+
+# write to file
+write_delim(output_table, file = snakemake@output[[1]], delim = "\t")
 print("Finished. No erorrs.")
+
+#### CLOSE LOG ####f
+sink()
