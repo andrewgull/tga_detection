@@ -213,15 +213,13 @@ rule blaSHV_counts:
     shell: "Rscript {input.script} -i {input.bed} -b {input.blast} -l {params.length} -p {output.plot} -a {output.table} &> {log}"
 
 rule frequency_calculation:
-    input: script="workflow/scripts/final_calculations.R",
-           bins="results/tables/{sample}/number_reads_containing_CN.tsv",
-           bla="results/tables/{sample}/blaSHV_counts.tsv",
-           rrol="results/tables/{sample}/blast_joined_red_repunit_orient_len.tsv"
+    input: bins="results/tables/{sample}/number_reads_containing_CN.tsv",
+           bla="results/tables/{sample}/blaSHV_counts.tsv"
     output: "results/tables/{sample}/frequencies.tsv"
     log: "results/logs/{sample}_frequencies.log"
     conda: "rscripts-env"
     container: "containers/rscripts.sif"
-    shell: "Rscript {input.script} -c {input.bins} -b {input.bla} -f {input.rrol} -o {output} &> {log}"
+    shell: "scripts/final_calculations.R"
 
 rule aggregate_freq_tables:
     input: expand("results/tables/{sample}/frequencies.tsv", sample=config['samples'])
