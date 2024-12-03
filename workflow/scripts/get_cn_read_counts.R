@@ -1,84 +1,39 @@
-# script to add read lengths to the reads filtered by 
+#############################################################
+# script to add read lengths to the reads filtered by
 # the FR+RU orientation and distance (1820 bp)
-# But a distribution of lengths is not enough!
-# We need bins (i.e. number of reads in each bin) of reads:
-#  - able to contain 0 blaSHV copies (all reads)
-#  - able to contain 1 blaSHV copy (min length of 5270 bp from the beginning of RED towards RU)
-#  - able to contain 2 bla SHV copies (min len. 8720...)
-# result: a table with CN (0, 1, 2, 3 etc.) and number of reads possibly containing this CN
+# For each possible blaSHV copy-number, we calculate
+# number of reads that can contain them, i.e.:
+#  N reads able to contain 0 blaSHV copies (all reads)
+#  N reads able to contain 1 blaSHV copy
+# (reads with min len of 5270 nt from the beginning of RED towards RU)
+#  N reads able to contain 2 bla SHV copies (min len 8720 nt)
+# input 1: table with blast results filtered by FR+RU orientation and distance
+# input 2: reads filtered by FR+RU orientation and distance
+# input 3: maximum CN you are interested in
+# (if output table contains NAs, increase this umber)
+# input 4: min length of reads possibly containing 0 blaSHV copies
+# input 5: length incrementation with each new blaSHV copy (3450 nt)
+# result: a table with CNs and number of reads possibly containing this CN
 # requires dlyr, purrr, tibble & Biostrings
 # to count reads with reverse hits, read lengths are required
+#############################################################
 
-library(optparse)
+#### OPEN LOG ####
+sink(snakemake@log[[1]])
 
-#### CLI parsing ####
-option_list <- list(
-  make_option(c("-t", "--table"),
-              type = "character",
-              default = NULL,
-              help = "a table file with blast results filtered by FR+RU orientation and distance",
-              metavar = "character"),
-  
-  make_option(c("-r", "--reads"),
-              type = "character",
-              default = NULL,
-              help = "reads filtered by FR+RU orientation and distance",
-              metavar = "character"),
-  
-  make_option(c("-c", "--max_cn"),
-              type = "integer",
-              default = 12,
-              help = "maximum CN you are interested in",
-              metavar = "integer"),
-
-  make_option(c("-b", "--base_len"),
-              type = "integer",
-              default = 1820,
-              help = "min length of reads possibly containing 0 blaSHV copies",
-              metavar = "integer"),
-
-  make_option(c("-i", "--increment"),
-              type = "integer",
-              default = 3450,
-              help = "length incrementation with each new blaSHV copy",
-              metavar = "integer"),
-
-  make_option(c("-o", "--output"),
-              type = "character",
-              default = NULL,
-              help = "a table with read id and length",
-              metavar = "character")
-)
-
-opt_parser <- OptionParser(option_list = option_list)
-opt <- parse_args(opt_parser)
-
-if (is.null(opt$table)) {
-  print_help(opt_parser)
-  stop("Input table file must be provided", call. = FALSE)
-}
-if (is.null(opt$reads)) {
-  print_help(opt_parser)
-  stop("Input reads must be provided", call. = FALSE)
-}
-if (is.null(opt$output)) {
-  print_help(opt_parser)
-  stop("Output file must be provided", call. = FALSE)
-}
-
-#### Libraries ####
+#### LIBRARIES ####
 suppressPackageStartupMessages(library(dplyr))
 library(readr)
 library(purrr)
+library(tibble)
+# Do not load Biostrings
 
-#### Functions ####
+#### FUNCTIONS ####
 # count reads for each CNV
 count_reads_cn <-
-  function(df,
-           cn = 0,
-           b = 1820,
-           i = 3450,
-           direct = TRUE) {
+  function(df, cn = 0, b = 1820, i = 3450, direct = TRUE) {
+    # check headers
+    stopifnot(sum(grepl("end.red", names(df))) == 1)
     if (direct) {
       df %>%
         mutate(keep = end.red > (b + i * cn)) %>%
@@ -86,6 +41,7 @@ count_reads_cn <-
         nrow()
     } else {
       # reverse: read length must be present!
+      stopifnot(sum(grepl("read.len", names(df))) == 1)
       df %>%
         mutate(keep = (read.len - end.red) > (b + i * cn)) %>%
         filter(keep) %>%
@@ -96,6 +52,7 @@ count_reads_cn <-
 # read fasta file and return a table with read ID and length
 # requires Biostrings
 read_length <- function(fasta) {
+  # fasta: file name, fasta format
   # use memory efficient way of retrieving lengths
   lengths <-
     Biostrings::fasta.seqlengths(fasta)
@@ -110,64 +67,97 @@ read_length <- function(fasta) {
   return(len_df)
 }
 
-
-#### Workflow ####
-
-# read input table
-fr_repunit <- read.table(opt$table, sep = "\t", header = TRUE)
-
-# make table size checks
-stopifnot(ncol(fr_repunit) == 7)
-stopifnot(nrow(fr_repunit) != 0)
-
-# read input reads to get their lengths
-reads_len_df <- read_length(opt$reads)
-
 # separate direct from reverse hits
-fr_repunit_direct <- 
-  fr_repunit %>% 
-  filter(orient == "direct")
+separate <- function(df, orientation, reads_len = NULL) {
+  # check headers
+  stopifnot(sum(grepl("orient", names(df))) == 1)
+  stopifnot(sum(grepl("subject", names(df))) == 1)
+  if (orientation == "direct") {
+    df %>% filter(orient == "direct")
+  } else {
+    # reads len must be provided
+    stopifnot(!is.null(reads_len))
+    # subject columnmust be there
+    stopifnot(sum(grepl("subject", names(reads_len))) == 1)
+    df %>%
+      filter(orient == "reverse") %>%
+      left_join(reads_len, by = "subject")
+  }
+}
 
-# add read lengths to the reverse hits
-fr_repunit_reverse <- 
-  fr_repunit %>% 
-  filter(orient == "reverse") %>% 
-  left_join(reads_len_df, by = "subject")
-
-# create array of copy numbers
-cn_array <- seq(0, opt$max_cn, 1)
-
-# count the reads for each CNV (direct)
-n_reads_cn_dir <- map_int(
-  cn_array,
-  ~ count_reads_cn(
-    fr_repunit_direct,
+# count the reads for each CNV (direct/reverse)
+count_reads <- function(cn_array, hits_orient, min_len, increment, direct) {
+  # cn_array: array of copy number variants
+  # hits_orient: df of hits separated by orientation
+  # min_len: min length of reads possibly containing 0 blaSHV copies
+  # increment: length increment
+  # direct: logical, TRUE if separated hits are direct, FALSE if reverse
+  # return: read counts per each CN variant
+  map_int(cn_array, ~ count_reads_cn(
+    hits_orient,
     cn = .,
-    b = opt$base_len,
-    i = opt$increment,
-    direct = TRUE
-  )
-)
+    b = min_len,
+    i = increment,
+    direct = direct
+  ))
+}
 
-# count the reads for each CNV (reverse)
-n_reads_cn_rev <- map_int(
-  cn_array,
-  ~ count_reads_cn(
-    fr_repunit_reverse,
-    cn = .,
-    b = opt$base_len,
-    i = opt$increment,
-    direct = FALSE
-  )
-)
+# all functions put together
+main <- function(in_table, reads, max_cn, min_len, increment) {
+  # in_table: df with blast hits filtered by FR+RU orientation and distance
+  # reads: fasta w reads filtered by FR+RU orientation and distance
+  # max_cn: maximum CN you are interested in
+  # param: min_len: min length of reads possibly containing 0 blaSHV copies
+  # increment: length incrementation with each new blaSHV copy
+  # return: table with read counts for each CNV
 
-# sum the read counts
-n_reads_cn_tot <- n_reads_cn_dir + n_reads_cn_rev
+  # read input table
+  fr_repunit <- read.table(in_table, sep = "\t", header = TRUE)
 
-# make a table
-output_table <- data.frame("CN" = cn_array,
-                           "n_reads_theoretical" = n_reads_cn_tot)
+  # make table size checks
+  stopifnot(ncol(fr_repunit) == 7)
+  stopifnot(nrow(fr_repunit) != 0)
 
-# save results
-write.table(output_table, file = opt$output, sep = "\t", row.names = FALSE, quote = FALSE)
+  # read input reads to get their lengths
+  reads_len_df <- read_length(reads)
+
+  hits_direct <- separate(fr_repunit, "direct")
+  hits_reverse <- separate(fr_repunit, "reverse", reads_len = reads_len_df)
+
+  # create array of copy numbers
+  cnv_variants <- seq(0, max_cn, 1)
+
+  # count reads direct
+  counts_direct <- count_reads(cnv_variants, hits_direct,
+                               min_len = min_len, increment = increment,
+                               direct = TRUE)
+
+  # count reads reverse
+  counts_reverse <- count_reads(cnv_variants, hits_reverse,
+                                min_len = min_len, increment = increment,
+                                direct = FALSE)
+
+  # sum the read counts
+  n_reads_cn_tot <- counts_direct + counts_reverse
+
+  # compile output table
+  output_table <- data.frame("CN" = cnv_variants,
+                             "n_reads_theoretical" = n_reads_cn_tot)
+
+  return(output_table)
+}
+
+#### RUN ####
+cnv_theoretical <- main(in_table = snakemake@input[[1]],
+                        reads = snakemake@input[[2]],
+                        max_cn = snakemake@params[[1]],
+                        increment = snakemake@param[[2]],
+                        min_len = snakemake@param[[3]])
+# save to file
+write.table(cnv_theoretical,
+            file = snakemake@output[[1]],
+            sep = "\t", row.names = FALSE, quote = FALSE)
 print("Finished. No erorrs.")
+
+#### CLOSE LOG ####
+sink()
