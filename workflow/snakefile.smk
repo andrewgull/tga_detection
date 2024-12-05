@@ -1,8 +1,30 @@
+####################################################################
+# this pipeline runs the blaSHV gene copy number variation analysis
+# in ultra-deep Nanopore sequencing reads
+# author: Andrei Guliaev, Uppsala University
+####################################################################
+
 from snakemake.io import expand, directory, touch, temp
+import pandas as pd
+
+#### Singularity setup ####
+
+# this container defines the underlying OS for each job when using the workflow
+# with --use-conda --use-singularity
+container: "docker://continuumio/miniconda3"
+
+
+#### Config file for this pipeline ####
+configfile: "configs/config.yaml"
+
+# read strain names
+samples = pd.read_csv(config["samples"], dtype={"samples": str})
+
+#### Rules ####
 
 rule all:
     input:
-        expand("results/final/{sample}_all.done", sample=config['samples']), "results/tables/aggregate/frequencies_full_table.tsv"
+        expand("results/final/{sample}_all.done", sample=samples['samples']), "results/tables/aggregate/frequencies_full_table.tsv"
 
 rule merge_reads:
     input: "resources/reads_separate/{sample}"
@@ -11,7 +33,6 @@ rule merge_reads:
     log: "results/logs/{sample}_zcat.log"
     benchmark: "results/benchmarks/zcat_reads/{sample}.tsv"
     conda: "compress-env"
-    container: "containers/compress.sif"
     shell: "zcat {input}/*.gz | pigz -c -p {threads} 1> {output} 2> {log}"
 
 rule filter_reads:
@@ -21,7 +42,6 @@ rule filter_reads:
     log: "results/logs/{sample}_filtlong.log"
     benchmark: "results/benchmarks/filtlong_filter/{sample}.tsv"
     conda: "filtlong-env"
-    container: "containers/filtlong.sif"
     params: min_len=config['min_read_len']
     shell: "filtlong --min_length {params.min_len} {input} 2> {log} | pigz -c -p {threads} > {output}"
 
@@ -32,7 +52,6 @@ rule fq2fasta:
     log: "results/logs/{sample}_seqkit_fq2fa.log"
     benchmark: "results/benchmarks/seqkit_convert/{sample}.tsv"
     conda: "seqkit-env"
-    container: "containers/seqkit.sif"
     shell: "seqkit fq2fa -j {threads} {input} | pigz -c -p {threads} 1> {output} 2> {log}"
 
 rule create_fr_red:
@@ -41,7 +60,6 @@ rule create_fr_red:
     threads: 18
     log: "results/logs/seqkit_subseq_fr_red.log"
     conda: "seqkit-env"
-    container: "containers/seqkit.sif"
     params: start = config['fr_red_start'], end = config['fr_red_end']
     shell: "seqkit subseq -r {params.start}:{params.end} {input} 1> {output} 2> {log}"
 
@@ -51,7 +69,6 @@ rule create_fr_green:
     threads: 18
     log: "results/logs/seqkit_subseq_fr_green.log"
     conda: "seqkit-env"
-    container: "containers/seqkit.sif"
     params: start = config['fr_green_start'], end = config['fr_green_end']
     shell: "seqkit subseq -j {threads} -r {params.start}:{params.end} {input} 1> {output} 2> {log}"
 
@@ -61,7 +78,6 @@ rule make_blast_db:
     threads: 18
     log: "results/logs/{sample}_blastdb.log"
     conda: "blast-env"
-    container: "containers/blast.sif"
     shell: "pigz -c -d -p {threads} {input} | makeblastdb -in - -dbtype nucl -title blastdb -out {output}/blastdb &> {log}"
 
 rule blast_red:
@@ -72,7 +88,6 @@ rule blast_red:
     log: "results/logs/{sample}_blast_red.log"
     benchmark: "results/benchmarks/blast_red/{sample}.tsv"
     conda: "blast-env"
-    container: "containers/blast.sif"
     shell: "blastn -query {input.query} -db {input.database}/blastdb -outfmt {params.fmt} "
            "-num_threads {threads} -num_alignments {params.n_alns} 1> {output} 2> {log}"
 
@@ -84,7 +99,6 @@ rule blast_green:
     log: "results/logs/{sample}_blast_green.log"
     benchmark: "results/benchmarks/blast_green/{sample}.tsv"
     conda: "blast-env"
-    container: "containers/blast.sif"
     shell: "blastn -query {input.query} -db {input.database}/blastdb -outfmt {params.fmt} "
            "-num_threads {threads} -num_alignments {params.n_alns} 1> {output} 2> {log}"
 
@@ -94,7 +108,6 @@ rule create_repeat_unit:
     log: "results/logs/seqkit_repunit.log"
     params: start=config["ru_start"], end=config["ru_end"]
     conda: "seqkit-env"
-    container: "containers/seqkit.sif"
     shell:  "seqkit subseq -r {params.start}:{params.end} {input} 1> {output} 2> {log}"
 
 rule blast_repeat_unit:
@@ -104,7 +117,6 @@ rule blast_repeat_unit:
     threads: 18
     log: "results/logs/{sample}_blast_repeat_unit.log"
     conda: "blast-env"
-    container: "containers/blast.sif"
     params: fmt=config["format"], n_alns=config["n_bla_aligns"]
     shell: "blastn -query {input.query} -db {input.database}/blastdb -outfmt {params.fmt} "
            "-num_threads {threads} -num_alignments {params.n_alns} 1> {output} 2> {log}"
@@ -115,7 +127,6 @@ rule filter_rr_ru_blast:
     output: "results/tables/{sample}/blast_joined_red_repunit.tsv"
     log: "results/logs/{sample}_blast_joined.log"
     conda: "rscripts-env"
-    container: "containers/rscripts.sif"
     params: identity = config['min_identity'], e_val = config['max_e_value'],
             length_fr = config['min_fr_len'], length_ru = config['min_ru_len'],
             distance = config['max_dist']
@@ -127,7 +138,6 @@ rule filter_min_orient_length:
     output: "results/tables/{sample}/blast_joined_red_repunit_orient_len.tsv"
     log: "results/logs/{sample}_filt_min_orient_len.log"
     conda: "rscripts-env"
-    container: "containers/rscripts.sif"
     params: base_len = config['base_len']
     script: "scripts/filter_1820.R"
 
@@ -138,7 +148,6 @@ rule cn_reads_bins:
     output: "results/tables/{sample}/number_reads_containing_CN.tsv"
     log: "results/logs/{sample}_cn_reads_bins.log"
     conda: "biostrings-env"
-    container: "containers/biostrings.sif"
     params: max_cn = config['max_cn'], incr = config['increment'], base_len = config['base_len']
     shell: "scripts/get_cn_read_counts.R"
 
@@ -149,7 +158,6 @@ rule filter_flanking_regions:
     output: "results/tables/{sample}/blast_joined.tsv"
     log: "results/logs/{sample}_blast_joined.log"
     conda: "rscripts-env"
-    container: "containers/rscripts.sif"
     params: identity = config['min_identity'], e_val = config['max_e_value'], length = config['min_fr_len']
     script: "scripts/filter_fr_hits.R"
 
@@ -161,7 +169,6 @@ rule blast_blaSHV:
     log: "results/logs/{sample}_blast_blaSHV.log"
     benchmark: "results/benchmarks/blast_blaSHV/{sample}.tsv"
     conda: "blast-env"
-    container: "containers/blast.sif"
     params: fmt=config["format"], n_alns=config["n_bla_aligns"]
     shell: "blastn -query {input.query} -db {input.database}/blastdb -outfmt {params.fmt} "
            "-num_threads {threads} -num_alignments {params.n_alns} 1> {output} 2> {log}"
@@ -172,7 +179,6 @@ rule filter_blaSHV_hits:
     output: "results/tables/{sample}/blast_blaSHV_filtered.tsv"
     log: "results/logs/{sample}_blast_blaSHV_filter.log"
     conda: "rscripts-env"
-    container: "containers/rscripts.sif"
     params: e_val=config["max_e_value"]
     script: "scripts/filter_blaSHV_blast.R"
 
@@ -182,7 +188,6 @@ rule make_bed_blaSHV_filtered:
     log: "results/logs/{sample}_make_bed.log"
     benchmark: "results/benchmarks/make_bed/{sample}.tsv"
     conda: "rscripts-env"
-    container: "containers/rscripts.sif"
     script: "scripts/make_bed.R"
 
 rule merge_blaSHV_filtered:
@@ -192,7 +197,6 @@ rule merge_blaSHV_filtered:
     log: "results/logs/{sample}_bedtools_merge.log"
     benchmark: "results/benchmarks/bedtools_merge/{sample}.tsv"
     conda: "bedtools-env"
-    container: "containers/bedtools.sif"
     params: dist=config["dist"]
     shell: "sort -k1,1 -k2,2n {input} > {output.sorted} && "
            "bedtools merge -i {output.sorted} -s -d {params.dist} > {output.merged} 2> {log}"
@@ -205,7 +209,6 @@ rule blaSHV_counts:
             table="results/tables/{sample}/blaSHV_counts.tsv"
     log: "results/logs/{sample}_blaSHV_counts.log"
     conda: "rscripts-env"
-    container: "containers/rscripts.sif"
     params: length=config["bla_len"]
     shell: "Rscript {input.script} -i {input.bed} -b {input.blast} -l {params.length} -p {output.plot} -a {output.table} &> {log}"
 
@@ -215,7 +218,6 @@ rule frequency_calculation:
     output: "results/tables/{sample}/frequencies.tsv"
     log: "results/logs/{sample}_frequencies.log"
     conda: "rscripts-env"
-    container: "containers/rscripts.sif"
     shell: "scripts/final_calculations.R"
 
 rule aggregate_freq_tables:
@@ -224,7 +226,6 @@ rule aggregate_freq_tables:
             xlsx = "results/tables/aggregate/frequencies_full_table.xlsx"
     log: "results/logs/aggregate_freq_tables.log"
     conda: "pandas-env"
-    container: "containers/pandas.sif"
     script: "scripts/aggregate_frequency_tables.py"
 
 rule final:
