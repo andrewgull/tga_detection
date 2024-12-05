@@ -199,7 +199,7 @@ rule filter_blaSHV_hits:
     log: "results/logs/{sample}_blast_blaSHV_filter.log"
     conda: "rscripts-env"
     params: e_val=config["max_e_value"]
-    script: "scripts/filter_blaSHV_blast.R"
+    script: "scripts/filter_gene_blast.R"
 
 # convert filtered gene hits table to BED
 rule make_bed_blaSHV_filtered:
@@ -224,15 +224,13 @@ rule merge_blaSHV_filtered:
 
 # count genes in the filtered reads
 rule blaSHV_counts:
-    input: script="workflow/scripts/plot_blaSHV_counts_merged.R",
-           bed="results/bedfiles/{sample}/blaSHV_hits_merged.bed",
+    input: bed="results/bedfiles/{sample}/blaSHV_hits_merged.bed",
            blast="results/tables/{sample}/blast_joined.tsv"
-    output: plot="results/plots/{sample}/blaSHV_merged_counts.png",
-            table="results/tables/{sample}/blaSHV_counts.tsv"
+    output: "results/tables/{sample}/blaSHV_counts.tsv"
     log: "results/logs/{sample}_blaSHV_counts.log"
     conda: "rscripts-env"
     params: length=config["bla_len"]
-    shell: "Rscript {input.script} -i {input.bed} -b {input.blast} -l {params.length} -p {output.plot} -a {output.table} &> {log}"
+    script: "scripts/count_merged_gene_hits.R"
 
 # calculate observed, expected frequencies etc
 rule frequency_calculation:
