@@ -26,6 +26,8 @@ rule all:
     input:
         expand("results/final/{sample}_all.done", sample=samples['samples']), "results/tables/aggregate/frequencies_full_table.tsv"
 
+# merge separate read files into 
+# one single file per sample
 rule merge_reads:
     input: "resources/reads_separate/{sample}"
     output: temp("resources/reads/{sample}/reads_all.fastq.gz")
@@ -35,6 +37,7 @@ rule merge_reads:
     conda: "compress-env"
     shell: "zcat {input}/*.gz | pigz -c -p {threads} 1> {output} 2> {log}"
 
+# filter reads by length
 rule filter_reads:
     input: "resources/reads/{sample}/reads_all.fastq.gz"
     output: temp("results/reads/{sample}/reads_filtered.fastq.gz")
@@ -45,6 +48,7 @@ rule filter_reads:
     params: min_len=config['min_read_len']
     shell: "filtlong --min_length {params.min_len} {input} 2> {log} | pigz -c -p {threads} > {output}"
 
+# convert fastq to fasta
 rule fq2fasta:
     input: "results/reads/{sample}/reads_filtered.fastq.gz"
     output: "results/reads/{sample}/reads_filtered.fasta.gz"
@@ -54,24 +58,27 @@ rule fq2fasta:
     conda: "seqkit-env"
     shell: "seqkit fq2fa -j {threads} {input} | pigz -c -p {threads} 1> {output} 2> {log}"
 
+# cut flanking regions Red (RR) from plasmid
 rule create_fr_red:
     input: "resources/plasmid/DA61218_plasmid.fa"
-    output: "results/flanking_regions/fr_red.fa" # the same for every sample
+    output: "results/flanking_regions/fr_red.fa"
     threads: 18
     log: "results/logs/seqkit_subseq_fr_red.log"
     conda: "seqkit-env"
     params: start = config['fr_red_start'], end = config['fr_red_end']
     shell: "seqkit subseq -r {params.start}:{params.end} {input} 1> {output} 2> {log}"
 
+# cut flanking region Green (GR) from plasmid
 rule create_fr_green:
     input: "resources/plasmid/DA61218_plasmid.fa"
-    output: "results/flanking_regions/fr_green.fa" # the same for every sample
+    output: "results/flanking_regions/fr_green.fa"
     threads: 18
     log: "results/logs/seqkit_subseq_fr_green.log"
     conda: "seqkit-env"
     params: start = config['fr_green_start'], end = config['fr_green_end']
     shell: "seqkit subseq -j {threads} -r {params.start}:{params.end} {input} 1> {output} 2> {log}"
 
+# blast DB of reads
 rule make_blast_db:
     input: "results/reads/{sample}/reads_filtered.fasta.gz"
     output: directory("results/blast_databases/{sample}")
@@ -80,6 +87,7 @@ rule make_blast_db:
     conda: "blast-env"
     shell: "pigz -c -d -p {threads} {input} | makeblastdb -in - -dbtype nucl -title blastdb -out {output}/blastdb &> {log}"
 
+# search for RR
 rule blast_red:
     input: query="results/flanking_regions/fr_red.fa", database="results/blast_databases/{sample}"
     output: "results/tables/{sample}/blast_red.tsv"
@@ -91,6 +99,7 @@ rule blast_red:
     shell: "blastn -query {input.query} -db {input.database}/blastdb -outfmt {params.fmt} "
            "-num_threads {threads} -num_alignments {params.n_alns} 1> {output} 2> {log}"
 
+# search for GR
 rule blast_green:
     input: query="results/flanking_regions/fr_green.fa", database="results/blast_databases/{sample}"
     output: "results/tables/{sample}/blast_green.tsv"
@@ -102,6 +111,7 @@ rule blast_green:
     shell: "blastn -query {input.query} -db {input.database}/blastdb -outfmt {params.fmt} "
            "-num_threads {threads} -num_alignments {params.n_alns} 1> {output} 2> {log}"
 
+# cut repeat unit (RU) from plasmid
 rule create_repeat_unit:
     input: "resources/plasmid/DA61218_plasmid.fa"
     output: "results/flanking_regions/repeat_unit.fa"
@@ -110,6 +120,7 @@ rule create_repeat_unit:
     conda: "seqkit-env"
     shell:  "seqkit subseq -r {params.start}:{params.end} {input} 1> {output} 2> {log}"
 
+# search for RU
 rule blast_repeat_unit:
     input: query="results/flanking_regions/repeat_unit.fa",
            database="results/blast_databases/{sample}"
@@ -121,6 +132,8 @@ rule blast_repeat_unit:
     shell: "blastn -query {input.query} -db {input.database}/blastdb -outfmt {params.fmt} "
            "-num_threads {threads} -num_alignments {params.n_alns} 1> {output} 2> {log}"
 
+# filter blast hits by RR and RU presence
+# RR first and RU right after it (within max dist)
 rule filter_rr_ru_blast:
     input: red = "results/tables/{sample}/blast_red.tsv",
            repunit = "results/tables/{sample}/blast_repeat_unit.tsv"
@@ -132,7 +145,8 @@ rule filter_rr_ru_blast:
             distance = config['max_dist']
     script: "scripts/filter_red_repunit.R"
 
-# filter RED+RU+Oriented length
+# filter hits by presence of RR and RU in correct orientation,
+# distance and at least 1820 nt from the beginning of the RR
 rule filter_min_orient_length:
     input: "results/tables/{sample}/blast_joined_red_repunit.tsv"
     output: "results/tables/{sample}/blast_joined_red_repunit_orient_len.tsv"
@@ -141,7 +155,7 @@ rule filter_min_orient_length:
     params: base_len = config['base_len']
     script: "scripts/filter_1820.R"
 
-# get counts of read possibly containing various CNs
+# count reads theoretically capable of containing each CN variant
 rule cn_reads_bins:
     input: table = "results/tables/{sample}/blast_joined_red_repunit_orient_len.tsv",
            reads = "results/reads/{sample}/reads_filtered.fasta.gz"
@@ -151,7 +165,9 @@ rule cn_reads_bins:
     params: max_cn = config['max_cn'], incr = config['increment'], base_len = config['base_len']
     shell: "scripts/get_cn_read_counts.R"
 
-# filter GREEN
+# filter GR
+# join GR hits with the filtered ones
+# from the previous step
 rule filter_flanking_regions:
     input: red_ru = "results/tables/{sample}/blast_joined_red_repunit_orient_len.tsv",
            green = "results/tables/{sample}/blast_green.tsv"
@@ -161,6 +177,7 @@ rule filter_flanking_regions:
     params: identity = config['min_identity'], e_val = config['max_e_value'], length = config['min_fr_len']
     script: "scripts/filter_fr_hits.R"
 
+# search gene
 rule blast_blaSHV:
     input: query="resources/genes/blaSHV.fa",
            database="results/blast_databases/{sample}"
@@ -173,6 +190,8 @@ rule blast_blaSHV:
     shell: "blastn -query {input.query} -db {input.database}/blastdb -outfmt {params.fmt} "
            "-num_threads {threads} -num_alignments {params.n_alns} 1> {output} 2> {log}"
 
+# filter gene hits by joining them with 
+# the GR & RR hits from previous steps
 rule filter_blaSHV_hits:
     input: bla="results/tables/{sample}/blast_blaSHV.tsv",
            fr="results/tables/{sample}/blast_joined.tsv"
@@ -182,6 +201,7 @@ rule filter_blaSHV_hits:
     params: e_val=config["max_e_value"]
     script: "scripts/filter_blaSHV_blast.R"
 
+# convert filtered gene hits table to BED
 rule make_bed_blaSHV_filtered:
     input: "results/tables/{sample}/blast_blaSHV_filtered.tsv"
     output: "results/bedfiles/{sample}/blaSHV_hits.bed"
@@ -190,6 +210,7 @@ rule make_bed_blaSHV_filtered:
     conda: "rscripts-env"
     script: "scripts/make_bed.R"
 
+# merge close gene hits
 rule merge_blaSHV_filtered:
     input: "results/bedfiles/{sample}/blaSHV_hits.bed"
     output: sorted="results/bedfiles/{sample}/blaSHV_hits_sorted.bed",
@@ -201,6 +222,7 @@ rule merge_blaSHV_filtered:
     shell: "sort -k1,1 -k2,2n {input} > {output.sorted} && "
            "bedtools merge -i {output.sorted} -s -d {params.dist} > {output.merged} 2> {log}"
 
+# count genes in the filtered reads
 rule blaSHV_counts:
     input: script="workflow/scripts/plot_blaSHV_counts_merged.R",
            bed="results/bedfiles/{sample}/blaSHV_hits_merged.bed",
@@ -212,6 +234,7 @@ rule blaSHV_counts:
     params: length=config["bla_len"]
     shell: "Rscript {input.script} -i {input.bed} -b {input.blast} -l {params.length} -p {output.plot} -a {output.table} &> {log}"
 
+# calculate observed, expected frequencies etc
 rule frequency_calculation:
     input: bins="results/tables/{sample}/number_reads_containing_CN.tsv",
            bla="results/tables/{sample}/blaSHV_counts.tsv"
@@ -220,6 +243,7 @@ rule frequency_calculation:
     conda: "rscripts-env"
     shell: "scripts/final_calculations.R"
 
+# join samples' tables together
 rule aggregate_freq_tables:
     input: expand("results/tables/{sample}/frequencies.tsv", sample=config['samples'])
     output: tsv = "results/tables/aggregate/frequencies_full_table.tsv",
