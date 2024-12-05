@@ -12,19 +12,20 @@ The main pipeline processes Nanopore reads to find and summarize plasmid *blaSHV
 
 ## How to use
 
-The pipeline is written using [Snakemake](https://snakemake.github.io/) - a workflow management system.
-To be able to run the analysis, install Snakemake first (see the official installation instructions) 
+The pipeline is written using [Snakemake](https://snakemake.github.io/) v8.23.1 - a workflow management system.
+To be able to run the analysis, install Snakemake first (see the official installation instructions).
 
-Ensure that you have input files (Nanopore reads and plasmid sequence) in corresponding directories in `resources`
+Ensure that you have input files (Nanopore reads and plasmid sequence) in corresponding directories in `resources/reads` and `resources/plasmid`.
 
-Once everything is in place, run the following commands:
+Once everything is in place, run the following command:
 
 ```bash
 # navigate to the project's directory
-snakemake --snakefile workflow/snakefile.smk --configfile workflow/config.yaml --use-conda
+# replace $N with number of threads you want to use
+snakemake --snakefile workflow/snakefile.smk --use-conda --use-singularity --cores $N 
 ```
 
-you can change number of threads using `--cores` flag.
+to run the analysis using conda environments inside a container.
 
 ## The main rule graph
 
