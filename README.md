@@ -1,14 +1,8 @@
 # Nano-CNV project
 
-Code for the project publshed in %journalname%
+Code for the project published in %journalname%
 
 The main pipeline processes Nanopore reads to find and summarize plasmid *blaSHV-1* copy number distribution.
-
-## The plasmid map
-
-![Fig. 1. Map of DA61218_I-scel plasmid](images/plasmid_I-scel_full_map.png)
-
-**Resistance gene** - beta-lactamase gene (*blaSHV*); **IS** - insertion sequence/repeat unit; **RR** - "red" flanking region; **GR** - "green" flanking region; **CR** - control regions (1 to 5).
 
 ## How to use
 
