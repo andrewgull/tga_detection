@@ -60,7 +60,7 @@ rule fq2fasta:
 
 # cut flanking regions Red (RR) from plasmid
 rule create_fr_red:
-    input: "resources/plasmid/DA61218_plasmid.fa"
+    input: "resources/plasmid/CP061207.1.fasta"
     output: "results/flanking_regions/fr_red.fa"
     threads: 18
     log: "results/logs/seqkit_subseq_fr_red.log"
@@ -70,7 +70,7 @@ rule create_fr_red:
 
 # cut flanking region Green (GR) from plasmid
 rule create_fr_green:
-    input: "resources/plasmid/DA61218_plasmid.fa"
+    input: "resources/plasmid/CP061207.1.fasta"
     output: "results/flanking_regions/fr_green.fa"
     threads: 18
     log: "results/logs/seqkit_subseq_fr_green.log"
@@ -113,7 +113,7 @@ rule blast_green:
 
 # cut repeat unit (RU) from plasmid
 rule create_repeat_unit:
-    input: "resources/plasmid/DA61218_plasmid.fa"
+    input: "resources/plasmid/CP061207.1.fasta"
     output: "results/flanking_regions/repeat_unit.fa"
     log: "results/logs/seqkit_repunit.log"
     params: start=config["ru_start"], end=config["ru_end"]
