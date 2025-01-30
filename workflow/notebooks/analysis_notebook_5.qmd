@@ -769,3 +769,143 @@ freq_df %>%
 ```
 
 Seprate script for that?
+
+## blaSHV hits between flanking regions
+
+In the rule `filter_blaSHV_hits` I filter bla hits keeping only those that sit on the reads from FR+RU+RR filtering (including all distances and relative orientations).
+
+Here, I will check how many of these bla SHV hits reside between the FR to exclude abberrant reads.
+
+Table to analyse: `results/tables/{sample}/blast_joined.tsv` (reads from FR+RU+RR filtering)
+
+```{r}
+fr_ru_filt <- read_delim("../../results/tables/76595_D_10g/blast_joined.tsv", show_col_types = F)
+
+fr_ru_filt %>% select(-c(mismatch, gaps, dist, identity))
+```
+
+```{r}
+# max entries per read/subject
+fr_ru_filt %>% count(subject) %>% arrange(n)
+```
+
+
+Column `green.red.distance` has been calculated by subtracting `start.subject` from `end.red`. Clearly, subject is FR green here.
+
+Join this table with `filter_blaSHV_hits` output (it contains *bla*SHV hist) and find if their coordinates are between `start.subject` and `end.red` (take into account orientation).
+
+If at least one *bla* hit per read will be found not between `start.subject` and `end.red` (reverse) or `end.subject` and `end.red`, such read should be considered aberrant and discarded from analysis.
+
+
+```{r}
+bla_filt <- read_delim("../../results/tables/76595_D_10g/blast_blaSHV_filtered.tsv", show_col_types = F)
+bla_filt %>% count(subject)
+```
+
+```{r}
+bla_filt %>% 
+  filter(subject == "9a1dd6e5-a4e0-4cb4-975f-85e66575e0a1")
+```
+
+Let's find FRs coordinates for each read:
+
+```{r}
+# function to filter coords
+is_between <-
+  function(bla_start,
+           bla_end,
+           fr_start,
+           fr_end) {
+    # this is direct strand
+    if (fr_start < fr_end) {
+      # check if both ends of the gene are inside the FR coords
+      if (between(bla_start, fr_start, fr_end) &
+          between(bla_end, fr_start, fr_end)) {
+        return(TRUE)
+      } else {
+        return(FALSE)
+      }
+    # this is reverse strand
+    } else {
+      # check the same condition but with FR ends swapped
+      if (between(bla_start, fr_end, fr_start) &
+          between(bla_end, fr_end, fr_start)) {
+        return(TRUE)
+      } else {
+        return(FALSE)
+      }
+    }
+  }
+
+# apply is_between() to vectors/columns of a tibble
+# this wrapper will return TRUE if any of the elements is FALSE, and FALSE if otherwise
+any(!map2_lgl(c(10000, 17000, 29000), c(11000, 18000, 29500), ~ is_between(.x, .y, 5000, 30000)))
+
+# apply the function to tibbles grouped by read ID
+# one row - one read
+# test this idea on a single row
+fr_bla_test <- fr_ru_filt %>% 
+  filter(subject == "9a1dd6e5-a4e0-4cb4-975f-85e66575e0a1") %>% 
+  # this will copy values of FR coords across rows
+  left_join(bla_filt, by = "subject") %>% 
+  # BLA columns are prefixed by .y
+  # start.subject.x and end.subject.x are the same across all rows now
+  select(subject, start.subject.x, end.subject.x, end.red, start.subject.y, end.subject.y, orientation)
+  
+# apply the wrapper from above
+# first two args must be BLA genes coords: start and end
+any(!map2_lgl(
+  fr_bla_test$start.subject.y,
+  fr_bla_test$end.subject.y,
+  ~ is_between(.x, .y, fr_bla_test$end.red[1], fr_bla_test$end.subject.x[1])
+))
+
+# make a solution for full table
+genes_within_flanks <- function(read_id, fr_df, bla_df) {
+  fr_bla_df <- fr_df %>%
+    filter(subject == read_id) %>%
+    # this will copy values of FR coords across rows
+    left_join(bla_df, by = "subject") %>%
+    # BLA columns are prefixed by .y
+    # start.subject.x and end.subject.x are the same across all rows now
+    select(
+      subject,
+      start.subject.x,
+      end.subject.x,
+      end.red,
+      start.subject.y,
+      end.subject.y,
+      orientation
+    )
+  
+  # FR coords are always the first elements of the end.red, end.subject.x columns
+  answer <- any(
+    !map2_lgl(
+      fr_bla_df$start.subject.y,
+      fr_bla_df$end.subject.y,
+      ~ is_between(.x, .y, fr_bla_df$end.red[1], fr_bla_df$end.subject.x[1])
+    )
+  )
+  
+  return(answer)
+}
+
+# apply it to the whole table of this sample
+map_vec(fr_ru_filt$subject, ~ genes_within_flanks(., fr_ru_filt, bla_filt)) %>% sum() # 4
+
+# compare to the number of reads in the full table
+nrow(fr_ru_filt) # 1840
+
+(4/1840)*100
+```
+
+
+### Counts of abberant reads per sample (table)
+
+Table and plots FYI
+
+This filtering step should be implemented in the pipeline before the *blaSHV* counting is made.
+
+Go to `final_cnv_plots.qmd`
+
+
