@@ -774,7 +774,7 @@ Seprate script for that?
 
 In the rule `filter_blaSHV_hits` I filter bla hits keeping only those that sit on the reads from FR+RU+RR filtering (including all distances and relative orientations).
 
-Here, I will check how many of these bla SHV hits reside between the FR to exclude abberrant reads.
+Here, I will check how many of these bla SHV hits reside between the FR to exclude aberrant reads.
 
 Table to analyse: `results/tables/{sample}/blast_joined.tsv` (reads from FR+RU+RR filtering)
 
@@ -866,6 +866,8 @@ genes_within_flanks <- function(read_id, fr_df, bla_df) {
     filter(subject == read_id) %>%
     # this will copy values of FR coords across rows
     left_join(bla_df, by = "subject") %>%
+    # drop na in .y -> no bla hits in this read
+    drop_na(start.subject.y) %>% 
     # BLA columns are prefixed by .y
     # start.subject.x and end.subject.x are the same across all rows now
     select(
@@ -900,7 +902,7 @@ nrow(fr_ru_filt) # 1840
 ```
 
 
-### Counts of abberant reads per sample (table)
+### Counts of aberrant reads per sample (table)
 
 Table and plots FYI
 
