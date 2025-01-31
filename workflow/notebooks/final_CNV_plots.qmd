@@ -176,3 +176,136 @@ freq_df %>%
   knitr::kable()
 ```
 
+## Aberrant reads
+
+Reads that contain *blaSHV* hits outside the flanking regions.
+
+Here I will count them and plot the results.
+
+Such reads will be excluded from the analysis.
+
+```{r}
+# this code was developed in analysis_notebook_5.qmd
+# for each sample you have to read two tables with filtered blaSHV hits and filtered RR+RU+GR reads
+
+# function to show if (gene) coords are within (FR) range
+is_between <- function(bla_start, bla_end, fr_start, fr_end) {
+    # this is direct strand
+    if (fr_start < fr_end) {
+      # check if both ends of the gene are inside the FR coords
+      if (between(bla_start, fr_start, fr_end) &
+          between(bla_end, fr_start, fr_end)) {
+        return(TRUE)
+      } else {
+        return(FALSE)
+      }
+    # this is reverse strand
+    } else {
+      # check the same condition but with FR ends swapped
+      if (between(bla_start, fr_end, fr_start) &
+          between(bla_end, fr_end, fr_start)) {
+        return(TRUE)
+      } else {
+        return(FALSE)
+      }
+    }
+  }
+
+# solution that can be applied to the full table
+genes_within_flanks <- function(read_id, fr_df, bla_df) {
+  fr_bla_df <- fr_df %>%
+    filter(subject == read_id) %>%
+    # this will copy values of FR coords across rows
+    left_join(bla_df, by = "subject") %>%
+    # drop na in .y -> no bla hits in this read
+    drop_na(start.subject.y) %>% 
+    # BLA columns are prefixed by .y
+    # start.subject.x and end.subject.x are the same across all rows now
+    select(
+      subject,
+      start.subject.x,
+      end.subject.x,
+      end.red,
+      start.subject.y,
+      end.subject.y,
+      orientation
+    )
+  
+  # FR coords are always the first elements of the end.red, end.subject.x columns
+  answer <- any(
+    !map2_lgl(
+      fr_bla_df$start.subject.y,
+      fr_bla_df$end.subject.y,
+      ~ is_between(.x, .y, fr_bla_df$end.red[1], fr_bla_df$end.subject.x[1])
+    )
+  )
+  
+  return(answer)
+}
+
+# get the actual count of aberrant reads
+count_aberrant_reads <- function(fr_ru_df, bla_df) {
+  sum(map_vec(fr_ru_df$subject, ~ genes_within_flanks(., fr_ru_df, bla_df)))
+}
+
+# function that ties everything together
+main <- function(sample, prefix = "../../results/tables/") {
+  fr_ru_path <- paste0(prefix, sample, "/blast_joined.tsv")
+  bla_path <- paste0(prefix, sample, "/blast_blaSHV_filtered.tsv")
+  fr_df <- read_delim(fr_ru_path, show_col_types = F)
+  bla_df <- read_delim(bla_path, show_col_types = F)
+  n_abb <- count_aberrant_reads(fr_df, bla_df)
+  n_tot <- nrow(fr_df)
+  
+  out_df <- tibble("sample" = sample, "n_aberrant" = n_abb, "n_total" = n_tot)
+  return(out_df)
+}
+
+# samples
+sample_names <- dir("../../results/tables", pattern = "76595_*" )
+
+aberrant_reads_df <- map_dfr(sample_names, ~ main(.))
+
+```
+
+```{r}
+aberrant_reads_df <- 
+  aberrant_reads_df %>% 
+  mutate("perc_aberrant" = (n_aberrant/n_total)*100) %>% 
+  arrange(-perc_aberrant)
+
+aberrant_reads_df
+```
+
+```{r}
+write_delim(aberrant_reads_df, "../../results/tables/aberrant_reads.tsv", delim = "\t")
+```
+
+## Differences of different counting approaches
+
+D=mod(Nbla1 -Nbla2) where Nbla1 - the number of bla hits as calculated by blasting bla (+merging bed viles) and Nbla2 - the number of bla genes as calculated by dividing the distance btw FR by one bla length
+
+
+### Tables with data
+
+data on distances between FR come from the rule `filter_flanking_regions`
+
+```{r}
+fr_ru_filt <- read_delim("../../results/tables/76595_D_10g/blast_joined.tsv", show_col_types = F)
+fr_ru_filt %>% select(subject, distance.btw.FR)
+```
+
+data on counts through BED files merging come from the rule `blaSHV_counts`
+
+```{r}
+bla_counts <- read_delim("../../results/tables/76595_D_10g/blaSHV_counts.tsv", show_col_types = F)
+
+counts_distances <- fr_ru_filt %>% 
+  select(subject, distance.btw.FR) %>% 
+  left_join(bla_counts, by="subject") %>% 
+  mutate("n.blaSHV.dist" = distance.btw.FR/860,
+         "diff" = round(abs(n.blaSHV.dist - n.blaSHV.merged)))
+
+counts_distances 
+```
+
