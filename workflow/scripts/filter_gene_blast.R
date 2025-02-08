@@ -14,7 +14,6 @@
 sink(snakemake@log[[1]])
 
 #### LIBRARIES ####
-library(ggplot2)
 library(readr)
 library(purrr)
 library(tidyr)
@@ -68,8 +67,8 @@ main <- function(bla, fr, evalue) {
 
   # Filter bla hits keeping only those present in FR table
   bla_filt <- bla %>%
-    filter(X2 %in% unique(fr$subject)) %>%
-    filter(X11 <= evalue)
+    filter(subject %in% unique(fr$subject)) %>%
+    filter(e.value <= evalue)
 
   names(bla_filt) <- c("query", "subject", "identity", "length", "mismatch",
                        "gaps", "start.query", "end.query", "start.subject",
@@ -79,8 +78,7 @@ main <- function(bla, fr, evalue) {
 
 #### RUN ####
 tryCatch({
-  bla_df <- read_delim(snakemake@input[[1]], col_names = FALSE,
-                       show_col_types = FALSE)
+  bla_df <- read_delim(snakemake@input[[1]], show_col_types = FALSE)
   fr_df <- read_delim(snakemake@input[[2]], show_col_types = FALSE)
 
   bla_df_filt <- main(bla = bla_df, fr = fr_df, evalue = snakemake@params[[1]])
