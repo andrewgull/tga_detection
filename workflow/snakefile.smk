@@ -192,6 +192,7 @@ rule blast_blaSHV:
 
 # filter gene hits by joining them with 
 # the GR & RR hits from previous steps
+# and removing aberrant reads
 rule filter_blaSHV_hits:
     input: bla="results/tables/{sample}/blast_blaSHV.tsv",
            fr="results/tables/{sample}/blast_joined.tsv"
