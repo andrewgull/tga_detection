@@ -151,8 +151,8 @@ main <- function(in_table, reads, max_cn, min_len, increment) {
 cnv_theoretical <- main(in_table = snakemake@input[[1]],
                         reads = snakemake@input[[2]],
                         max_cn = snakemake@params[[1]],
-                        increment = snakemake@param[[2]],
-                        min_len = snakemake@param[[3]])
+                        increment = snakemake@params[[2]],
+                        min_len = snakemake@params[[3]])
 # save to file
 write.table(cnv_theoretical,
             file = snakemake@output[[1]],
