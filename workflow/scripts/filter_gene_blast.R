@@ -77,18 +77,21 @@ main <- function(bla, fr, evalue) {
 }
 
 #### RUN ####
-tryCatch({
-  bla_df <- read_delim(snakemake@input[[1]], show_col_types = FALSE)
-  fr_df <- read_delim(snakemake@input[[2]], show_col_types = FALSE)
+# blaSHV table doesn't have column names
+bla_df <- read_delim(snakemake@input[[1]], show_col_types = FALSE,
+                     col_names = FALSE)
+# add them
+names(bla_df) <- c("query", "subject", "identity", "length", "mismatch",
+                   "gaps", "start.query", "end.query", "start.subject",
+                   "end.subject", "e.value", "bit.score")
+# FR table has column names; nothing to do
+fr_df <- read_delim(snakemake@input[[2]], show_col_types = FALSE)
 
-  bla_df_filt <- main(bla = bla_df, fr = fr_df, evalue = snakemake@params[[1]])
+bla_df_filt <- main(bla = bla_df, fr = fr_df, evalue = snakemake@params[[1]])
 
-  # Save to file
-  write_delim(bla_df_filt, file = snakemake@output[[1]], delim = "\t")
-  print("Finished. No errors.")
-}, error = function(e) {
-  print(paste("Error: ", e$message))
-})
+# Save to file
+write_delim(bla_df_filt, file = snakemake@output[[1]], delim = "\t")
+print("Finished. No errors.")
 
 #### CLOSE LOG ####
 sink()
