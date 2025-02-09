@@ -35,7 +35,7 @@ read_blast <- function(input_blast) {
     # check if the correct variant of the blast table was read
     # incorrect version of the table (without headers)
     # will have 'X1' as the first column name
-    stopifnot(grepl("query", names(blast_blaSHV)[1]))
+    stopifnot(grepl("query", names(blast_bla)[1]))
   } else {
     blast_bla <- read_tsv(input_blast,
                           show_col_types = FALSE,
