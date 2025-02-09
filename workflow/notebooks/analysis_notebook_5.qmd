@@ -893,6 +893,7 @@ genes_within_flanks <- function(read_id, fr_df, bla_df) {
 }
 
 # apply it to the whole table of this sample
+# 4 reads in this sample have at least one bla hit outside the FR range
 map_vec(fr_ru_filt$subject, ~ genes_within_flanks(., fr_ru_filt, bla_filt)) %>% sum() # 4
 
 # compare to the number of reads in the full table
@@ -901,6 +902,15 @@ nrow(fr_ru_filt) # 1840
 (4/1840)*100
 ```
 
+If you need TRUE/FALSE value next to each read, the functions above have to be adjusted.
+
+For one table it should look like this:
+
+```{r}
+fr_ru_filt$aberrant <- map_vec(fr_ru_filt$subject, ~ genes_within_flanks(., fr_ru_filt, bla_filt))
+
+fr_ru_filt |> filter(aberrant) # teh same 4 reads are aberrant but now they are marked
+```
 
 ### Counts of aberrant reads per sample (table)
 
