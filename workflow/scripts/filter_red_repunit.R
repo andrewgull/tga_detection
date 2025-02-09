@@ -109,7 +109,7 @@ output_table <- main(red = snakemake@input[[1]],
                      identity = snakemake@params[[1]],
                      e = snakemake@params[[2]],
                      fr_len = snakemake@params[[3]],
-                     ru_len = snakemak@params[[4]],
+                     ru_len = snakemake@params[[4]],
                      maxd = snakemake@params[[5]])
 
 # Save to file
