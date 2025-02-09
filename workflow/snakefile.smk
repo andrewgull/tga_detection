@@ -163,7 +163,7 @@ rule cn_reads_bins:
     log: "results/logs/{sample}_cn_reads_bins.log"
     conda: "biostrings-env"
     params: max_cn = config['max_cn'], incr = config['increment'], base_len = config['base_len']
-    shell: "scripts/get_cn_read_counts.R"
+    script: "scripts/get_cn_read_counts.R"
 
 # filter GR
 # join GR hits with the filtered ones
@@ -240,7 +240,7 @@ rule frequency_calculation:
     output: "results/tables/{sample}/frequencies.tsv"
     log: "results/logs/{sample}_frequencies.log"
     conda: "rscripts-env"
-    shell: "scripts/final_calculations.R"
+    script: "scripts/final_calculations.R"
 
 # join samples' tables together
 rule aggregate_freq_tables:
