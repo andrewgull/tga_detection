@@ -244,7 +244,7 @@ rule frequency_calculation:
 
 # join samples' tables together
 rule aggregate_freq_tables:
-    input: expand("results/tables/{sample}/frequencies.tsv", sample=config['samples'])
+    input: expand("results/tables/{sample}/frequencies.tsv", sample=samples['samples'])
     output: tsv = "results/tables/aggregate/frequencies_full_table.tsv",
             xlsx = "results/tables/aggregate/frequencies_full_table.xlsx"
     log: "results/logs/aggregate_freq_tables.log"
