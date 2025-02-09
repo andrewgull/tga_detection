@@ -262,9 +262,9 @@ main <- function(sample, prefix = "../../results/tables/") {
 }
 
 # samples
-sample_names <- dir("../../results/tables", pattern = "76595_*" )
+sample_names <- read_delim("../../configs/samples.txt", delim = ",")
 
-aberrant_reads_df <- map_dfr(sample_names, ~ main(.))
+aberrant_reads_df <- map_dfr(sample_names$samples, ~ main(.))
 
 ```
 
@@ -283,7 +283,9 @@ write_delim(aberrant_reads_df, "../../results/tables/aberrant_reads.tsv", delim 
 
 ## Differences of different counting approaches
 
-D=mod(Nbla1 -Nbla2) where Nbla1 - the number of bla hits as calculated by blasting bla (+merging bed viles) and Nbla2 - the number of bla genes as calculated by dividing the distance btw FR by one bla length
+$$D=mod(N_{bla1} -N_{bla2})$$ 
+
+where *Nbla1* - the number of bla hits as calculated by blasting bla (+merging bed files) and *Nbla2* - the number of bla genes as calculated by dividing the distance btw FR by one bla length
 
 The idea is that the distance should always be bigger than the number of bla genes counted by merging the hits.
 
@@ -293,7 +295,7 @@ data on distances between FR come from the rule `filter_flanking_regions`
 
 ```{r}
 # samples
-sample_names <- dir("../../results/tables", pattern = "76595_*" )
+sample_names <- read_delim("../../configs/samples.txt", delim = ",")
 
 # go through the samples
 mod_dist <- function(sample_name, bla_length=860){
@@ -308,12 +310,12 @@ mod_dist <- function(sample_name, bla_length=860){
     mutate("n.blaSHV.dist" = distance.btw.FR/bla_length,
            "diff" = round(n.blaSHV.dist - n.blaSHV.merged))
   min_dist <- tibble("sample" = sample_name,
-                     "min.diff" = min(diff_per_read$diff))
+                     "min.diff" = min(diff_per_read$diff, na.rm = TRUE))
 
   return(min_dist)
 }
 
-diff_bla_counts <- map_dfr(sample_names, ~ mod_dist(.x))
+diff_bla_counts <- map_dfr(sample_names$samples, ~ mod_dist(.x))
 
 write_delim(diff_bla_counts, "../../results/tables/min_diff_bla_counts.tsv", delim = "\t")
 ```
@@ -324,3 +326,4 @@ Look at the min differences in *blaSHV* counts
 diff_bla_counts |> arrange(min.diff)
 ```
 
+files with negative numbers are questionable
