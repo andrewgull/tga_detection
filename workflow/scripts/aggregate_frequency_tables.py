@@ -2,13 +2,17 @@
 import pandas as pd
 import openpyxl
 
-sample_names = snakemake.config['samples']
 table_names = snakemake.input
 output_tsv = snakemake.output['tsv']
 output_xlsx = snakemake.output['xlsx']
 
+# parse the sample names from config and sample list
+# the first and only column of this df
+# will contain the sample names
+samples = pd.read_csv(snakemake.config["samples"], dtype={"samples": str})
+
 dfs = []
-for sample, file in zip(sample_names, table_names):
+for sample, file in zip(samples["samples"], table_names):
     df = pd.read_csv(file, sep='\t')
     df['sample'] = sample
     dfs.append(df)
