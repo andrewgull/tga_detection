@@ -289,16 +289,18 @@ where *Nbla1* - the number of bla hits as calculated by blasting bla (+merging b
 
 The idea is that the distance should always be bigger than the number of bla genes counted by merging the hits.
 
-### Tables with data
+### Tables
 
 data on distances between FR come from the rule `filter_flanking_regions`
+
+Let's look at minimal difference between d(FR)/len(bla) and n(bla).
 
 ```{r}
 # samples
 sample_names <- read_delim("../../configs/samples.txt", delim = ",")
 
 # go through the samples
-mod_dist <- function(sample_name, bla_length=860){
+range_dist <- function(sample_name, bla_length=860){
   # this FR table contains distance between FRs
   fr_ru_filt <- read_delim(paste0("../../results/tables/", sample_name, "/blast_joined.tsv"), show_col_types = F, progress= F)
   # this one contains bla counts via merging BED coords
@@ -309,21 +311,101 @@ mod_dist <- function(sample_name, bla_length=860){
     left_join(bla_counts, by="subject") %>% 
     mutate("n.blaSHV.dist" = distance.btw.FR/bla_length,
            "diff" = round(n.blaSHV.dist - n.blaSHV.merged))
-  min_dist <- tibble("sample" = sample_name,
-                     "min.diff" = min(diff_per_read$diff, na.rm = TRUE))
-
-  return(min_dist)
+    out_dist <- tibble("sample" = sample_name,
+                     "min.diff" = min(diff_per_read$diff, na.rm = TRUE),
+                     "max.diff" = max(diff_per_read$diff, na.rm = TRUE))
+  return(out_dist)
 }
 
-diff_bla_counts <- map_dfr(sample_names$samples, ~ mod_dist(.x))
+diff_bla_counts <- map_dfr(sample_names$samples, ~ range_dist(.x))
 
-write_delim(diff_bla_counts, "../../results/tables/min_diff_bla_counts.tsv", delim = "\t")
+write_delim(diff_bla_counts, "../../results/tables/min_max_diff_bla_counts.tsv", delim = "\t")
 ```
 
-Look at the min differences in *blaSHV* counts
+`min.diff` shows a minimal estimate of how many more *blaSHV* genes are expected to be found in a read based on the distance between FRs compared to the number of *blaSHV* genes calculated via BLAST analysis.
+
+Negative numbers in `min.diff` is a sign of 'bad' reads.
 
 ```{r}
 diff_bla_counts |> arrange(min.diff)
 ```
 
-files with negative numbers are questionable
+Now, let's look at the max differences.
+
+```{r}
+diff_bla_counts |> arrange(max.diff)
+```
+
+### Plots
+
+```{r}
+# I need full table of count differences for each read in a sample
+full_dist <- function(sample_name, bla_length=860){
+  # this FR table contains distance between FRs
+  fr_ru_filt <- read_delim(paste0("../../results/tables/", sample_name, "/blast_joined.tsv"), show_col_types = F, progress= F)
+  # this one contains bla counts via merging BED coords
+  bla_counts <- read_delim(paste0("../../results/tables/", sample_name, "/blaSHV_counts.tsv"), show_col_types = F, progress = F)
+  # now count distance
+  diff_per_read <- fr_ru_filt %>% 
+    select(subject, distance.btw.FR) %>% 
+    left_join(bla_counts, by="subject") %>% 
+    mutate("sample" = sample_name,
+           "n.blaSHV.dist" = distance.btw.FR/bla_length,
+           "diff" = round(n.blaSHV.dist - n.blaSHV.merged)) %>% 
+    select(-c(n.blaSHV.dist, distance.btw.FR)) %>% 
+    na.omit()
+    
+  return(diff_per_read)
+}
+```
+
+
+```{r}
+# let's try one sample with bigger range 76595_D_40g
+full_sample_dist <- full_dist(sample_name = "76595_D_40g")
+
+# plot
+ggplot(full_sample_dist, aes(sample, diff)) +
+  geom_boxplot() +
+  geom_violin(alpha=0.1) +
+  labs(x="", y = "difference") +
+  theme_bw()
+```
+```{r, fig.height=8, fig.width=8}
+library(ggpubr)
+
+full_dist_list <- map(sample_names$samples, ~ full_dist(.x))
+
+make_plots <- function(df){
+  ggplot(df, aes(sample, diff)) +
+  geom_boxplot() +
+  geom_violin(alpha=0.1) +
+  labs(x="", y = "") +
+  theme_bw()
+}
+
+plot_list <- map(full_dist_list, ~ make_plots(.x))
+
+ggarrange(plotlist = plot_list[1:16], nrow = 4, ncol = 4)
+```
+
+```{r, fig.height=8, fig.width=8}
+ggarrange(plotlist = plot_list[17:32], nrow = 4, ncol = 4)
+```
+
+```{r, fig.height=8, fig.width=8}
+ggarrange(plotlist = plot_list[33:48], nrow = 4, ncol = 4)
+```
+
+```{r, fig.height=8, fig.width=8}
+ggarrange(plotlist = plot_list[49:64], nrow = 4, ncol = 4)
+```
+
+Save the full table
+
+```{r}
+full_dist_table <- bind_rows(full_dist_list)
+
+write_delim(full_dist_table, "../../results/tables/full_diff_bla_counts.tsv", delim = "\t")
+```
+
