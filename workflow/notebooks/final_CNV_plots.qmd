@@ -370,7 +370,8 @@ diff_percent <- function(df){
     group_by(difference) %>%
     count() %>% 
     mutate("sample" = df$sample[[1]],
-           "perc" = (n/nrow(df)*100),)
+           "perc" = (n/nrow(df)*100)) %>% 
+    select(c(sample, difference, n, perc))
 }
 
 # list of tables for each sample
@@ -390,6 +391,13 @@ full_dist_table <- bind_rows(full_dist_list)
 write_delim(full_dist_table, "../../results/tables/full_diff_bla_counts.tsv", delim = "\t")
 ```
 
+Reads with +1 values
+
+```{r}
+full_dist_table %>% filter(difference == 1) %>% sample_n(10)
+```
+
+
 What is the type of difference inc each sample that is contained in the most reads
 
 ```{r}
@@ -401,7 +409,7 @@ max_perc <- function(df){
 
 max_percentages <- map_dfr(diff_perc_list, ~ max_perc(.))
 
-write_delim(max_percentages, "../../results/tables/max_prec_diff.tsv", delim = "\t")
+write_delim(max_percentages, "../../results/tables/max_perc_diff.tsv", delim = "\t")
 
 max_percentages
 ```
