@@ -4,8 +4,7 @@
 # the last step before frequency calculations
 # input1: bed file with merged intervals
 # input2: filtered table of FR blast hits
-# input3: blaSHV gene length, nt
-# output: tsv file woth blaSHV countss
+# output: tsv file with blaSHV countss
 ###############################################
 
 #### OPEN LOG ####
