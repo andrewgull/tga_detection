@@ -40,6 +40,7 @@ max_e_value: 0.00001
 min_ru_len: 700
 max_dist: 30
 base_len: 1820
+dist_to_end: 1320
 # increase this value if the frequencies table contains NAs
 max_cn: 60
 increment: 3450
