@@ -146,13 +146,13 @@ rule filter_rr_ru_blast:
     script: "scripts/filter_red_repunit.R"
 
 # filter hits by presence of RR and RU in correct orientation,
-# distance and at least 1820 nt from the beginning of the RR
+# distance and at least 1320 nt from the beginning of the RR
 rule filter_min_orient_length:
     input: "results/tables/{sample}/blast_joined_red_repunit.tsv"
     output: "results/tables/{sample}/blast_joined_red_repunit_orient_len.tsv"
     log: "results/logs/{sample}_filt_min_orient_len.log"
     conda: "rscripts-env"
-    params: base_len = config['base_len']
+    params: dist_to_end = config['dist_to_end']
     script: "scripts/filter_1820.R"
 
 # count reads theoretically capable of containing each CN variant
