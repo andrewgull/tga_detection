@@ -9,8 +9,8 @@
 # and remove reads with > abs(1) difference
 # input: table with distance between FRs
 # input: table with bla counts via blast/merging BED coords
-# output: table with read ID, n.bla.exp, n.blaSHV.merged
-# and difference between n.bla.exp and n.blaSHV.merged
+# output: table with table with bla counts via blast/merging BED coords
+# but filtered by the difference between n.bla.exp and n.blaSHV.merged
 ########################################################
 
 #### OPEN LOG ####
@@ -56,3 +56,7 @@ filtered_df <- filter_by_distance(fr_ru_filt, bla_counts,
                                   ru_len = snakemake@params[[2]])
 # write the output
 write_delim(filtered_df, snakemake@output[[1]], col_names = TRUE)
+print("Finished. No erorrs.")
+
+#### CLOSE LOG ####
+sink()
