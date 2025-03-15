@@ -233,10 +233,20 @@ rule blaSHV_counts:
     params: length=config["bla_len"]
     script: "scripts/count_merged_gene_hits.R"
 
+# filter reads by distance between FR
+rule filter_by_distance_between_FR:
+    input: fr="results/tables/{sample}/blast_joined.tsv",
+           bla="results/tables/{sample}/blaSHV_counts.tsv"
+    output: "results/tables/{sample}/blaSHV_counts_filtered.tsv"
+    log: "results/logs/{sample}_filter_by_distance_between_FR.log"
+    conda: "rscripts-env"
+    params: base=config["base_len"], ru_len=config["increment"]
+    script: "scripts/filter_by_distance_between_FR.R"
+
 # calculate observed, expected frequencies etc
 rule frequency_calculation:
     input: bins="results/tables/{sample}/number_reads_containing_CN.tsv",
-           bla="results/tables/{sample}/blaSHV_counts.tsv"
+           bla="results/tables/{sample}/blaSHV_counts_filtered.tsv"
     output: "results/tables/{sample}/frequencies.tsv"
     log: "results/logs/{sample}_frequencies.log"
     conda: "rscripts-env"
