@@ -241,7 +241,7 @@ rule filter_by_distance_between_FR:
     log: "results/logs/{sample}_filter_by_distance_between_FR.log"
     conda: "rscripts-env"
     params: base=config["base_len"], ru_len=config["increment"]
-    script: "scripts/filter_by_distance_between_FR.R"
+    script: "scripts/filter_by_distance_between_fr.R"
 
 # calculate observed, expected frequencies etc
 rule frequency_calculation:
