@@ -43,7 +43,10 @@ base_len: 1820
 dist_to_end: 1320
 # increase this value if the frequencies table contains NAs
 max_cn: 60
+# ru length
 increment: 3450
+# base length
+base_len: 4299
 
 # blaSHV plot
 bla_len: 860
