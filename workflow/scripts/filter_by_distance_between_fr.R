@@ -35,7 +35,7 @@ filter_by_distance <- function(fr_ru_filt, bla_counts,
            "n.bla.blast" = n.blaSHV.merged,
            "difference" = round(n.bla.exp - n.blaSHV.merged)) %>%
     # filter out abs(diff) > 1
-    filter(diff_per_read, abs(difference) <= 1) %>%
+    filter(abs(difference) <= 1) %>%
     # the output table should contain
     # columns subject and n.blaSHV.merged
     # same as the putut of the previous rule
