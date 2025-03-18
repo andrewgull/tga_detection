@@ -31,9 +31,11 @@ filter_by_distance <- function(fr_ru_filt, bla_counts,
   diff_per_read <- fr_ru_filt %>%
     select(subject, distance.btw.FR) %>%
     left_join(bla_counts, by = "subject") %>%
-    mutate("n.bla.exp" = ((distance.btw.FR - base_len) / ru_len) + 1,
-           "n.bla.blast" = n.blaSHV.merged,
-           "difference" = round(n.bla.exp - n.blaSHV.merged)) %>%
+    mutate(
+      "n.bla.exp" = ((distance.btw.FR - base_len) / ru_len) + 1,
+      "n.bla.blast" = n.blaSHV.merged,
+      "difference" = round(n.bla.exp - n.blaSHV.merged)
+    ) %>%
     # filter out abs(diff) > 1
     filter(abs(difference) <= 1) %>%
     # the output table should contain
@@ -44,39 +46,51 @@ filter_by_distance <- function(fr_ru_filt, bla_counts,
 }
 
 # read the input tables
-tryCatch({
-  # this FR table contains distance between FRs
-  fr_ru_filt <- read_delim(snakemake@input[[1]],
-                           show_col_types = FALSE, progress = FALSE)
-  # this one contains bla counts via merging BED coords
-  bla_counts <- read_delim(snakemake@input[[2]],
-                           show_col_types = FALSE, progress = FALSE)
-}, error = function(e) {
-  cat("Error reading input files: ", e$message, "\n")
-  sink()
-  stop("Script terminated due to input file read error.")
-})
+tryCatch(
+  {
+    # this FR table contains distance between FRs
+    fr_ru_filt <- read_delim(snakemake@input[[1]],
+      show_col_types = FALSE, progress = FALSE
+    )
+    # this one contains bla counts via merging BED coords
+    bla_counts <- read_delim(snakemake@input[[2]],
+      show_col_types = FALSE, progress = FALSE
+    )
+  },
+  error = function(e) {
+    cat("Error reading input files: ", e$message, "\n")
+    sink()
+    stop("Script terminated due to input file read error.")
+  }
+)
 
 # filter
-filtered_df <- tryCatch({
-  filter_by_distance(fr_ru_filt, bla_counts,
-                     base_len = snakemake@params[[1]],
-                     ru_len = snakemake@params[[2]])
-}, error = function(e) {
-  cat("Error during filtering: ", e$message, "\n")
-  sink()
-  stop("Script terminated due to filtering error.")
-})
+filtered_df <- tryCatch(
+  {
+    filter_by_distance(fr_ru_filt, bla_counts,
+      base_len = snakemake@params[[1]],
+      ru_len = snakemake@params[[2]]
+    )
+  },
+  error = function(e) {
+    cat("Error during filtering: ", e$message, "\n")
+    sink()
+    stop("Script terminated due to filtering error.")
+  }
+)
 
 # write the output
-tryCatch({
-  write_delim(filtered_df, snakemake@output[[1]], delim = "\t")
-  print("Finished. No errors.")
-}, error = function(e) {
-  cat("Error writing output file: ", e$message, "\n")
-  sink()
-  stop("Script terminated due to output file write error.")
-})
+tryCatch(
+  {
+    write_delim(filtered_df, snakemake@output[[1]], delim = "\t")
+    print("Finished. No errors.")
+  },
+  error = function(e) {
+    cat("Error writing output file: ", e$message, "\n")
+    sink()
+    stop("Script terminated due to output file write error.")
+  }
+)
 
 #### CLOSE LOG ####
 sink()

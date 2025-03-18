@@ -29,10 +29,12 @@ main <- function(df_merge, df_filt, len) {
 
 #### RUN ####
 bla_merge <- read_tsv(snakemake@input[[1]],
-                      col_names = FALSE,
-                      show_col_types = FALSE)
+  col_names = FALSE,
+  show_col_types = FALSE
+)
 blast_filt <- read_tsv(snakemake@input[[2]],
-                       show_col_types = FALSE)
+  show_col_types = FALSE
+)
 
 bla_merged_df <- main(bla_merge, blast_filt, snakemake@params[[1]])
 
