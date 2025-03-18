@@ -40,12 +40,14 @@ main <- function(df, dist) {
 
   # filter
   filtered_df <- filter_by_distance(input_table, dist = dist)
-  return(filtered_df)
+  filtered_df
 }
 
 #### RUN ####
-output_table <- main(df = snakemake@input[[1]],
-                     dist = snakemake@params[[1]])
+output_table <- main(
+  df = snakemake@input[[1]],
+  dist = snakemake@params[[1]]
+)
 
 # save to file
 write_delim(output_table, file = snakemake@output[[1]], delim = "\t")
