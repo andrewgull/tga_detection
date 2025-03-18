@@ -27,12 +27,12 @@ is_within <- function(bla_start, bla_end, fr_start, fr_end) {
   if (fr_start < fr_end) {
     # Direct strand: check if both ends of the gene
     # are inside the FR coordinates
-    return(between(bla_start, fr_start, fr_end) &&
-             between(bla_end, fr_start, fr_end))
+    between(bla_start, fr_start, fr_end) &&
+      between(bla_end, fr_start, fr_end)
   } else {
     # Reverse strand: check the same condition but with FR ends swapped
-    return(between(bla_start, fr_end, fr_start) &&
-             between(bla_end, fr_end, fr_start))
+    between(bla_start, fr_end, fr_start) &&
+      between(bla_end, fr_end, fr_start)
   }
 }
 
@@ -44,8 +44,10 @@ genes_within_flanks <- function(read_id, fr_df, bla_df) {
     filter(subject == read_id) %>%
     left_join(bla_df, by = "subject") %>%
     drop_na(start.subject.y) %>%
-    select(subject, start.subject.x, end.subject.x,
-           end.red, start.subject.y, end.subject.y, orientation)
+    select(
+      subject, start.subject.x, end.subject.x,
+      end.red, start.subject.y, end.subject.y, orientation
+    )
 
   answer <- any(
     !map2_lgl(
@@ -54,7 +56,7 @@ genes_within_flanks <- function(read_id, fr_df, bla_df) {
       ~ is_within(.x, .y, fr_bla_df$end.red[1], fr_bla_df$end.subject.x[1])
     )
   )
-  return(answer)
+  answer
 }
 
 # Main function that ties everything together
@@ -70,20 +72,26 @@ main <- function(bla, fr, evalue) {
     filter(subject %in% unique(fr$subject)) %>%
     filter(e.value <= evalue)
 
-  names(bla_filt) <- c("query", "subject", "identity", "length", "mismatch",
-                       "gaps", "start.query", "end.query", "start.subject",
-                       "end.subject", "e.value", "bit.score")
-  return(bla_filt)
+  names(bla_filt) <- c(
+    "query", "subject", "identity", "length", "mismatch",
+    "gaps", "start.query", "end.query", "start.subject",
+    "end.subject", "e.value", "bit.score"
+  )
+  bla_filt
 }
 
 #### RUN ####
 # blaSHV table doesn't have column names
-bla_df <- read_delim(snakemake@input[[1]], show_col_types = FALSE,
-                     col_names = FALSE)
+bla_df <- read_delim(snakemake@input[[1]],
+  show_col_types = FALSE,
+  col_names = FALSE
+)
 # add them
-names(bla_df) <- c("query", "subject", "identity", "length", "mismatch",
-                   "gaps", "start.query", "end.query", "start.subject",
-                   "end.subject", "e.value", "bit.score")
+names(bla_df) <- c(
+  "query", "subject", "identity", "length", "mismatch",
+  "gaps", "start.query", "end.query", "start.subject",
+  "end.subject", "e.value", "bit.score"
+)
 # FR table has column names; nothing to do
 fr_df <- read_delim(snakemake@input[[2]], show_col_types = FALSE)
 
