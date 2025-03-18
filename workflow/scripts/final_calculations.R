@@ -24,8 +24,10 @@ counts_freq_obs <- function(bla_cn) {
     group_by(n.blaSHV.merged) %>%
     count(name = "counts") %>%
     ungroup() %>%
-    rename("CN" = n.blaSHV.merged,
-           "counts_obs" = counts) %>%
+    rename(
+      "CN" = n.blaSHV.merged,
+      "counts_obs" = counts
+    ) %>%
     # find observed CN frequency
     mutate(freq_obs = counts_obs / sum(counts_obs))
 }
@@ -40,7 +42,7 @@ freq_theor <- function(cn_bins) {
     # remove those that are theoretically impossible (no such long reads)
     filter(n_reads_theoretical != 0) %>%
     mutate(freq_theoretical = n_reads_theoretical / total_n)
-  return(cn_bins_theor)
+  cn_bins_theor
 }
 
 # put everything together
@@ -53,14 +55,18 @@ main <- function(cn_bins, bla_cn) {
     bla_cn_freq %>%
     full_join(bins_theor, by = "CN") %>%
     # replace NA with 0
-    mutate(counts_obs = replace_na(counts_obs, 0),
-           freq_obs = replace_na(freq_obs, 0)) %>%
+    mutate(
+      counts_obs = replace_na(counts_obs, 0),
+      freq_obs = replace_na(freq_obs, 0)
+    ) %>%
     arrange(CN) %>%
     # do the rest of the calculations
-    mutate(counts_corrected = counts_obs / freq_theoretical,
-           freq_corrected = counts_corrected / sum(counts_corrected),
-           detection_limit = 1 / n_reads_theoretical)
-  return(bla_cn_full)
+    mutate(
+      counts_corrected = counts_obs / freq_theoretical,
+      freq_corrected = counts_corrected / sum(counts_corrected),
+      detection_limit = 1 / n_reads_theoretical
+    )
+  bla_cn_full
 }
 
 #### RUN ####
