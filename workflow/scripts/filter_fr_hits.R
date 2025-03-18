@@ -25,9 +25,11 @@ parse_blast <- function(file_path, region_name) {
   # check if nrow is wrong
   stopifnot(ncol(df) == 12)
   # assign names
-  names(df) <- c("query", "subject", "identity", "length", "mismatch",
-                 "gaps", "start.query", "end.query", "start.subject",
-                 "end.subject", "e.value", "bit.score")
+  names(df) <- c(
+    "query", "subject", "identity", "length", "mismatch",
+    "gaps", "start.query", "end.query", "start.subject",
+    "end.subject", "e.value", "bit.score"
+  )
   # create orientation column
   df$orientation <- ifelse(df$start.subject < df$end.subject, "direct", "reverse") # nolint: line_length_linter.
   # rename query
@@ -38,11 +40,13 @@ parse_blast <- function(file_path, region_name) {
 filter_blast_p1 <- function(blast_df, min_len, max_e_value, min_identity) {
   # return: a blast table filtered by minimal length, evalue and hit identity
   # apply only to GREEN hits table
-  filt_df <- filter(blast_df,
-                    length >= min_len,
-                    e.value <= max_e_value,
-                    identity >= min_identity)
-  return(filt_df)
+  filt_df <- filter(
+    blast_df,
+    length >= min_len,
+    e.value <= max_e_value,
+    identity >= min_identity
+  )
+  filt_df
 }
 
 get_multihits_ids <- function(df) {
@@ -57,8 +61,10 @@ get_multihits_ids <- function(df) {
 
 filter_red_green <- function(df_red_ru, df_green) {
   # find read IDs containing multiple query hits
-  reads_multiple_hits <- union(get_multihits_ids(df_red_ru),
-                               get_multihits_ids(df_green))
+  reads_multiple_hits <- union(
+    get_multihits_ids(df_red_ru),
+    get_multihits_ids(df_green)
+  )
   # filter out reads with multiple query hits
   # df_red_ru have differen column names!
   df_red_ru_filt <- df_red_ru %>%
@@ -69,11 +75,14 @@ filter_red_green <- function(df_red_ru, df_green) {
   # Add distance between FRs
   df_joined <- full_join(df_red_ru_filt, df_green_filt, by = "subject") %>%
     filter(!is.na(query.x), !is.na(query.y), orient == orientation) %>%
-    mutate(green.red.distance = end.red - start.subject,
-           distance.btw.FR = if_else(green.red.distance < 0,
-                                     green.red.distance * -1,
-                                     green.red.distance * 1))
-  return(df_joined)
+    mutate(
+      green.red.distance = end.red - start.subject,
+      distance.btw.FR = if_else(green.red.distance < 0,
+        green.red.distance * -1,
+        green.red.distance * 1
+      )
+    )
+  df_joined
 }
 
 main <- function(red, green, len, evalue, identity) {
@@ -81,25 +90,29 @@ main <- function(red, green, len, evalue, identity) {
   red$query <- "FR_RU_filt"
   green_filt <- green %>%
     # apply basic filtering of blast results
-    filter_blast_p1(min_len = len,
-                    max_e_value = evalue,
-                    min_identity = identity)
+    filter_blast_p1(
+      min_len = len,
+      max_e_value = evalue,
+      min_identity = identity
+    )
   # check if they are not empty
   stopifnot(nrow(red) > 0)
   stopifnot(nrow(green_filt) > 0)
   # Filtering, part 2
   blast_joined <- filter_red_green(red, green_filt)
-  return(blast_joined)
+  blast_joined
 }
 
 #### RUN ####
 blast_red <- read_tsv(snakemake@input[[1]], show_col_types = FALSE)
 blast_green <- parse_blast(snakemake@input[[2]], "FR_green")
-output_filtered <- main(red = blast_red,
-                        green = blast_green,
-                        identity = snakemake@params[[1]],
-                        evalue = snakemake@params[[2]],
-                        len = snakemake@params[[3]])
+output_filtered <- main(
+  red = blast_red,
+  green = blast_green,
+  identity = snakemake@params[[1]],
+  evalue = snakemake@params[[2]],
+  len = snakemake@params[[3]]
+)
 
 # write to file
 write_delim(output_filtered, file = snakemake@output[[1]], delim = "\t")
