@@ -49,16 +49,18 @@ parse_blast <- function(file_path, region_name) {
     ifelse(df$start.subject < df$end.subject, "direct", "reverse")
   # rename query
   df$query <- region_name
-  return(df)
+  df
 }
 
 filter_blast <- function(blast_df, min_len, max_e_value, min_identity) {
   # return: a blast table filtered by minimal length, evalue and hit identity
-  filt_df <- filter(blast_df,
-                    length >= min_len,
-                    e.value <= max_e_value,
-                    identity >= min_identity)
-  return(filt_df)
+  filt_df <- filter(
+    blast_df,
+    length >= min_len,
+    e.value <= max_e_value,
+    identity >= min_identity
+  )
+  filt_df
 }
 
 filter_ru_fr <-
@@ -82,35 +84,45 @@ main <- function(red, rep, ru_len, fr_len, e, identity, maxd) {
   # filter rep unite table
   # NB: min length is different from FR's min length
   blast_red <- parse_blast(red, "FR_red") %>%
-    filter_blast(min_len = fr_len,
-                 max_e_value = e,
-                 min_identity = identity)
+    filter_blast(
+      min_len = fr_len,
+      max_e_value = e,
+      min_identity = identity
+    )
   blast_rep <- parse_blast(rep, "Rep_unit") %>%
-    filter_blast(min_len = ru_len,
-                 max_e_value = e,
-                 min_identity = identity)
+    filter_blast(
+      min_len = ru_len,
+      max_e_value = e,
+      min_identity = identity
+    )
   # filter combination of both FR and rep unit
   # 1st: same orientation
   # 2nd: close to each other
   blast_joined <-
     filter_ru_fr(blast_red, blast_rep, max_distance = maxd) %>%
     # keep some columns
-    select(subject, start.subject.x, end.subject.x,
-           start.subject.y, end.subject.y, distance, orientation.x)
+    select(
+      subject, start.subject.x, end.subject.x,
+      start.subject.y, end.subject.y, distance, orientation.x
+    )
   # give them better names
-  names(blast_joined) <- c("subject", "start.red", "end.red",
-                           "start.rep.unit", "end.rep.unit", "dist", "orient")
-  return(blast_joined)
+  names(blast_joined) <- c(
+    "subject", "start.red", "end.red",
+    "start.rep.unit", "end.rep.unit", "dist", "orient"
+  )
+  blast_joined
 }
 
 #### RUN ####
-output_table <- main(red = snakemake@input[[1]],
-                     rep = snakemake@input[[2]],
-                     identity = snakemake@params[[1]],
-                     e = snakemake@params[[2]],
-                     fr_len = snakemake@params[[3]],
-                     ru_len = snakemake@params[[4]],
-                     maxd = snakemake@params[[5]])
+output_table <- main(
+  red = snakemake@input[[1]],
+  rep = snakemake@input[[2]],
+  identity = snakemake@params[[1]],
+  e = snakemake@params[[2]],
+  fr_len = snakemake@params[[3]],
+  ru_len = snakemake@params[[4]],
+  maxd = snakemake@params[[5]]
+)
 
 # Save to file
 write_delim(output_table, file = snakemake@output[[1]], delim = "\t")
