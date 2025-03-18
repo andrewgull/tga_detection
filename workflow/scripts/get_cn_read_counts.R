@@ -58,13 +58,15 @@ read_length <- function(fasta) {
     Biostrings::fasta.seqlengths(fasta)
   # read IDs are inside the name attributes of each length
   len_df <-
-    tibble("subject" = sub(
-      "^(.*?) runid=.*",
-      "\\1",
-      names(lengths)
-    ),
-    "read.len" = lengths)
-  return(len_df)
+    tibble(
+      "subject" = sub(
+        "^(.*?) runid=.*",
+        "\\1",
+        names(lengths)
+      ),
+      "read.len" = lengths
+    )
+  len_df
 }
 
 # separate direct from reverse hits
@@ -129,34 +131,41 @@ main <- function(in_table, reads, max_cn, min_len, increment) {
 
   # count reads direct
   counts_direct <- count_reads(cnv_variants, hits_direct,
-                               min_len = min_len, increment = increment,
-                               direct = TRUE)
+    min_len = min_len, increment = increment,
+    direct = TRUE
+  )
 
   # count reads reverse
   counts_reverse <- count_reads(cnv_variants, hits_reverse,
-                                min_len = min_len, increment = increment,
-                                direct = FALSE)
+    min_len = min_len, increment = increment,
+    direct = FALSE
+  )
 
   # sum the read counts
   n_reads_cn_tot <- counts_direct + counts_reverse
 
   # compile output table
-  output_table <- data.frame("CN" = cnv_variants,
-                             "n_reads_theoretical" = n_reads_cn_tot)
+  output_table <- data.frame(
+    "CN" = cnv_variants,
+    "n_reads_theoretical" = n_reads_cn_tot
+  )
 
-  return(output_table)
+  output_table
 }
 
 #### RUN ####
-cnv_theoretical <- main(in_table = snakemake@input[[1]],
-                        reads = snakemake@input[[2]],
-                        max_cn = snakemake@params[[1]],
-                        increment = snakemake@params[[2]],
-                        min_len = snakemake@params[[3]])
+cnv_theoretical <- main(
+  in_table = snakemake@input[[1]],
+  reads = snakemake@input[[2]],
+  max_cn = snakemake@params[[1]],
+  increment = snakemake@params[[2]],
+  min_len = snakemake@params[[3]]
+)
 # save to file
 write.table(cnv_theoretical,
-            file = snakemake@output[[1]],
-            sep = "\t", row.names = FALSE, quote = FALSE)
+  file = snakemake@output[[1]],
+  sep = "\t", row.names = FALSE, quote = FALSE
+)
 print("Finished. No erorrs.")
 
 #### CLOSE LOG ####
