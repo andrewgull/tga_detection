@@ -12,7 +12,6 @@ sink(snakemake@log[[1]])
 
 #### LIBRARIES ####
 suppressPackageStartupMessages(library(dplyr))
-library(ggplot2)
 library(readr)
 
 #### FUNCTIONS ####
