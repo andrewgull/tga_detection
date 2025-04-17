@@ -9,6 +9,7 @@ import pandas as pd
 
 #### Singularity setup ####
 
+
 # this container defines the underlying OS for each job when using the workflow
 # with --use-conda --use-singularity
 container: "docker://continuumio/miniconda3"
@@ -17,255 +18,436 @@ container: "docker://continuumio/miniconda3"
 #### Config file for this pipeline ####
 configfile: "configs/config.yaml"
 
+
 # read strain names
 samples = pd.read_csv(config["samples"], dtype={"samples": str})
 
 #### Rules ####
 
+
 rule all:
     input:
-        expand("results/final/{sample}_all.done", sample=samples['samples']), "results/tables/aggregate/frequencies_full_table.tsv"
+        expand("results/final/{sample}_all.done", sample=samples["samples"]),
+        "results/tables/aggregate/frequencies_full_table.tsv",
 
-# merge separate read files into 
+
+# merge separate read files into
 # one single file per sample
 rule merge_reads:
-    input: "resources/reads_separate/{sample}"
-    output: temp("resources/reads/{sample}/reads_all.fastq.gz")
+    input:
+        "resources/reads_separate/{sample}",
+    output:
+        temp("resources/reads/{sample}/reads_all.fastq.gz"),
     threads: 18
-    log: "results/logs/{sample}_zcat.log"
-    benchmark: "results/benchmarks/zcat_reads/{sample}.tsv"
-    conda: "compress-env"
-    shell: "zcat {input}/*.gz | pigz -c -p {threads} 1> {output} 2> {log}"
+    log:
+        "results/logs/{sample}_zcat.log",
+    benchmark:
+        "results/benchmarks/zcat_reads/{sample}.tsv"
+    conda:
+        "compress-env"
+    shell:
+        "zcat {input}/*.gz | pigz -c -p {threads} 1> {output} 2> {log}"
+
 
 # filter reads by length
 rule filter_reads:
-    input: "resources/reads/{sample}/reads_all.fastq.gz"
-    output: temp("results/reads/{sample}/reads_filtered.fastq.gz")
+    input:
+        "resources/reads/{sample}/reads_all.fastq.gz",
+    output:
+        temp("results/reads/{sample}/reads_filtered.fastq.gz"),
     threads: 18
-    log: "results/logs/{sample}_filtlong.log"
-    benchmark: "results/benchmarks/filtlong_filter/{sample}.tsv"
-    conda: "filtlong-env"
-    params: min_len=config['min_read_len']
-    shell: "filtlong --min_length {params.min_len} {input} 2> {log} | pigz -c -p {threads} > {output}"
+    log:
+        "results/logs/{sample}_filtlong.log",
+    benchmark:
+        "results/benchmarks/filtlong_filter/{sample}.tsv"
+    conda:
+        "filtlong-env"
+    params:
+        min_len=config["min_read_len"],
+    shell:
+        "filtlong --min_length {params.min_len} {input} 2> {log} | pigz -c -p {threads} > {output}"
+
 
 # convert fastq to fasta
 rule fq2fasta:
-    input: "results/reads/{sample}/reads_filtered.fastq.gz"
-    output: "results/reads/{sample}/reads_filtered.fasta.gz"
+    input:
+        "results/reads/{sample}/reads_filtered.fastq.gz",
+    output:
+        "results/reads/{sample}/reads_filtered.fasta.gz",
     threads: 18
-    log: "results/logs/{sample}_seqkit_fq2fa.log"
-    benchmark: "results/benchmarks/seqkit_convert/{sample}.tsv"
-    conda: "seqkit-env"
-    shell: "seqkit fq2fa -j {threads} {input} | pigz -c -p {threads} 1> {output} 2> {log}"
+    log:
+        "results/logs/{sample}_seqkit_fq2fa.log",
+    benchmark:
+        "results/benchmarks/seqkit_convert/{sample}.tsv"
+    conda:
+        "seqkit-env"
+    shell:
+        "seqkit fq2fa -j {threads} {input} | pigz -c -p {threads} 1> {output} 2> {log}"
+
 
 # cut flanking regions Red (RR) from plasmid
 rule create_fr_red:
-    input: config["plasmid"]
-    output: "results/flanking_regions/fr_red.fa"
+    input:
+        config["plasmid"],
+    output:
+        "results/flanking_regions/fr_red.fa",
     threads: 18
-    log: "results/logs/seqkit_subseq_fr_red.log"
-    conda: "seqkit-env"
-    params: start = config['fr_red_start'], end = config['fr_red_end']
-    shell: "seqkit subseq -r {params.start}:{params.end} {input} 1> {output} 2> {log}"
+    log:
+        "results/logs/seqkit_subseq_fr_red.log",
+    conda:
+        "seqkit-env"
+    params:
+        start=config["fr_red_start"],
+        end=config["fr_red_end"],
+    shell:
+        "seqkit subseq -r {params.start}:{params.end} {input} 1> {output} 2> {log}"
+
 
 # cut flanking region Green (GR) from plasmid
 rule create_fr_green:
-    input: config["plasmid"]
-    output: "results/flanking_regions/fr_green.fa"
+    input:
+        config["plasmid"],
+    output:
+        "results/flanking_regions/fr_green.fa",
     threads: 18
-    log: "results/logs/seqkit_subseq_fr_green.log"
-    conda: "seqkit-env"
-    params: start = config['fr_green_start'], end = config['fr_green_end']
-    shell: "seqkit subseq -j {threads} -r {params.start}:{params.end} {input} 1> {output} 2> {log}"
+    log:
+        "results/logs/seqkit_subseq_fr_green.log",
+    conda:
+        "seqkit-env"
+    params:
+        start=config["fr_green_start"],
+        end=config["fr_green_end"],
+    shell:
+        "seqkit subseq -j {threads} -r {params.start}:{params.end} {input} 1> {output} 2> {log}"
+
 
 # blast DB of reads
 rule make_blast_db:
-    input: "results/reads/{sample}/reads_filtered.fasta.gz"
-    output: directory("results/blast_databases/{sample}")
+    input:
+        "results/reads/{sample}/reads_filtered.fasta.gz",
+    output:
+        directory("results/blast_databases/{sample}"),
     threads: 18
-    log: "results/logs/{sample}_blastdb.log"
-    conda: "blast-env"
-    shell: "pigz -c -d -p {threads} {input} | makeblastdb -in - -dbtype nucl -title blastdb -out {output}/blastdb &> {log}"
+    log:
+        "results/logs/{sample}_blastdb.log",
+    conda:
+        "blast-env"
+    shell:
+        "pigz -c -d -p {threads} {input} | makeblastdb -in - -dbtype nucl -title blastdb -out {output}/blastdb &> {log}"
+
 
 # search for RR
 rule blast_red:
-    input: query="results/flanking_regions/fr_red.fa", database="results/blast_databases/{sample}"
-    output: "results/tables/{sample}/blast_red.tsv"
+    input:
+        query="results/flanking_regions/fr_red.fa",
+        database="results/blast_databases/{sample}",
+    output:
+        "results/tables/{sample}/blast_red.tsv",
     threads: 18
-    params: fmt=config['format'], n_alns=config['n_fr_aligns']
-    log: "results/logs/{sample}_blast_red.log"
-    benchmark: "results/benchmarks/blast_red/{sample}.tsv"
-    conda: "blast-env"
-    shell: "blastn -query {input.query} -db {input.database}/blastdb -outfmt {params.fmt} "
-           "-num_threads {threads} -num_alignments {params.n_alns} 1> {output} 2> {log}"
+    params:
+        fmt=config["format"],
+        n_alns=config["n_fr_aligns"],
+    log:
+        "results/logs/{sample}_blast_red.log",
+    benchmark:
+        "results/benchmarks/blast_red/{sample}.tsv"
+    conda:
+        "blast-env"
+    shell:
+        "blastn -query {input.query} -db {input.database}/blastdb -outfmt {params.fmt} "
+        "-num_threads {threads} -num_alignments {params.n_alns} 1> {output} 2> {log}"
+
 
 # search for GR
 rule blast_green:
-    input: query="results/flanking_regions/fr_green.fa", database="results/blast_databases/{sample}"
-    output: "results/tables/{sample}/blast_green.tsv"
+    input:
+        query="results/flanking_regions/fr_green.fa",
+        database="results/blast_databases/{sample}",
+    output:
+        "results/tables/{sample}/blast_green.tsv",
     threads: 18
-    params: fmt = config['format'], n_alns = config['n_fr_aligns']
-    log: "results/logs/{sample}_blast_green.log"
-    benchmark: "results/benchmarks/blast_green/{sample}.tsv"
-    conda: "blast-env"
-    shell: "blastn -query {input.query} -db {input.database}/blastdb -outfmt {params.fmt} "
-           "-num_threads {threads} -num_alignments {params.n_alns} 1> {output} 2> {log}"
+    params:
+        fmt=config["format"],
+        n_alns=config["n_fr_aligns"],
+    log:
+        "results/logs/{sample}_blast_green.log",
+    benchmark:
+        "results/benchmarks/blast_green/{sample}.tsv"
+    conda:
+        "blast-env"
+    shell:
+        "blastn -query {input.query} -db {input.database}/blastdb -outfmt {params.fmt} "
+        "-num_threads {threads} -num_alignments {params.n_alns} 1> {output} 2> {log}"
+
 
 # cut repeat unit (RU) from plasmid
 rule create_repeat_unit:
-    input: config["plasmid"]
-    output: "results/flanking_regions/repeat_unit.fa"
-    log: "results/logs/seqkit_repunit.log"
-    params: start=config["ru_start"], end=config["ru_end"]
-    conda: "seqkit-env"
-    shell:  "seqkit subseq -r {params.start}:{params.end} {input} 1> {output} 2> {log}"
+    input:
+        config["plasmid"],
+    output:
+        "results/flanking_regions/repeat_unit.fa",
+    log:
+        "results/logs/seqkit_repunit.log",
+    params:
+        start=config["ru_start"],
+        end=config["ru_end"],
+    conda:
+        "seqkit-env"
+    shell:
+        "seqkit subseq -r {params.start}:{params.end} {input} 1> {output} 2> {log}"
+
 
 # search for RU
 rule blast_repeat_unit:
-    input: query="results/flanking_regions/repeat_unit.fa",
-           database="results/blast_databases/{sample}"
-    output: "results/tables/{sample}/blast_repeat_unit.tsv"
+    input:
+        query="results/flanking_regions/repeat_unit.fa",
+        database="results/blast_databases/{sample}",
+    output:
+        "results/tables/{sample}/blast_repeat_unit.tsv",
     threads: 18
-    log: "results/logs/{sample}_blast_repeat_unit.log"
-    conda: "blast-env"
-    params: fmt=config["format"], n_alns=config["n_bla_aligns"]
-    shell: "blastn -query {input.query} -db {input.database}/blastdb -outfmt {params.fmt} "
-           "-num_threads {threads} -num_alignments {params.n_alns} 1> {output} 2> {log}"
+    log:
+        "results/logs/{sample}_blast_repeat_unit.log",
+    conda:
+        "blast-env"
+    params:
+        fmt=config["format"],
+        n_alns=config["n_bla_aligns"],
+    shell:
+        "blastn -query {input.query} -db {input.database}/blastdb -outfmt {params.fmt} "
+        "-num_threads {threads} -num_alignments {params.n_alns} 1> {output} 2> {log}"
+
 
 # filter blast hits by RR and RU presence
 # RR first and RU right after it (within max dist)
 rule filter_rr_ru_blast:
-    input: red = "results/tables/{sample}/blast_red.tsv",
-           repunit = "results/tables/{sample}/blast_repeat_unit.tsv"
-    output: "results/tables/{sample}/blast_joined_red_repunit.tsv"
-    log: "results/logs/{sample}_blast_joined.log"
-    conda: "rscripts-env"
-    params: identity = config['min_identity'], e_val = config['max_e_value'],
-            length_fr = config['min_fr_len'], length_ru = config['min_ru_len'],
-            distance = config['max_dist']
-    script: "scripts/filter_red_repunit.R"
+    input:
+        red="results/tables/{sample}/blast_red.tsv",
+        repunit="results/tables/{sample}/blast_repeat_unit.tsv",
+    output:
+        "results/tables/{sample}/blast_joined_red_repunit.tsv",
+    log:
+        "results/logs/{sample}_blast_joined.log",
+    conda:
+        "rscripts-env"
+    params:
+        identity=config["min_identity"],
+        e_val=config["max_e_value"],
+        length_fr=config["min_fr_len"],
+        length_ru=config["min_ru_len"],
+        distance=config["max_dist"],
+    script:
+        "scripts/filter_red_repunit.R"
+
 
 # filter hits by presence of RR and RU in correct orientation,
 # distance and at least 1320 nt from the beginning of the RR
 rule filter_min_orient_length:
-    input: "results/tables/{sample}/blast_joined_red_repunit.tsv"
-    output: "results/tables/{sample}/blast_joined_red_repunit_orient_len.tsv"
-    log: "results/logs/{sample}_filt_min_orient_len.log"
-    conda: "rscripts-env"
-    params: dist_to_end = config['dist_to_end']
-    script: "scripts/filter_1820.R"
+    input:
+        "results/tables/{sample}/blast_joined_red_repunit.tsv",
+    output:
+        "results/tables/{sample}/blast_joined_red_repunit_orient_len.tsv",
+    log:
+        "results/logs/{sample}_filt_min_orient_len.log",
+    conda:
+        "rscripts-env"
+    params:
+        dist_to_end=config["dist_to_end"],
+    script:
+        "scripts/filter_1820.R"
+
 
 # count reads theoretically capable of containing each CN variant
 rule cn_reads_bins:
-    input: table = "results/tables/{sample}/blast_joined_red_repunit_orient_len.tsv",
-           reads = "results/reads/{sample}/reads_filtered.fasta.gz"
-    output: "results/tables/{sample}/number_reads_containing_CN.tsv"
-    log: "results/logs/{sample}_cn_reads_bins.log"
-    conda: "biostrings-env"
-    params: max_cn = config['max_cn'], incr = config['increment'], dist_to_end = config['dist_to_end']
-    script: "scripts/get_cn_read_counts.R"
+    input:
+        table="results/tables/{sample}/blast_joined_red_repunit_orient_len.tsv",
+        reads="results/reads/{sample}/reads_filtered.fasta.gz",
+    output:
+        "results/tables/{sample}/number_reads_containing_CN.tsv",
+    log:
+        "results/logs/{sample}_cn_reads_bins.log",
+    conda:
+        "biostrings-env"
+    params:
+        max_cn=config["max_cn"],
+        incr=config["increment"],
+        dist_to_end=config["dist_to_end"],
+    script:
+        "scripts/get_cn_read_counts.R"
+
 
 # filter GR
 # join GR hits with the filtered ones
 # from the previous step
 rule filter_flanking_regions:
-    input: red_ru = "results/tables/{sample}/blast_joined_red_repunit_orient_len.tsv",
-           green = "results/tables/{sample}/blast_green.tsv"
-    output: "results/tables/{sample}/blast_joined.tsv"
-    log: "results/logs/{sample}_blast_joined.log"
-    conda: "rscripts-env"
-    params: identity = config['min_identity'], e_val = config['max_e_value'], length = config['min_fr_len']
-    script: "scripts/filter_fr_hits.R"
+    input:
+        red_ru="results/tables/{sample}/blast_joined_red_repunit_orient_len.tsv",
+        green="results/tables/{sample}/blast_green.tsv",
+    output:
+        "results/tables/{sample}/blast_joined.tsv",
+    log:
+        "results/logs/{sample}_blast_joined.log",
+    conda:
+        "rscripts-env"
+    params:
+        identity=config["min_identity"],
+        e_val=config["max_e_value"],
+        length=config["min_fr_len"],
+    script:
+        "scripts/filter_fr_hits.R"
+
 
 # search gene
 rule blast_blaSHV:
-    input: query="resources/genes/blaSHV.fa",
-           database="results/blast_databases/{sample}"
-    output: "results/tables/{sample}/blast_blaSHV.tsv"
+    input:
+        query="resources/genes/blaSHV.fa",
+        database="results/blast_databases/{sample}",
+    output:
+        "results/tables/{sample}/blast_blaSHV.tsv",
     threads: 18
-    log: "results/logs/{sample}_blast_blaSHV.log"
-    benchmark: "results/benchmarks/blast_blaSHV/{sample}.tsv"
-    conda: "blast-env"
-    params: fmt=config["format"], n_alns=config["n_bla_aligns"]
-    shell: "blastn -query {input.query} -db {input.database}/blastdb -outfmt {params.fmt} "
-           "-num_threads {threads} -num_alignments {params.n_alns} 1> {output} 2> {log}"
+    log:
+        "results/logs/{sample}_blast_blaSHV.log",
+    benchmark:
+        "results/benchmarks/blast_blaSHV/{sample}.tsv"
+    conda:
+        "blast-env"
+    params:
+        fmt=config["format"],
+        n_alns=config["n_bla_aligns"],
+    shell:
+        "blastn -query {input.query} -db {input.database}/blastdb -outfmt {params.fmt} "
+        "-num_threads {threads} -num_alignments {params.n_alns} 1> {output} 2> {log}"
 
-# filter gene hits by joining them with 
+
+# filter gene hits by joining them with
 # the GR & RR hits from previous steps
 # and removing aberrant reads
 rule filter_blaSHV_hits:
-    input: bla="results/tables/{sample}/blast_blaSHV.tsv",
-           fr="results/tables/{sample}/blast_joined.tsv"
-    output: "results/tables/{sample}/blast_blaSHV_filtered.tsv"
-    log: "results/logs/{sample}_blast_blaSHV_filter.log"
-    conda: "rscripts-env"
-    params: e_val=config["max_e_value"]
-    script: "scripts/filter_gene_blast.R"
+    input:
+        bla="results/tables/{sample}/blast_blaSHV.tsv",
+        fr="results/tables/{sample}/blast_joined.tsv",
+    output:
+        "results/tables/{sample}/blast_blaSHV_filtered.tsv",
+    log:
+        "results/logs/{sample}_blast_blaSHV_filter.log",
+    conda:
+        "rscripts-env"
+    params:
+        e_val=config["max_e_value"],
+    script:
+        "scripts/filter_gene_blast.R"
+
 
 # convert filtered gene hits table to BED
 rule make_bed_blaSHV_filtered:
-    input: "results/tables/{sample}/blast_blaSHV_filtered.tsv"
-    output: "results/bedfiles/{sample}/blaSHV_hits.bed"
-    log: "results/logs/{sample}_make_bed.log"
-    benchmark: "results/benchmarks/make_bed/{sample}.tsv"
-    conda: "rscripts-env"
-    script: "scripts/make_bed.R"
+    input:
+        "results/tables/{sample}/blast_blaSHV_filtered.tsv",
+    output:
+        "results/bedfiles/{sample}/blaSHV_hits.bed",
+    log:
+        "results/logs/{sample}_make_bed.log",
+    benchmark:
+        "results/benchmarks/make_bed/{sample}.tsv"
+    conda:
+        "rscripts-env"
+    script:
+        "scripts/make_bed.R"
+
 
 # merge close gene hits
 rule merge_blaSHV_filtered:
-    input: "results/bedfiles/{sample}/blaSHV_hits.bed"
-    output: sorted="results/bedfiles/{sample}/blaSHV_hits_sorted.bed",
-            merged="results/bedfiles/{sample}/blaSHV_hits_merged.bed"
-    log: "results/logs/{sample}_bedtools_merge.log"
-    benchmark: "results/benchmarks/bedtools_merge/{sample}.tsv"
-    conda: "bedtools-env"
-    params: dist=config["dist"]
-    shell: "sort -k1,1 -k2,2n {input} > {output.sorted} && "
-           "bedtools merge -i {output.sorted} -s -d {params.dist} > {output.merged} 2> {log}"
+    input:
+        "results/bedfiles/{sample}/blaSHV_hits.bed",
+    output:
+        sorted="results/bedfiles/{sample}/blaSHV_hits_sorted.bed",
+        merged="results/bedfiles/{sample}/blaSHV_hits_merged.bed",
+    log:
+        "results/logs/{sample}_bedtools_merge.log",
+    benchmark:
+        "results/benchmarks/bedtools_merge/{sample}.tsv"
+    conda:
+        "bedtools-env"
+    params:
+        dist=config["dist"],
+    shell:
+        "sort -k1,1 -k2,2n {input} > {output.sorted} && "
+        "bedtools merge -i {output.sorted} -s -d {params.dist} > {output.merged} 2> {log}"
+
 
 # count genes in the filtered reads
 rule blaSHV_counts:
-    input: bed="results/bedfiles/{sample}/blaSHV_hits_merged.bed",
-           blast="results/tables/{sample}/blast_joined.tsv"
-    output: "results/tables/{sample}/blaSHV_counts.tsv"
-    log: "results/logs/{sample}_blaSHV_counts.log"
-    conda: "rscripts-env"
-    params: length=config["bla_len"]
-    script: "scripts/count_merged_gene_hits.R"
+    input:
+        bed="results/bedfiles/{sample}/blaSHV_hits_merged.bed",
+        blast="results/tables/{sample}/blast_joined.tsv",
+    output:
+        "results/tables/{sample}/blaSHV_counts.tsv",
+    log:
+        "results/logs/{sample}_blaSHV_counts.log",
+    conda:
+        "rscripts-env"
+    params:
+        length=config["bla_len"],
+    script:
+        "scripts/count_merged_gene_hits.R"
+
 
 # filter reads by distance between FR
 rule filter_by_distance_between_FR:
-    input: fr="results/tables/{sample}/blast_joined.tsv",
-           bla="results/tables/{sample}/blaSHV_counts.tsv"
-    output: "results/tables/{sample}/blaSHV_counts_filtered.tsv"
-    log: "results/logs/{sample}_filter_by_distance_between_FR.log"
-    conda: "rscripts-env"
-    params: base=config["base_len"], ru_len=config["increment"]
-    script: "scripts/filter_by_distance_between_fr.R"
+    input:
+        fr="results/tables/{sample}/blast_joined.tsv",
+        bla="results/tables/{sample}/blaSHV_counts.tsv",
+    output:
+        "results/tables/{sample}/blaSHV_counts_filtered.tsv",
+    log:
+        "results/logs/{sample}_filter_by_distance_between_FR.log",
+    conda:
+        "rscripts-env"
+    params:
+        base=config["base_len"],
+        ru_len=config["increment"],
+    script:
+        "scripts/filter_by_distance_between_fr.R"
+
 
 # calculate observed, expected frequencies etc
 rule frequency_calculation:
-    input: bins="results/tables/{sample}/number_reads_containing_CN.tsv",
-           bla="results/tables/{sample}/blaSHV_counts_filtered.tsv"
-    output: "results/tables/{sample}/frequencies.tsv"
-    log: "results/logs/{sample}_frequencies.log"
-    conda: "rscripts-env"
-    script: "scripts/final_calculations.R"
+    input:
+        bins="results/tables/{sample}/number_reads_containing_CN.tsv",
+        bla="results/tables/{sample}/blaSHV_counts_filtered.tsv",
+    output:
+        "results/tables/{sample}/frequencies.tsv",
+    log:
+        "results/logs/{sample}_frequencies.log",
+    conda:
+        "rscripts-env"
+    script:
+        "scripts/final_calculations.R"
+
 
 # join samples' tables together
 rule aggregate_freq_tables:
-    input: expand("results/tables/{sample}/frequencies.tsv", sample=samples['samples'])
-    output: tsv = "results/tables/aggregate/frequencies_full_table.tsv",
-            xlsx = "results/tables/aggregate/frequencies_full_table.xlsx"
-    log: "results/logs/aggregate_freq_tables.log"
-    conda: "pandas-env"
-    script: "scripts/aggregate_frequency_tables.py"
+    input:
+        expand("results/tables/{sample}/frequencies.tsv", sample=samples["samples"]),
+    output:
+        tsv="results/tables/aggregate/frequencies_full_table.tsv",
+        xlsx="results/tables/aggregate/frequencies_full_table.xlsx",
+    log:
+        "results/logs/aggregate_freq_tables.log",
+    conda:
+        "pandas-env"
+    script:
+        "scripts/aggregate_frequency_tables.py"
+
 
 rule final:
-    input: freqs="results/tables/{sample}/frequencies.tsv"
-    output: touch("results/final/{sample}_all.done")
-    log: "results/logs/{sample}_final.log"
-    shell: "echo 'DONE'"
+    input:
+        freqs="results/tables/{sample}/frequencies.tsv",
+    output:
+        touch("results/final/{sample}_all.done"),
+    log:
+        "results/logs/{sample}_final.log",
+    shell:
+        "echo 'DONE'"
+
 
 onsuccess:
     print("Workflow finished, no errors")
