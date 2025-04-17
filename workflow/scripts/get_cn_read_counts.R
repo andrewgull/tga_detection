@@ -1,6 +1,6 @@
 #############################################################
 # script to add read lengths to the reads filtered by
-# the FR+RU orientation and distance (1820 bp)
+# the FR+RU orientation and distance (1320 bp)
 # For each possible blaSHV copy-number, we calculate
 # number of reads that can contain them, i.e.:
 #  N reads able to contain 0 blaSHV copies (all reads)
@@ -31,7 +31,7 @@ library(tibble)
 #### FUNCTIONS ####
 # count reads for each CNV
 count_reads_cn <-
-  function(df, cn = 0, b = 1820, i = 3450, direct = TRUE) {
+  function(df, cn = 0, b = 1320, i = 3450, direct = TRUE) {
     # check headers
     stopifnot(sum(grepl("end.red", names(df))) == 1)
     if (direct) {
@@ -79,7 +79,7 @@ separate <- function(df, orientation, reads_len = NULL) {
   } else {
     # reads len must be provided
     stopifnot(!is.null(reads_len))
-    # subject columnmust be there
+    # subject column must be there
     stopifnot(sum(grepl("subject", names(reads_len))) == 1)
     df %>%
       filter(orient == "reverse") %>%

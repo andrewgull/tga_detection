@@ -1,9 +1,9 @@
 #############################################################################
 # script to filter reads with both FR and RU in correct orientation
-# and proximity AND at least 1820 nt from the beginning of the FR
+# and proximity AND at least 1320 nt from the beginning of the FR
 # input: table with blast results filtered by FR+RU orientation and distance
 # input: min distance from the start of FR towards RU (1320)
-# output: table with reads at least 1820 nt in length from the start of FR
+# output: table with reads at least 1320 nt in length from the start of FR
 #############################################################################
 
 #### OPEN LOG ####
