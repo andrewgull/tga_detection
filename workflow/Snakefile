@@ -253,7 +253,7 @@ rule filter_min_orient_length:
     params:
         dist_to_end=config["dist_to_end"],
     script:
-        "scripts/filter_1820.R"
+        "scripts/filter_by_distance_to_end.R"
 
 
 # count reads theoretically capable of containing each CN variant
