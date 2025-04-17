@@ -162,7 +162,7 @@ rule cn_reads_bins:
     output: "results/tables/{sample}/number_reads_containing_CN.tsv"
     log: "results/logs/{sample}_cn_reads_bins.log"
     conda: "biostrings-env"
-    params: max_cn = config['max_cn'], incr = config['increment'], base_len = config['base_len']
+    params: max_cn = config['max_cn'], incr = config['increment'], dist_to_end = config['dist_to_end']
     script: "scripts/get_cn_read_counts.R"
 
 # filter GR
