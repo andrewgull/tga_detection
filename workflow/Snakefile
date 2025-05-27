@@ -19,6 +19,7 @@ rule all:
         expand("results/final/{sample}_all.done", sample=sample_table["sample"]),
         "results/tables/aggregate/frequencies_full_table.tsv",
 
+
 # filter reads by length
 rule filter_reads:
     input:
