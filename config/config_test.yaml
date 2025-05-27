@@ -4,7 +4,7 @@ sample_table: "config/samples_test.tsv"
 # plasmid sequence location
 plasmid: "resources/plasmid/CP061207.1.fasta"
 
-output_name: "results/tables/aggregate_frequencies_table_test"
+output_name: "results/tables/frequencies_all_test"
 
 # coordinates according to
 # CP061207.1
