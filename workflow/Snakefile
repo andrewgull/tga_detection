@@ -399,8 +399,8 @@ rule aggregate_freq_tables:
     input:
         expand("results/tables/{sample}/frequencies.tsv", sample=sample_table["sample"]),
     output:
-        tsv=f"{config["output_name"]}.tsv",
-        xlsx=f"{config["output_name"]}.xlsx",
+        tsv=f"{config['output_name']}.tsv",
+        xlsx=f"{config['output_name']}.xlsx",
     log:
         "results/logs/aggregate_freq_tables.log",
     conda:
