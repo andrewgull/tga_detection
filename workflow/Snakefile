@@ -9,7 +9,7 @@ import pandas as pd
 
 
 # read strain names
-sample_table = pd.read_csv(config["sample_table"], dtype={"sample": str, "path": str})
+sample_table = pd.read_csv(config["sample_table"], sep="\t", dtype={"sample": str, "path": str})
 
 #### Rules ####
 
