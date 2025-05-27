@@ -4,6 +4,8 @@ sample_table: "config/samples.tsv"
 # plasmid sequence location
 plasmid: "resources/plasmid/CP061207.1.fasta"
 
+output_name: "results/tables/aggregate_frequencies_table"
+
 # coordinates according to
 # CP061207.1
 # min read length
