@@ -1,5 +1,5 @@
-# list of samples/replicates
-samples: "configs/samples.txt"
+# table of samples and filepaths
+sample_table: "config/samples.tsv"
 
 # plasmid sequence location
 plasmid: "resources/plasmid/CP061207.1.fasta"
