@@ -231,7 +231,7 @@ rule filter_min_orient_length:
 rule cn_reads_bins:
     input:
         table="results/tables/{sample}/blast_joined_red_repunit_orient_len.tsv",
-        reads="results/reads/{sample}/reads_filtered.fasta.gz",
+        reads="results/reads_filtered/{sample}_filtered.fasta.gz",
     output:
         "results/tables/{sample}/number_reads_containing_CN.tsv",
     log:
