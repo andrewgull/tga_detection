@@ -17,7 +17,7 @@ sample_table = pd.read_csv(config["sample_table"], sep="\t", dtype={"sample": st
 rule all:
     input:
         expand("results/final/{sample}_all.done", sample=sample_table["sample"]),
-        "results/tables/aggregate/frequencies_full_table.tsv",
+        f"{config['output_name']}.tsv",
 
 
 # filter reads by length
