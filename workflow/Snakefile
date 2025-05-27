@@ -1,60 +1,30 @@
-####################################################################
-# this pipeline runs the blaSHV gene copy number variation analysis
-# in ultra-deep Nanopore sequencing reads
-# author: Andrei Guliaev, Uppsala University
-####################################################################
+__author__ = "Andrei Guliaev"
+__copyright__ = "Copyright 2024, Andrei Guliaev"
+__email__ = "andrei.guliaev@scilifelab.uu.se"
+__license__ = "GPL-3"
 
 from snakemake.io import expand, directory, touch, temp
+from scripts.utils import get_sample_path
 import pandas as pd
-
-#### Singularity setup ####
-
-
-# this container defines the underlying OS for each job when using the workflow
-# with --use-conda --use-singularity
-container: "docker://continuumio/miniconda3"
-
-
-#### Config file for this pipeline ####
-configfile: "configs/config.yaml"
 
 
 # read strain names
-samples = pd.read_csv(config["samples"], dtype={"samples": str})
+sample_table = pd.read_csv(config["sample_table"], dtype={"sample": str, "path": str})
 
 #### Rules ####
 
 
 rule all:
     input:
-        expand("results/final/{sample}_all.done", sample=samples["samples"]),
+        expand("results/final/{sample}_all.done", sample=sample_table["sample"]),
         "results/tables/aggregate/frequencies_full_table.tsv",
-
-
-# merge separate read files into
-# one single file per sample
-rule merge_reads:
-    input:
-        "resources/reads_separate/{sample}",
-    output:
-        temp("resources/reads/{sample}/reads_all.fastq.gz"),
-    threads: 18
-    log:
-        "results/logs/{sample}_zcat.log",
-    benchmark:
-        "results/benchmarks/zcat_reads/{sample}.tsv"
-    conda:
-        "compress-env"
-    shell:
-        "zcat {input}/*.gz | pigz -c -p {threads} 1> {output} 2> {log}"
-
 
 # filter reads by length
 rule filter_reads:
     input:
-        "resources/reads/{sample}/reads_all.fastq.gz",
+        lambda wildcards: get_sample_path(wildcards, sample_table),
     output:
-        temp("results/reads/{sample}/reads_filtered.fastq.gz"),
+        temp("results/reads_filtered/{sample}_filtered.fastq.gz"),
     threads: 18
     log:
         "results/logs/{sample}_filtlong.log",
@@ -71,9 +41,9 @@ rule filter_reads:
 # convert fastq to fasta
 rule fq2fasta:
     input:
-        "results/reads/{sample}/reads_filtered.fastq.gz",
+        "results/reads_filtered/{sample}_filtered.fastq.gz",
     output:
-        "results/reads/{sample}/reads_filtered.fasta.gz",
+        "results/reads_filtered/{sample}_filtered.fasta.gz",
     threads: 18
     log:
         "results/logs/{sample}_seqkit_fq2fa.log",
@@ -124,7 +94,7 @@ rule create_fr_green:
 # blast DB of reads
 rule make_blast_db:
     input:
-        "results/reads/{sample}/reads_filtered.fasta.gz",
+        "results/reads_filtered/{sample}_filtered.fasta.gz",
     output:
         directory("results/blast_databases/{sample}"),
     threads: 18
@@ -426,7 +396,7 @@ rule frequency_calculation:
 # join samples' tables together
 rule aggregate_freq_tables:
     input:
-        expand("results/tables/{sample}/frequencies.tsv", sample=samples["samples"]),
+        expand("results/tables/{sample}/frequencies.tsv", sample=sample_table["sample"]),
     output:
         tsv="results/tables/aggregate/frequencies_full_table.tsv",
         xlsx="results/tables/aggregate/frequencies_full_table.xlsx",
