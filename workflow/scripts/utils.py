@@ -1,7 +1,8 @@
 import pandas as pd
+from typing import Any
 
 
-def get_sample_path(wildcards: snakemake.io.wildcards, data_frame: pd.DataFrame) -> str:
+def get_sample_path(wildcards: Any, data_frame: pd.DataFrame) -> str:
     """
     Get the path to the fastq file using its sample name.
     arguments:
