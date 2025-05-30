@@ -4,15 +4,17 @@ __email__ = "andrei.guliaev@scilifelab.uu.se"
 __license__ = "GPL-3"
 
 from snakemake.io import expand, directory, touch, temp
-from scripts.utils import get_sample_path
+from scripts.utils import get_sample_path, tsv2dict
 import pandas as pd
 
 
 # read strain names
 sample_table = pd.read_csv(config["sample_table"], sep="\t", dtype={"sample": str, "path": str})
 
-#### Rules ####
+# read parameters into a dictionary
+parameters = tsv2dict(config["parameters"])
 
+#### Rules ####
 
 rule all:
     input:
@@ -34,7 +36,7 @@ rule filter_reads:
     conda:
         "filtlong-env"
     params:
-        min_len=config["min_read_len"],
+        min_len=parameters["min_read_len"],
     shell:
         "filtlong --min_length {params.min_len} {input} 2> {log} | pigz -c -p {threads} > {output}"
 
@@ -68,8 +70,8 @@ rule create_fr_red:
     conda:
         "seqkit-env"
     params:
-        start=config["fr_red_start"],
-        end=config["fr_red_end"],
+        start=parameters["fr_red_start"],
+        end=parameters["fr_red_end"],
     shell:
         "seqkit subseq -r {params.start}:{params.end} {input} 1> {output} 2> {log}"
 
@@ -86,8 +88,8 @@ rule create_fr_green:
     conda:
         "seqkit-env"
     params:
-        start=config["fr_green_start"],
-        end=config["fr_green_end"],
+        start=parameters["fr_green_start"],
+        end=parameters["fr_green_end"],
     shell:
         "seqkit subseq -j {threads} -r {params.start}:{params.end} {input} 1> {output} 2> {log}"
 
@@ -116,8 +118,8 @@ rule blast_red:
         "results/tables/{sample}/blast_red.tsv",
     threads: 18
     params:
-        fmt=config["format"],
-        n_alns=config["n_fr_aligns"],
+        fmt=parameters["format"],
+        n_alns=parameters["n_fr_aligns"],
     log:
         "results/logs/{sample}_blast_red.log",
     benchmark:
@@ -138,8 +140,8 @@ rule blast_green:
         "results/tables/{sample}/blast_green.tsv",
     threads: 18
     params:
-        fmt=config["format"],
-        n_alns=config["n_fr_aligns"],
+        fmt=parameters["format"],
+        n_alns=parameters["n_fr_aligns"],
     log:
         "results/logs/{sample}_blast_green.log",
     benchmark:
@@ -160,8 +162,8 @@ rule create_repeat_unit:
     log:
         "results/logs/seqkit_repunit.log",
     params:
-        start=config["ru_start"],
-        end=config["ru_end"],
+        start=parameters["ru_start"],
+        end=parameters["ru_end"],
     conda:
         "seqkit-env"
     shell:
@@ -181,8 +183,8 @@ rule blast_repeat_unit:
     conda:
         "blast-env"
     params:
-        fmt=config["format"],
-        n_alns=config["n_bla_aligns"],
+        fmt=parameters["format"],
+        n_alns=parameters["n_bla_aligns"],
     shell:
         "blastn -query {input.query} -db {input.database}/blastdb -outfmt {params.fmt} "
         "-num_threads {threads} -num_alignments {params.n_alns} 1> {output} 2> {log}"
@@ -201,11 +203,11 @@ rule filter_rr_ru_blast:
     conda:
         "rscripts-env"
     params:
-        identity=config["min_identity"],
-        e_val=config["max_e_value"],
-        length_fr=config["min_fr_len"],
-        length_ru=config["min_ru_len"],
-        distance=config["max_dist"],
+        identity=parameters["min_identity"],
+        e_val=parameters["max_e_value"],
+        length_fr=parameters["min_fr_len"],
+        length_ru=parameters["min_ru_len"],
+        distance=parameters["max_dist"],
     script:
         "scripts/filter_red_repunit.R"
 
@@ -222,7 +224,7 @@ rule filter_min_orient_length:
     conda:
         "rscripts-env"
     params:
-        dist_to_end=config["dist_to_end"],
+        dist_to_end=parameters["dist_to_end"],
     script:
         "scripts/filter_by_distance_to_end.R"
 
@@ -239,9 +241,9 @@ rule cn_reads_bins:
     conda:
         "biostrings-env"
     params:
-        max_cn=config["max_cn"],
-        incr=config["increment"],
-        dist_to_end=config["dist_to_end"],
+        max_cn=parameters["max_cn"],
+        incr=parameters["increment"],
+        dist_to_end=parameters["dist_to_end"],
     script:
         "scripts/get_cn_read_counts.R"
 
@@ -260,9 +262,9 @@ rule filter_flanking_regions:
     conda:
         "rscripts-env"
     params:
-        identity=config["min_identity"],
-        e_val=config["max_e_value"],
-        length=config["min_fr_len"],
+        identity=parameters["min_identity"],
+        e_val=parameters["max_e_value"],
+        length=parameters["min_fr_len"],
     script:
         "scripts/filter_fr_hits.R"
 
@@ -282,8 +284,8 @@ rule blast_blaSHV:
     conda:
         "blast-env"
     params:
-        fmt=config["format"],
-        n_alns=config["n_bla_aligns"],
+        fmt=parameters["format"],
+        n_alns=parameters["n_bla_aligns"],
     shell:
         "blastn -query {input.query} -db {input.database}/blastdb -outfmt {params.fmt} "
         "-num_threads {threads} -num_alignments {params.n_alns} 1> {output} 2> {log}"
@@ -303,7 +305,7 @@ rule filter_blaSHV_hits:
     conda:
         "rscripts-env"
     params:
-        e_val=config["max_e_value"],
+        e_val=parameters["max_e_value"],
     script:
         "scripts/filter_gene_blast.R"
 
@@ -338,7 +340,7 @@ rule merge_blaSHV_filtered:
     conda:
         "bedtools-env"
     params:
-        dist=config["dist"],
+        dist=parameters["dist"],
     shell:
         "sort -k1,1 -k2,2n {input} > {output.sorted} && "
         "bedtools merge -i {output.sorted} -s -d {params.dist} > {output.merged} 2> {log}"
@@ -356,7 +358,7 @@ rule blaSHV_counts:
     conda:
         "rscripts-env"
     params:
-        length=config["bla_len"],
+        length=parameters["bla_len"],
     script:
         "scripts/count_merged_gene_hits.R"
 
@@ -373,8 +375,8 @@ rule filter_by_distance_between_FR:
     conda:
         "rscripts-env"
     params:
-        base=config["base_len"],
-        ru_len=config["increment"],
+        base=parameters["base_len"],
+        ru_len=parameters["increment"],
     script:
         "scripts/filter_by_distance_between_fr.R"
 
