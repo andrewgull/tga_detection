@@ -18,7 +18,7 @@ def get_sample_path(wildcards: Any, data_frame: pd.DataFrame) -> str:
         raise ValueError(f"Sample '{wildcards.sample}' not found in the provided DataFrame.")
 
 
-def tsv2dict(file_path) -> dict:
+def tsv2dict(file_path: str) -> dict:
     """
     Read a TSV file and convert it to a dictionary.
     arguments:
