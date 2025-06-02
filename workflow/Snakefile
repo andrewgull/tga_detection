@@ -31,8 +31,6 @@ rule filter_reads:
     threads: 18
     log:
         "results/logs/{sample}_filtlong.log",
-    benchmark:
-        "results/benchmarks/filtlong_filter/{sample}.tsv"
     conda:
         "filtlong-env"
     params:
@@ -50,8 +48,6 @@ rule fq2fasta:
     threads: 18
     log:
         "results/logs/{sample}_seqkit_fq2fa.log",
-    benchmark:
-        "results/benchmarks/seqkit_convert/{sample}.tsv"
     conda:
         "seqkit-env"
     shell:
@@ -122,8 +118,6 @@ rule blast_red:
         n_alns=parameters["n_fr_aligns"],
     log:
         "results/logs/{sample}_blast_red.log",
-    benchmark:
-        "results/benchmarks/blast_red/{sample}.tsv"
     conda:
         "blast-env"
     shell:
@@ -144,8 +138,6 @@ rule blast_green:
         n_alns=parameters["n_fr_aligns"],
     log:
         "results/logs/{sample}_blast_green.log",
-    benchmark:
-        "results/benchmarks/blast_green/{sample}.tsv"
     conda:
         "blast-env"
     shell:
@@ -279,8 +271,6 @@ rule blast_blaSHV:
     threads: 18
     log:
         "results/logs/{sample}_blast_blaSHV.log",
-    benchmark:
-        "results/benchmarks/blast_blaSHV/{sample}.tsv"
     conda:
         "blast-env"
     params:
@@ -318,8 +308,6 @@ rule make_bed_blaSHV_filtered:
         "results/bedfiles/{sample}/blaSHV_hits.bed",
     log:
         "results/logs/{sample}_make_bed.log",
-    benchmark:
-        "results/benchmarks/make_bed/{sample}.tsv"
     conda:
         "rscripts-env"
     script:
@@ -335,8 +323,6 @@ rule merge_blaSHV_filtered:
         merged="results/bedfiles/{sample}/blaSHV_hits_merged.bed",
     log:
         "results/logs/{sample}_bedtools_merge.log",
-    benchmark:
-        "results/benchmarks/bedtools_merge/{sample}.tsv"
     conda:
         "bedtools-env"
     params:
