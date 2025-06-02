@@ -29,7 +29,7 @@ def tsv2dict(file_path: str) -> dict:
     df = pd.read_csv(
         file_path,
         sep="\t",
-        dtype={"param": str, "value": float}
+        dtype={"param": str, "value": str}
     )
     data_dict = df.set_index("param")["value"].to_dict()
     return data_dict
