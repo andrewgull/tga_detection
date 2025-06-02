@@ -264,7 +264,7 @@ rule filter_flanking_regions:
 # search gene
 rule blast_blaSHV:
     input:
-        query="resources/genes/blaSHV.fa",
+        query=config["blaSHV"],
         database="results/blast_databases/{sample}",
     output:
         "results/tables/{sample}/blast_blaSHV.tsv",
