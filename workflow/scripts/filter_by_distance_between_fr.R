@@ -25,9 +25,16 @@ library(readr)
 # with read ID and different in counts
 filter_by_distance <- function(fr_ru_filt, bla_counts,
                                base_len = 4299, ru_len = 3450) {
-  # the 1st arg is a table with distance between FRs
-  # the 2nd arg is a table with bla counts via merging BED coords
+  # fr_ru_fil: a table with distance between FRs
+  # bla_counts: a table with bla counts via merging BED coords
   # calculate the distance
+
+  # convert/check the base_len and ru_len
+  base_len <- as.integer(base_len)
+  stopifnot(!is.na(base_len))
+  ru_len <- as.integer(ru_len)
+  stopifnot(!is.na(ru_len))
+
   diff_per_read <- fr_ru_filt %>%
     select(subject, distance.btw.FR) %>%
     left_join(bla_counts, by = "subject") %>%

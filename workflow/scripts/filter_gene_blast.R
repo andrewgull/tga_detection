@@ -61,6 +61,12 @@ genes_within_flanks <- function(read_id, fr_df, bla_df) {
 
 # Main function that ties everything together
 main <- function(bla, fr, evalue) {
+  # convert/check evalue
+  # must be float (numeric) but
+  # passed by snakemake as character string
+  evalue <- as.numeric(evalue)
+  stopifnot(!is.na(evalue))
+
   # Find reads with bla hits outside FRs
   fr$aberrant <- map_vec(fr$subject, ~ genes_within_flanks(., fr, bla))
 

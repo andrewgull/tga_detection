@@ -83,6 +83,23 @@ filter_ru_fr <-
 main <- function(red, rep, ru_len, fr_len, e, identity, maxd) {
   # filter rep unite table
   # NB: min length is different from FR's min length
+
+  # convert/check numeric and integer args
+  ru_len <- as.integer(ru_len)
+  stopifnot(!is.na(ru_len))
+
+  fr_len <- as.integer(fr_len)
+  stopifnot(!is.na(fr_len))
+
+  e <- as.numeric(e)
+  stopifnot(!is.na(e))
+
+  identity <- as.integer(identity)
+  stopifnot(!is.na(identity))
+
+  maxd <- as.integer(maxd)
+  stopifnot(!is.na(maxd))
+
   blast_red <- parse_blast(red, "FR_red") %>%
     filter_blast(
       min_len = fr_len,

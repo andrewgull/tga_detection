@@ -38,6 +38,10 @@ main <- function(df, dist) {
   stopifnot(ncol(input_table) == 7)
   stopifnot(nrow(input_table) != 0)
 
+  # convert/check dist
+  dist <- as.integer(dist)
+  stopifnot(!is.na(dist))
+
   # filter
   filtered_df <- filter_by_distance(input_table, dist = dist)
   filtered_df
