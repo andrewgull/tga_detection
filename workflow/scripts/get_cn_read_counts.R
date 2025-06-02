@@ -108,10 +108,24 @@ count_reads <- function(cn_array, hits_orient, min_len, increment, direct) {
 main <- function(in_table, reads, max_cn, min_len, increment) {
   # in_table: df with blast hits filtered by FR+RU orientation and distance
   # reads: fasta w reads filtered by FR+RU orientation and distance
-  # max_cn: maximum CN you are interested in
-  # param: min_len: min length of reads possibly containing 0 blaSHV copies
-  # increment: length incrementation with each new blaSHV copy
+  # max_cn: maximum CN you are interested in (int)
+  # min_len: min length of reads possibly containing 0 blaSHV copies (int)
+  # increment: length incrementation with each new blaSHV copy (int)
   # return: table with read counts for each CNV
+
+  # These parameters must be integers
+  max_cn <- as.integer(max_cn)
+  # if max_cn is a character string that cannot be transformed to integer,
+  # as.integer() will return NA
+  # NA is integer
+  # therefore max_cn must be 'not NA'
+  stopifnot(!is.na(max_cn)
+
+  min_len <- as.integer(min_len)
+  stopifnot(!is.na(min_len))
+
+  increment <- as.integer(increment)
+  stopifnot(!is.na(increment))
 
   # read input table
   fr_repunit <- read.table(in_table, sep = "\t", header = TRUE)
