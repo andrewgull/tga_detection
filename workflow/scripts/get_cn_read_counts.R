@@ -119,7 +119,7 @@ main <- function(in_table, reads, max_cn, min_len, increment) {
   # as.integer() will return NA
   # NA is integer
   # therefore max_cn must be 'not NA'
-  stopifnot(!is.na(max_cn)
+  stopifnot(!is.na(max_cn))
 
   min_len <- as.integer(min_len)
   stopifnot(!is.na(min_len))
