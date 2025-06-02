@@ -86,9 +86,6 @@ filter_red_green <- function(df_red_ru, df_green) {
 }
 
 main <- function(red, green, len, evalue, identity) {
-  # check if the tables are not empty
-  stopifnot(nrow(red) > 0)
-  stopifnot(nrow(green_filt) > 0)
 
   # convert/check int and numeric args
   len <- as.integer(len)
@@ -111,6 +108,10 @@ main <- function(red, green, len, evalue, identity) {
       max_e_value = evalue,
       min_identity = identity
     )
+
+  # check if the tables are not empty
+  stopifnot(nrow(red) > 0)
+  stopifnot(nrow(green_filt) > 0)
 
   # Filtering, part 2
   blast_joined <- filter_red_green(red, green_filt)
