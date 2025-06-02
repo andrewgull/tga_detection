@@ -1,6 +1,6 @@
 # pipeline work files
 results/**
-resources/**
+resources/reads/
 figures/**
 examples/**
 *.html
