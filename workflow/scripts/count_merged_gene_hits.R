@@ -16,6 +16,14 @@ library(readr)
 
 #### FUNCTIONS ####
 main <- function(df_merge, df_filt, len) {
+  # df_merge: table with merged intervals
+  # df_filt: filtered table of FR blast hits
+  # len: bla gene length (int)
+
+  # convert/check len
+  len <- as.integer(len)
+  stopifnot(!is.na(len))
+
   df_merge %>%
     group_by(X1) %>%
     summarise(sum.merged.hits = sum(X3 - X2 + 1)) %>%
