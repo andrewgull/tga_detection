@@ -57,6 +57,8 @@ To run the pipeline on all the samples, just replace the config file name with `
 snakemake --use-conda --cores <number_of_cores> --configfile config.yaml
 ```
 
+You might need to edit `config/samples.tsv` to include actual paths to the FASTQ files (default is `resources/reads/`)
+
 # Parameters
 
 The parameters for the analysis are specified in the `params.tsv` file. The parameters include:
