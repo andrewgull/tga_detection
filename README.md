@@ -46,7 +46,7 @@ All the input files are described in `config.yaml`:
 If you want to test the pipeline with a small dataset, you can use the `test.yaml` configuration file.
 
 ```bash
-snakemake --use-conda --cores <number_of_cores> --configfile test.yaml
+snakemake --use-conda --cores <number_of_cores> --configfile config/test.yaml
 ```
 
 ## Full run
@@ -54,7 +54,7 @@ snakemake --use-conda --cores <number_of_cores> --configfile test.yaml
 To run the pipeline on all the samples, just replace the config file name with `config.yaml`:
 
 ```bash
-snakemake --use-conda --cores <number_of_cores> --configfile config.yaml
+snakemake --use-conda --cores <number_of_cores> --configfile config/config.yaml
 ```
 
 You might need to edit `config/samples.tsv` to include actual paths to the FASTQ files (default is `resources/reads/`)
