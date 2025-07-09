@@ -24,6 +24,7 @@ List of dependencies:
  - [BLAST](https://www.ncbi.nlm.nih.gov/books/NBK52640/) v2.12.0
  - [SeqKit](https://bioinf.shenwei.me/seqkit/) v2.0.0
  - [Filtlong](https://github.com/rrwick/Filtlong) v0.2.1
+ - [bedtools](https://bedtools.readthedocs.io/en/latest/) v2.30.0
  - [gzip](https://www.gzip.org/) v1.10
  - [pigz](https://zlib.net/pigz/) v2.6
 
