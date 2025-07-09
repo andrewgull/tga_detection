@@ -32,7 +32,7 @@ rule filter_reads:
     log:
         "results/logs/{sample}_filtlong.log",
     conda:
-        "filtlong-env"
+        "envs/filtlong.yaml"
     params:
         min_len=parameters["min_read_len"],
     shell:
@@ -49,7 +49,7 @@ rule fq2fasta:
     log:
         "results/logs/{sample}_seqkit_fq2fa.log",
     conda:
-        "seqkit-env"
+        "envs/seqkit.yaml"
     shell:
         "seqkit fq2fa -j {threads} {input} | pigz -c -p {threads} 1> {output} 2> {log}"
 
@@ -64,7 +64,7 @@ rule create_fr_red:
     log:
         "results/logs/seqkit_subseq_fr_red.log",
     conda:
-        "seqkit-env"
+        "envs/seqkit.yaml"
     params:
         start=parameters["fr_red_start"],
         end=parameters["fr_red_end"],
@@ -82,7 +82,7 @@ rule create_fr_green:
     log:
         "results/logs/seqkit_subseq_fr_green.log",
     conda:
-        "seqkit-env"
+        "envs/seqkit.yaml"
     params:
         start=parameters["fr_green_start"],
         end=parameters["fr_green_end"],
@@ -100,7 +100,7 @@ rule make_blast_db:
     log:
         "results/logs/{sample}_blastdb.log",
     conda:
-        "blast-env"
+        "envs/blast.yaml"
     shell:
         "pigz -c -d -p {threads} {input} | makeblastdb -in - -dbtype nucl -title blastdb -out {output}/blastdb &> {log}"
 
@@ -119,7 +119,7 @@ rule blast_red:
     log:
         "results/logs/{sample}_blast_red.log",
     conda:
-        "blast-env"
+        "envs/blast.yaml"
     shell:
         "blastn -query {input.query} -db {input.database}/blastdb -outfmt {params.fmt} "
         "-num_threads {threads} -num_alignments {params.n_alns} 1> {output} 2> {log}"
@@ -139,7 +139,7 @@ rule blast_green:
     log:
         "results/logs/{sample}_blast_green.log",
     conda:
-        "blast-env"
+        "envs/blast.yaml"
     shell:
         "blastn -query {input.query} -db {input.database}/blastdb -outfmt {params.fmt} "
         "-num_threads {threads} -num_alignments {params.n_alns} 1> {output} 2> {log}"
@@ -157,7 +157,7 @@ rule create_repeat_unit:
         start=parameters["ru_start"],
         end=parameters["ru_end"],
     conda:
-        "seqkit-env"
+        "envs/seqkit.yaml"
     shell:
         "seqkit subseq -r {params.start}:{params.end} {input} 1> {output} 2> {log}"
 
@@ -173,7 +173,7 @@ rule blast_repeat_unit:
     log:
         "results/logs/{sample}_blast_repeat_unit.log",
     conda:
-        "blast-env"
+        "envs/blast.yaml"
     params:
         fmt=parameters["format"],
         n_alns=parameters["n_bla_aligns"],
@@ -193,7 +193,7 @@ rule filter_rr_ru_blast:
     log:
         "results/logs/{sample}_blast_joined.log",
     conda:
-        "rscripts-env"
+        "envs/rscripts.yaml"
     params:
         identity=parameters["min_identity"],
         e_val=parameters["max_e_value"],
@@ -214,7 +214,7 @@ rule filter_min_orient_length:
     log:
         "results/logs/{sample}_filt_min_orient_len.log",
     conda:
-        "rscripts-env"
+        "envs/rscripts.yaml"
     params:
         dist_to_end=parameters["dist_to_end"],
     script:
@@ -231,7 +231,7 @@ rule cn_reads_bins:
     log:
         "results/logs/{sample}_cn_reads_bins.log",
     conda:
-        "biostrings-env"
+        "envs/biostrings.yaml"
     params:
         max_cn=parameters["max_cn"],
         incr=parameters["increment"],
@@ -252,7 +252,7 @@ rule filter_flanking_regions:
     log:
         "results/logs/{sample}_blast_joined.log",
     conda:
-        "rscripts-env"
+        "envs/rscripts.yaml"
     params:
         identity=parameters["min_identity"],
         e_val=parameters["max_e_value"],
@@ -272,7 +272,7 @@ rule blast_blaSHV:
     log:
         "results/logs/{sample}_blast_blaSHV.log",
     conda:
-        "blast-env"
+        "envs/blast.yaml"
     params:
         fmt=parameters["format"],
         n_alns=parameters["n_bla_aligns"],
@@ -293,7 +293,7 @@ rule filter_blaSHV_hits:
     log:
         "results/logs/{sample}_blast_blaSHV_filter.log",
     conda:
-        "rscripts-env"
+        "envs/rscripts.yaml"
     params:
         e_val=parameters["max_e_value"],
     script:
@@ -309,7 +309,7 @@ rule make_bed_blaSHV_filtered:
     log:
         "results/logs/{sample}_make_bed.log",
     conda:
-        "rscripts-env"
+        "envs/rscripts.yaml"
     script:
         "scripts/make_bed.R"
 
@@ -324,7 +324,7 @@ rule merge_blaSHV_filtered:
     log:
         "results/logs/{sample}_bedtools_merge.log",
     conda:
-        "bedtools-env"
+        "envs/bedtools.yaml"
     params:
         dist=parameters["dist"],
     shell:
@@ -342,7 +342,7 @@ rule blaSHV_counts:
     log:
         "results/logs/{sample}_blaSHV_counts.log",
     conda:
-        "rscripts-env"
+        "envs/rscripts.yaml"
     params:
         length=parameters["bla_len"],
     script:
@@ -359,7 +359,7 @@ rule filter_by_distance_between_FR:
     log:
         "results/logs/{sample}_filter_by_distance_between_FR.log",
     conda:
-        "rscripts-env"
+        "envs/rscripts.yaml"
     params:
         base=parameters["base_len"],
         ru_len=parameters["increment"],
@@ -377,7 +377,7 @@ rule frequency_calculation:
     log:
         "results/logs/{sample}_frequencies.log",
     conda:
-        "rscripts-env"
+        "envs/rscripts.yaml"
     script:
         "scripts/final_calculations.R"
 
@@ -392,7 +392,7 @@ rule aggregate_freq_tables:
     log:
         "results/logs/aggregate_freq_tables.log",
     conda:
-        "pandas-env"
+        "envs/pandas.yaml"
     script:
         "scripts/aggregate_frequency_tables.py"
 
