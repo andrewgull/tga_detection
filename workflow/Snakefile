@@ -28,7 +28,7 @@ rule filter_reads:
         lambda wildcards: get_sample_path(wildcards, sample_table),
     output:
         temp("results/reads_filtered/{sample}_filtered.fastq.gz"),
-    threads: 18
+    threads: 8
     log:
         "results/logs/{sample}_filtlong.log",
     conda:
@@ -45,7 +45,7 @@ rule fq2fasta:
         "results/reads_filtered/{sample}_filtered.fastq.gz",
     output:
         "results/reads_filtered/{sample}_filtered.fasta.gz",
-    threads: 18
+    threads: 4
     log:
         "results/logs/{sample}_seqkit_fq2fa.log",
     conda:
@@ -60,7 +60,7 @@ rule create_fr_red:
         config["plasmid"],
     output:
         "results/flanking_regions/fr_red.fa",
-    threads: 18
+    threads: 4
     log:
         "results/logs/seqkit_subseq_fr_red.log",
     conda:
@@ -78,7 +78,7 @@ rule create_fr_green:
         config["plasmid"],
     output:
         "results/flanking_regions/fr_green.fa",
-    threads: 18
+    threads: 4
     log:
         "results/logs/seqkit_subseq_fr_green.log",
     conda:
@@ -96,7 +96,7 @@ rule make_blast_db:
         "results/reads_filtered/{sample}_filtered.fasta.gz",
     output:
         directory("results/blast_databases/{sample}"),
-    threads: 18
+    threads: 8
     log:
         "results/logs/{sample}_blastdb.log",
     conda:
@@ -112,7 +112,7 @@ rule blast_red:
         database="results/blast_databases/{sample}",
     output:
         "results/tables/{sample}/blast_red.tsv",
-    threads: 18
+    threads: 8
     params:
         fmt=parameters["format"],
         n_alns=parameters["n_fr_aligns"],
@@ -132,7 +132,7 @@ rule blast_green:
         database="results/blast_databases/{sample}",
     output:
         "results/tables/{sample}/blast_green.tsv",
-    threads: 18
+    threads: 8
     params:
         fmt=parameters["format"],
         n_alns=parameters["n_fr_aligns"],
@@ -169,7 +169,7 @@ rule blast_repeat_unit:
         database="results/blast_databases/{sample}",
     output:
         "results/tables/{sample}/blast_repeat_unit.tsv",
-    threads: 18
+    threads: 8
     log:
         "results/logs/{sample}_blast_repeat_unit.log",
     conda:
@@ -268,7 +268,7 @@ rule blast_blaSHV:
         database="results/blast_databases/{sample}",
     output:
         "results/tables/{sample}/blast_blaSHV.tsv",
-    threads: 18
+    threads: 8
     log:
         "results/logs/{sample}_blast_blaSHV.log",
     conda:
