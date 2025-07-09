@@ -10,5 +10,5 @@ plasmid: "resources/plasmid/CP061207.1.fasta"
 # blaSHV gene location
 blaSHV: "resources/genes/blaSHV.fa"
 
-# name for the frequencies table without the extension
+# name for the frequencies table without extension
 output_name: "results/tables/frequencies_all"
