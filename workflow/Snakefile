@@ -402,8 +402,6 @@ rule final:
         freqs="results/tables/{sample}/frequencies.tsv",
     output:
         touch("results/final/{sample}_all.done"),
-    log:
-        "results/logs/{sample}_final.log",
     shell:
         "echo 'DONE'"
 
