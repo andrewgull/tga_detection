@@ -33,17 +33,21 @@ List of dependencies:
 
 All the input files are described in `config.yaml`:
 
-- a TSV file with sample names and their corresponding FASTQ files;
-- FASTA file with the plasmid sequence;
-- FASTA file with the blaSHV gene sequence;
-- the output table name (without extension);
-- a TSV file with parameters for the analysis (see the section below)
+- path to the TSV file with sample names and corresponding FASTQ files;
+- path to the TSV file with the analysis' parameters (see the section below)
+- path to the FASTA file with the plasmid sequence;
+- path to the FASTA file with the blaSHV gene sequence;
+- path to the output file name (without extension);
+
+The output is a TSV text file with observed, expected (theoretical) and corrected gene counts, observed, expected and corrected gene frequency, as well as detection limit for each sample and copy number variant of the gene.
 
 # Usage
 
 ## Test run
 
-If you want to test the pipeline with a small dataset, you can use the `test.yaml` configuration file.
+This repo contains a small dataset which you can use for testing purposes.
+
+To run the pipeline on this dataset, use `test.yaml` configuration file:
 
 ```bash
 snakemake --use-conda --cores <number_of_cores> --configfile config/test.yaml
@@ -51,17 +55,17 @@ snakemake --use-conda --cores <number_of_cores> --configfile config/test.yaml
 
 ## Full run
 
-To run the pipeline on all the samples, just replace the config file name with `config.yaml`:
+The Nanopore long sequencing data can be found in the NCBI SRA database under the accession number PRJNA1299340.
+
+To run the pipeline on these samples, edit `config/samples.tsv` to include the actual paths to the FASTQ files and then run the pipeline using the `config.yaml` file:
 
 ```bash
 snakemake --use-conda --cores <number_of_cores> --configfile config/config.yaml
 ```
 
-You might need to edit `config/samples.tsv` to include actual paths to the FASTQ files (default is `resources/reads/`)
-
 # Parameters
 
-The parameters for the analysis are specified in the `params.tsv` file. The parameters include:
+The parameters for the analysis are specified in the `params.tsv` file. These parameters are:
 
 - minimum read length: reads shorter than this are discarded from the analysis.
 - fr_red_start and fr_red_end: the start and end positions of the flanking region 1.
