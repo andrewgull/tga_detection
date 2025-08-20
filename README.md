@@ -1,4 +1,4 @@
-[![Snakemake](https://img.shields.io/badge/snakemake-≥8.23.1-brightgreen.svg?style=flat-square)](https://snakemake.bitbucket.io)
+[![Snakemake](https://img.shields.io/badge/snakemake-8.23.1-brightgreen.svg?style=flat-square)](https://snakemake.bitbucket.io) ![R](https://img.shields.io/badge/R-4.4.0-brightgreen.svg?style=flat-square)
 
 
 # Description
