@@ -6,8 +6,6 @@
 This is the code for detecting gene amplifications in ultra-deep Nanopore long read sequencing data at frequencies as low as $10^{-5}$.
 Full study and method description can be found [in this publication](link).
 
-The pipeline is written using [Snakemake](https://snakemake.github.io/) v8.23.1.
-
 # Dependencies
 
 Given that you have Snakemake installed, all other dependencies will be installed automatically when you run the pipeline.
