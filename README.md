@@ -1,3 +1,6 @@
+[![Snakemake](https://img.shields.io/badge/snakemake-≥8.23.1-brightgreen.svg?style=flat-square)](https://snakemake.bitbucket.io)
+
+
 # Description
 
 This is the code for detecting gene amplifications in ultra-deep Nanopore long read sequencing data at frequencies as low as $10^{-5}$.
