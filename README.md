@@ -3,8 +3,8 @@
 
 # Description
 
-This is the code for detecting gene amplifications in ultra-deep Nanopore long read sequencing data at frequencies as low as $10^{-5}$.
-Full study and method description can be found [in this publication](link).
+This is the code for detecting tandem gene amplifications in ultra-deep Nanopore long read sequencing data at frequencies as low as $10^{-5}$.
+The full study and method description can be available soon.
 
 # Dependencies
 
