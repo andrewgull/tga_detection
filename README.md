@@ -4,31 +4,7 @@
 # Description
 
 This is the code for detecting tandem gene amplifications in ultra-deep Nanopore long read sequencing data at frequencies as low as $10^{-5}$.
-The full study and method description can be available soon.
-
-# Dependencies
-
-Given that you have Snakemake installed, all other dependencies will be installed automatically when you run the pipeline.
-
-List of dependencies:
-
- - [Snakemake](https://snakemake.readthedocs.io/en/stable/) v8.23.1
- - [R](https://www.r-project.org/) v4.4.0
- - [dplyr](https://dplyr.tidyverse.org/) v1.1.4
- - [readr](https://readr.tidyverse.org/) v2.1.5
- - [purrr](https://purrr.tidyverse.org/) v1.0.2
- - [tidyr](https://tidyr.tidyverse.org/) v1.3.1
- - [Biostrings](https://bioconductor.org/packages/release/bioc/html/Biostrings.html) v2.70.1
- - [Python](https://www.python.org/) v3.12.10
- - [pandas](https://pandas.pydata.org/) v1.5.3 
- - [OpenPyXL](https://openpyxl.readthedocs.io/en/stable/) v3.1.5
- - [BLAST](https://www.ncbi.nlm.nih.gov/books/NBK52640/) v2.12.0
- - [SeqKit](https://bioinf.shenwei.me/seqkit/) v2.0.0
- - [Filtlong](https://github.com/rrwick/Filtlong) v0.2.1
- - [bedtools](https://bedtools.readthedocs.io/en/latest/) v2.30.0
- - [gzip](https://www.gzip.org/) v1.10
- - [pigz](https://zlib.net/pigz/) v2.6
-
+The full study and method description will be available soon.
 
 # Input & output
 
@@ -86,6 +62,31 @@ The parameters for the analysis are specified in the `params.tsv` file. These pa
 - increment: increase in length of the DNA segment with each new blaSHV copy.
 - base_len: length of a blaSHV gene for expected  copy number calculation.
 - dist: the distance between BLAST hits to use in `bedtools merge`.
+
+# Dependencies
+
+Given that you have Snakemake installed, all other dependencies will be installed automatically when you run the pipeline.
+
+List of dependencies:
+
+ - [Snakemake](https://snakemake.readthedocs.io/en/stable/) v8.23.1
+ - [R](https://www.r-project.org/) v4.4.0
+ - [dplyr](https://dplyr.tidyverse.org/) v1.1.4
+ - [readr](https://readr.tidyverse.org/) v2.1.5
+ - [purrr](https://purrr.tidyverse.org/) v1.0.2
+ - [tidyr](https://tidyr.tidyverse.org/) v1.3.1
+ - [Biostrings](https://bioconductor.org/packages/release/bioc/html/Biostrings.html) v2.70.1
+ - [Python](https://www.python.org/) v3.12.10
+ - [pandas](https://pandas.pydata.org/) v1.5.3 
+ - [OpenPyXL](https://openpyxl.readthedocs.io/en/stable/) v3.1.5
+ - [BLAST](https://www.ncbi.nlm.nih.gov/books/NBK52640/) v2.12.0
+ - [SeqKit](https://bioinf.shenwei.me/seqkit/) v2.0.0
+ - [Filtlong](https://github.com/rrwick/Filtlong) v0.2.1
+ - [bedtools](https://bedtools.readthedocs.io/en/latest/) v2.30.0
+ - [gzip](https://www.gzip.org/) v1.10
+ - [pigz](https://zlib.net/pigz/) v2.6
+
+
 
 # Rule graph
 
