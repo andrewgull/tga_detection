@@ -6,6 +6,31 @@
 This is the code for detecting tandem gene amplifications in ultra-deep Nanopore long read sequencing data at frequencies as low as $10^{-5}$.
 The full study and method description will be available soon.
 
+# Dependencies
+
+OS: Ubuntu 22.04.5 LTS
+
+Software:
+
+ - [Snakemake](https://snakemake.readthedocs.io/en/stable/) v8.23.1
+ - [R](https://www.r-project.org/) v4.4.0
+ - [dplyr](https://dplyr.tidyverse.org/) v1.1.4
+ - [readr](https://readr.tidyverse.org/) v2.1.5
+ - [purrr](https://purrr.tidyverse.org/) v1.0.2
+ - [tidyr](https://tidyr.tidyverse.org/) v1.3.1
+ - [Biostrings](https://bioconductor.org/packages/release/bioc/html/Biostrings.html) v2.70.1
+ - [Python](https://www.python.org/) v3.12.10
+ - [pandas](https://pandas.pydata.org/) v1.5.3 
+ - [OpenPyXL](https://openpyxl.readthedocs.io/en/stable/) v3.1.5
+ - [BLAST](https://www.ncbi.nlm.nih.gov/books/NBK52640/) v2.12.0
+ - [SeqKit](https://bioinf.shenwei.me/seqkit/) v2.0.0
+ - [Filtlong](https://github.com/rrwick/Filtlong) v0.2.1
+ - [bedtools](https://bedtools.readthedocs.io/en/latest/) v2.30.0
+ - [gzip](https://www.gzip.org/) v1.10
+ - [pigz](https://zlib.net/pigz/) v2.6
+
+**NB:** Given that you have Snakemake installed, all other dependencies will be installed and deployed automatically when you run the pipeline (see below).
+
 # Input & output
 
 All the input files are described in `config.yaml`:
@@ -29,6 +54,8 @@ To run the pipeline on this dataset, use `test.yaml` configuration file:
 ```bash
 snakemake --use-conda --cores <number_of_cores> --configfile config/test.yaml
 ```
+
+Depending on your computer it may take some time, but it should not take more than 1 hour.
 
 ## Full run
 
@@ -62,30 +89,6 @@ The parameters for the analysis are specified in the `params.tsv` file. These pa
 - increment: increase in length of the DNA segment with each new blaSHV copy.
 - base_len: length of a blaSHV gene for expected  copy number calculation.
 - dist: the distance between BLAST hits to use in `bedtools merge`.
-
-# Dependencies
-
-Given that you have Snakemake installed, all other dependencies will be installed automatically when you run the pipeline.
-
-List of dependencies:
-
- - [Snakemake](https://snakemake.readthedocs.io/en/stable/) v8.23.1
- - [R](https://www.r-project.org/) v4.4.0
- - [dplyr](https://dplyr.tidyverse.org/) v1.1.4
- - [readr](https://readr.tidyverse.org/) v2.1.5
- - [purrr](https://purrr.tidyverse.org/) v1.0.2
- - [tidyr](https://tidyr.tidyverse.org/) v1.3.1
- - [Biostrings](https://bioconductor.org/packages/release/bioc/html/Biostrings.html) v2.70.1
- - [Python](https://www.python.org/) v3.12.10
- - [pandas](https://pandas.pydata.org/) v1.5.3 
- - [OpenPyXL](https://openpyxl.readthedocs.io/en/stable/) v3.1.5
- - [BLAST](https://www.ncbi.nlm.nih.gov/books/NBK52640/) v2.12.0
- - [SeqKit](https://bioinf.shenwei.me/seqkit/) v2.0.0
- - [Filtlong](https://github.com/rrwick/Filtlong) v0.2.1
- - [bedtools](https://bedtools.readthedocs.io/en/latest/) v2.30.0
- - [gzip](https://www.gzip.org/) v1.10
- - [pigz](https://zlib.net/pigz/) v2.6
-
 
 
 # Rule graph
