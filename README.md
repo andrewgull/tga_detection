@@ -49,7 +49,7 @@ The output is a TSV text file with observed, expected (theoretical) and correcte
 
 This repo contains a small dataset which you can use for testing purposes.
 
-To run the pipeline on this dataset, use `test.yaml` configuration file:
+To run the pipeline on this dataset, use `config/test.yaml` configuration file:
 
 ```bash
 snakemake --use-conda --cores <number_of_cores> --configfile config/test.yaml
