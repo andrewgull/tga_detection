@@ -33,7 +33,7 @@ Software:
 
 # Input & output
 
-All the input files are described in `config.yaml`:
+All the input files are described in `config/config.yaml`:
 
 - path to the TSV file with sample names and corresponding FASTQ files;
 - path to the TSV file with the analysis' parameters (see the section below)
@@ -55,7 +55,9 @@ To run the pipeline on this dataset, use `test.yaml` configuration file:
 snakemake --use-conda --cores <number_of_cores> --configfile config/test.yaml
 ```
 
-Depending on your computer it may take some time, but it should not take more than 1 hour.
+Depending on your computer, the process may take some time, but normally it should not exceed one hour.
+
+The results of this run will be saved in two files under `results/tables/` directory: `frequencies_all_test.tsv` and `frequencies_all_test.xlsx`. You can compare them to the expected results in `results/test_dataset/` directory available in this repository.
 
 ## Full run
 
@@ -69,7 +71,7 @@ snakemake --use-conda --cores <number_of_cores> --configfile config/config.yaml
 
 # Parameters
 
-The parameters for the analysis are specified in the `params.tsv` file. These parameters are:
+Parameters for the analysis and their values are specified in the `config/params.tsv` file. These parameters are:
 
 - minimum read length: reads shorter than this are discarded from the analysis.
 - fr_red_start and fr_red_end: the start and end positions of the flanking region 1.
@@ -89,6 +91,7 @@ The parameters for the analysis are specified in the `params.tsv` file. These pa
 - increment: increase in length of the DNA segment with each new blaSHV copy.
 - base_len: length of a blaSHV gene for expected  copy number calculation.
 - dist: the distance between BLAST hits to use in `bedtools merge`.
+
 
 
 # Rule graph
