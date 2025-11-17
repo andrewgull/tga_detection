@@ -96,4 +96,10 @@ Parameters for the analysis and their values are specified in the `config/params
 
 # Rule graph
 
-![DAG](images/rulegraph.png)
+## graphviz variant
+
+![DAG](images/rulegraph_graphviz.png)
+
+## snakevision variant
+
+![DAG](images/rulegraph_snakevision.svg)
