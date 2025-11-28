@@ -13,7 +13,7 @@ OS: Ubuntu 22.04.5 LTS
 Software:
 
  - [Snakemake](https://snakemake.readthedocs.io/en/stable/) v8.23.1
- - [R](https://www.r-project.org/) v4.4.0
+ - [R](https://www.r-project.org/) v4.4.3
  - [dplyr](https://dplyr.tidyverse.org/) v1.1.4
  - [readr](https://readr.tidyverse.org/) v2.1.5
  - [purrr](https://purrr.tidyverse.org/) v1.0.2
