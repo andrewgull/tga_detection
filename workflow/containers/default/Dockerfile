@@ -1,35 +1,43 @@
-ARG VERSION=0.0.1
+ARG VERSION=1.0
 ARG ENV_NAME=default
 
 # The build-stage image:
-FROM continuumio/miniconda3:23.5.2-0 AS build
+FROM mambaorg/micromamba:1.5.8 AS build
 
-ARG ENV_NAME
+ARG ENV_NAME=default
 
-# Install conda-pack:
-RUN conda install -c conda-forge conda-pack conda-libmamba-solver && \
-    conda config --set solver libmamba && \
-    conda create --name ${ENV_NAME} -c bioconda -c conda-forge \
+# Install tools using micromamba
+# We install to /tmp/env to avoid permission issues in the build container
+RUN micromamba create -y -p /tmp/env -c bioconda -c conda-forge \
     filtlong=0.2.1 \
     seqkit=2.0.0 \
     blast=2.12.0 \
     bedtools=2.30.0 \
     pandas=1.5.3 \
-    openpyxl=3.1.5
+    openpyxl=3.1.5 \
+    && micromamba clean --all --yes
 
-# The runtime-stage image; we can use Debian as the
-# base image since the Conda env also includes Python
-# for us.
-FROM debian:buster-slim AS runtime
+# The runtime-stage image
+FROM debian:bookworm-slim AS runtime
 
 ARG VERSION
 ARG ENV_NAME
 ENV VERSION=${VERSION}
+ENV PATH="/opt/conda/envs/${ENV_NAME}/bin:${PATH}"
+
+# Create a non-root user
+RUN groupadd -r appuser && useradd -r -g appuser appuser
+
+# Copy the environment from the build stage
+# We copy from /tmp/env to the final location
+COPY --from=build --chown=appuser:appuser /tmp/env /opt/conda/envs/${ENV_NAME}
 
 ################## METADATA ######################
 LABEL maintainer="andrei.guliaev@scilifelab.uu.se"
 LABEL version=${VERSION}
 LABEL env=${ENV_NAME}
-   
-COPY --from=build /opt/conda/envs/${ENV_NAME}/ /opt/conda/envs/${ENV_NAME}/
-ENV PATH=${PATH}:/opt/conda/envs/${ENV_NAME}/bin
+
+# Switch to non-root user
+USER appuser
+
+# No default command specified, but the environment is on the PATH
