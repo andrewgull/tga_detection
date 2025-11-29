@@ -16,6 +16,7 @@ parameters = tsv2dict(config["parameters"])
 
 #### Rules ####
 
+
 rule all:
     input:
         expand("results/final/{sample}_all.done", sample=sample_table["sample"]),
@@ -33,7 +34,8 @@ rule filter_reads:
         "results/logs/{sample}_filtlong.log",
     conda:
         "envs/filtlong.yaml"
-    container: config.get("default_container", "")
+    container:
+        config.get("default_container", "")
     params:
         min_len=parameters["min_read_len"],
     shell:
@@ -51,7 +53,8 @@ rule fq2fasta:
         "results/logs/{sample}_seqkit_fq2fa.log",
     conda:
         "envs/seqkit.yaml"
-    container: config.get("default_container", "")
+    container:
+        config.get("default_container", "")
     shell:
         "seqkit fq2fa -j {threads} {input} | pigz -c -p {threads} 1> {output} 2> {log}"
 
@@ -67,7 +70,8 @@ rule create_fr_red:
         "results/logs/seqkit_subseq_fr_red.log",
     conda:
         "envs/seqkit.yaml"
-    container: config.get("default_container", "")
+    container:
+        config.get("default_container", "")
     params:
         start=parameters["fr_red_start"],
         end=parameters["fr_red_end"],
@@ -86,7 +90,8 @@ rule create_fr_green:
         "results/logs/seqkit_subseq_fr_green.log",
     conda:
         "envs/seqkit.yaml"
-    container: config.get("default_container", "")
+    container:
+        config.get("default_container", "")
     params:
         start=parameters["fr_green_start"],
         end=parameters["fr_green_end"],
@@ -105,7 +110,8 @@ rule make_blast_db:
         "results/logs/{sample}_blastdb.log",
     conda:
         "envs/blast.yaml"
-    container: config.get("default_container", "")
+    container:
+        config.get("default_container", "")
     shell:
         "pigz -c -d -p {threads} {input} | makeblastdb -in - -dbtype nucl -title blastdb -out {output}/blastdb &> {log}"
 
@@ -125,7 +131,8 @@ rule blast_red:
         "results/logs/{sample}_blast_red.log",
     conda:
         "envs/blast.yaml"
-    container: config.get("default_container", "")
+    container:
+        config.get("default_container", "")
     shell:
         "blastn -query {input.query} -db {input.database}/blastdb -outfmt {params.fmt} "
         "-num_threads {threads} -num_alignments {params.n_alns} 1> {output} 2> {log}"
@@ -146,7 +153,8 @@ rule blast_green:
         "results/logs/{sample}_blast_green.log",
     conda:
         "envs/blast.yaml"
-    container: config.get("default_container", "")
+    container:
+        config.get("default_container", "")
     shell:
         "blastn -query {input.query} -db {input.database}/blastdb -outfmt {params.fmt} "
         "-num_threads {threads} -num_alignments {params.n_alns} 1> {output} 2> {log}"
@@ -165,7 +173,8 @@ rule create_repeat_unit:
         end=parameters["ru_end"],
     conda:
         "envs/seqkit.yaml"
-    container: config.get("default_container", "")
+    container:
+        config.get("default_container", "")
     shell:
         "seqkit subseq -r {params.start}:{params.end} {input} 1> {output} 2> {log}"
 
@@ -182,7 +191,8 @@ rule blast_repeat_unit:
         "results/logs/{sample}_blast_repeat_unit.log",
     conda:
         "envs/blast.yaml"
-    container: config.get("default_container", "")
+    container:
+        config.get("default_container", "")
     params:
         fmt=parameters["format"],
         n_alns=parameters["n_bla_aligns"],
@@ -203,6 +213,8 @@ rule filter_rr_ru_blast:
         "results/logs/{sample}_blast_joined.log",
     conda:
         "envs/rscripts.yaml"
+    container:
+        config.get("rscripts_container", "")
     params:
         identity=parameters["min_identity"],
         e_val=parameters["max_e_value"],
@@ -224,6 +236,8 @@ rule filter_min_orient_length:
         "results/logs/{sample}_filt_min_orient_len.log",
     conda:
         "envs/rscripts.yaml"
+    container:
+        config.get("rscripts_container", "")
     params:
         dist_to_end=parameters["dist_to_end"],
     script:
@@ -262,6 +276,8 @@ rule filter_flanking_regions:
         "results/logs/{sample}_blast_joined.log",
     conda:
         "envs/rscripts.yaml"
+    container:
+        config.get("rscripts_container", "")
     params:
         identity=parameters["min_identity"],
         e_val=parameters["max_e_value"],
@@ -282,7 +298,8 @@ rule blast_blaSHV:
         "results/logs/{sample}_blast_blaSHV.log",
     conda:
         "envs/blast.yaml"
-    container: config.get("default_container", "")
+    container:
+        config.get("default_container", "")
     params:
         fmt=parameters["format"],
         n_alns=parameters["n_bla_aligns"],
@@ -304,6 +321,8 @@ rule filter_blaSHV_hits:
         "results/logs/{sample}_blast_blaSHV_filter.log",
     conda:
         "envs/rscripts.yaml"
+    container:
+        config.get("rscripts_container", "")
     params:
         e_val=parameters["max_e_value"],
     script:
@@ -320,6 +339,8 @@ rule make_bed_blaSHV_filtered:
         "results/logs/{sample}_make_bed.log",
     conda:
         "envs/rscripts.yaml"
+    container:
+        config.get("rscripts_container", "")
     script:
         "scripts/make_bed.R"
 
@@ -335,7 +356,8 @@ rule merge_blaSHV_filtered:
         "results/logs/{sample}_bedtools_merge.log",
     conda:
         "envs/bedtools.yaml"
-    container: config.get("default_container", "")
+    container:
+        config.get("default_container", "")
     params:
         dist=parameters["dist"],
     shell:
@@ -354,6 +376,8 @@ rule blaSHV_counts:
         "results/logs/{sample}_blaSHV_counts.log",
     conda:
         "envs/rscripts.yaml"
+    container:
+        config.get("rscripts_container", "")
     params:
         length=parameters["bla_len"],
     script:
@@ -371,6 +395,8 @@ rule filter_by_distance_between_FR:
         "results/logs/{sample}_filter_by_distance_between_FR.log",
     conda:
         "envs/rscripts.yaml"
+    container:
+        config.get("rscripts_container", "")
     params:
         base=parameters["base_len"],
         ru_len=parameters["increment"],
@@ -389,6 +415,8 @@ rule frequency_calculation:
         "results/logs/{sample}_frequencies.log",
     conda:
         "envs/rscripts.yaml"
+    container:
+        config.get("rscripts_container", "")
     script:
         "scripts/final_calculations.R"
 
@@ -404,7 +432,8 @@ rule aggregate_freq_tables:
         "results/logs/aggregate_freq_tables.log",
     conda:
         "envs/pandas.yaml"
-    container: config.get("default_container", "")
+    container:
+        config.get("default_container", "")
     script:
         "scripts/aggregate_frequency_tables.py"
 
