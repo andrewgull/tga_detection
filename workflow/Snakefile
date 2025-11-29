@@ -255,6 +255,8 @@ rule cn_reads_bins:
         "results/logs/{sample}_cn_reads_bins.log",
     conda:
         "envs/biostrings.yaml"
+    container:
+        config.get("biostrings_container", "")
     params:
         max_cn=parameters["max_cn"],
         incr=parameters["increment"],
