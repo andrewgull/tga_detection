@@ -1,6 +1,11 @@
 # pipeline work files
 results/**
-resources/reads/
+resources/reads/**
+resources/reads_old/**
+resources/reads_separate/**
+resources/flanking_regions/
+resources/etc/
+resources/control_regions/
 figures/**
 examples/**
 *.html
