@@ -1,47 +1,56 @@
-ARG VERSION=2.70.1
-ARG ENV_NAME=biostrings
 
-# The build-stage image:
+# Build arguments
+ARG VERSION=2.70.1
+ARG CONDA_ENV=biostrings
+
+########################
+# Build Stage
+########################
 FROM mambaorg/micromamba:1.5.8 AS build
 
-ARG ENV_NAME=biostrings
+# Re-declare ARG for this stage
+ARG CONDA_ENV
 
-# Install tools using micromamba
-# R requires the environment to be at the same path as it was built.
-# We use a consistent path /opt/conda/envs/${ENV_NAME} for both build and runtime.
-# We ensure the parent directory is writable so micromamba can create the environment.
+# Ensure environment directory exists and is writable
 USER root
-RUN mkdir -p /opt/conda/envs && \
-    chown mambauser:mambauser /opt/conda/envs
+RUN mkdir -p /opt/conda/envs && chown mambauser:mambauser /opt/conda/envs
 USER mambauser
 
-RUN micromamba create -y -p /opt/conda/envs/${ENV_NAME} -c bioconda -c conda-forge \
+# Create the micromamba environment at a fixed path using CONDA_ENV
+RUN micromamba create -y -p /opt/conda/envs/${CONDA_ENV} -c bioconda -c conda-forge \
     r-base=4.3 \
     r-dplyr=1.1.4 \
     r-readr=2.1.5 \
     r-purrr=1.0.2 \
-    bioconductor-biostrings=2.70.1 \
+    bioconductor-biostrings=${VERSION} \
     && micromamba clean --all --yes
 
-# The runtime-stage image
+########################
+# Runtime Stage
+########################
 FROM debian:bookworm-slim AS runtime
 
+# Re-declare ARG for this stage
 ARG VERSION
-ARG ENV_NAME
-ENV VERSION=${VERSION}
-ENV PATH="/opt/conda/envs/${ENV_NAME}/bin:${PATH}"
+ARG CONDA_ENV
 
-# Create a non-root user
+# Set environment variables
+ENV VERSION=${VERSION}
+ENV CONDA_ENV=${CONDA_ENV}
+ENV PATH="/opt/conda/envs/${CONDA_ENV}/bin:${PATH}"
+
+# Create non-root user
 RUN groupadd -r appuser && useradd -r -g appuser appuser
 
-# Copy the environment from the build stage
-# We copy from the SAME path to the SAME path to ensure R works
-COPY --from=build --chown=appuser:appuser /opt/conda/envs/${ENV_NAME} /opt/conda/envs/${ENV_NAME}
+# Copy environment from build stage (same path, same name)
+COPY --from=build --chown=appuser:appuser /opt/conda/envs/${CONDA_ENV} /opt/conda/envs/${CONDA_ENV}
 
-################## METADATA ######################
+########################
+# Metadata
+########################
 LABEL maintainer="andrei.guliaev@scilifelab.uu.se"
 LABEL version=${VERSION}
-LABEL env=${ENV_NAME}
+LABEL env=${CONDA_ENV}
 
 # Switch to non-root user
 USER appuser
