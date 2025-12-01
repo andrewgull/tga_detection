@@ -9,7 +9,7 @@ for C in "${CONTAINERS[@]}"; do
     echo "Building SIF for container: $C"
     
     # Build Docker image
-    # docker build -t ${C} workflow/docker/${C}
+    docker build -t ${C} workflow/docker/${C}
     
     # Save Docker image to tar archive
     docker save -o workflow/docker/${C}.tar ${C}
