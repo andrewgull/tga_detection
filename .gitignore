@@ -1,5 +1,6 @@
 # pipeline work files
 results/**
+data/
 resources/reads/**
 resources/reads_old/**
 resources/reads_separate/**
