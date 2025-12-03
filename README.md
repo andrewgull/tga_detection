@@ -1,4 +1,5 @@
-[![Snakemake](https://img.shields.io/badge/snakemake-8.23.1-blue.svg?style=flat-square)](https://snakemake.bitbucket.io) ![R](https://img.shields.io/badge/R-4.4.3-blue.svg?style=flat-square)
+[![Snakemake](https://img.shields.io/badge/snakemake-8.23.1-blue.svg?style=flat-square)](https://snakemake.bitbucket.io) ![R](https://img.shields.io/badge/R-4.4.3-blue.svg?style=flat-square) ![Apptainer](https://img.shields.io/badge/Apptainer-1.3.4-blue)
+
 
 
 # Description
@@ -13,6 +14,7 @@ OS: Ubuntu 22.04.5 LTS
 Software:
 
  - [Snakemake](https://snakemake.readthedocs.io/en/stable/) v8.23.1
+ - [Apptainer](https://apptainer.org) v1.3.4
  - [R](https://www.r-project.org/) v4.4.3
  - [dplyr](https://dplyr.tidyverse.org/) v1.1.4
  - [readr](https://readr.tidyverse.org/) v2.1.5
@@ -49,13 +51,20 @@ The output is a TSV text file with observed, expected (theoretical) and correcte
 
 This repo contains a small dataset which you can use for testing purposes.
 
-To run the pipeline on this dataset, use `config/test.yaml` configuration file:
+To run the pipeline on this dataset using `Apptainer`:
 
 ```bash
-snakemake --use-conda --cores <number_of_cores> --configfile config/test.yaml
+snakemake --configfile config/config.yaml --profile profiles/apptainer
 ```
 
-Depending on your computer, the process may take some time, but normally it should not exceed one hour.
+
+To run the pipeline on this dataset using `conda`:
+
+```bash
+snakemake --use-conda --cores <number_of_cores> --configfile config/config.yaml
+```
+
+On a moderately powerful desktop computer, this process take a few minutes.
 
 The results of this run will be saved in two files under `results/tables/` directory: `frequencies_all_test.tsv` and `frequencies_all_test.xlsx`. You can compare them to the expected results in `results/test_dataset/` directory available in this repository.
 
@@ -63,7 +72,15 @@ The results of this run will be saved in two files under `results/tables/` direc
 
 The Nanopore long sequencing data can be found in the NCBI SRA database under the accession number PRJNA1299340.
 
-To run the pipeline on these samples, edit `config/samples.tsv` to include the actual paths to the FASTQ files and then run the pipeline using the `config.yaml` file:
+To run the pipeline on these samples, edit `config/samples.tsv` to include absolute paths to the FASTQ files on your computer, then edit `config/config.yaml` file to include (relative) path to `config/samples.tsv` (line `samples_table`):
+
+with `Apptainer` run:
+
+```bash
+snakemake --configfile config/config.yaml --profile profiles/apptainer
+```
+
+or with `conda` run:
 
 ```bash
 snakemake --use-conda --cores <number_of_cores> --configfile config/config.yaml
