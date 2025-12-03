@@ -15,6 +15,7 @@ RUN micromamba create -y -p /tmp/env -c bioconda -c conda-forge \
     bedtools=2.30.0 \
     pandas=1.5.3 \
     openpyxl=3.1.5 \
+    pigz=2.6 \
     && micromamba clean --all --yes
 
 # The runtime-stage image
