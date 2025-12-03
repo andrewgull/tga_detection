@@ -13,6 +13,7 @@ blaSHV: "resources/genes/blaSHV.fa"
 # name for the frequencies table without extension
 output_name: "results/tables/frequencies_test_apptainer"
 
+# paths to SIF files
 default_container: "resources/apptainer/default.sif"
 biostrings_container: "resources/apptainer/biostrings.sif"
 rscripts_container: "resources/apptainer/rscripts.sif"
