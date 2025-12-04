@@ -104,24 +104,24 @@ Commands to run the pipeline with `Apptainer` and `conda` are the same as for th
 
 Parameters for the analysis and their values are specified in the `config/params.tsv` file. These parameters are:
 
-- minimum read length: reads shorter than this are discarded from the analysis.
-- fr_red_start and fr_red_end: the start and end positions of the flanking region 1.
-- fr_green_start and fr_green_end: the start and end positions of the flanking region 2.
-- ru_start and ru_end: the start and end positions of the repeat unit (IS element).
-- bla_start and bla_end: the start and end positions of the blaSHV gene.
-- format: blast output format.
-- n_fr_aligns: the number of flanking region alignments to consider.
-- n_bla_aligns: the number of blaSHV gene alignments to consider.
-- min_fr_len: the minimum length of the flanking region to consider.
-- min_identity: the minimum identity BLAST hits to consider.
-- max_e_value: the maximum E-value of BLAST hits to consider.
-- min_ru_len: the minimum length of the repeat unit to consider.
-- max_dist: the maximum distance between the BLAST hits to consider.
-- dist_to_end: the distance from the end of the read to the end of the repeat unit to consider.
-- max_cn: the maximum copy number of the repeat unit to consider.
-- increment: increase in length of the DNA segment with each new blaSHV copy.
-- base_len: length of a blaSHV gene for expected  copy number calculation.
-- dist: the distance between BLAST hits to use in `bedtools merge`.
+- *minimum read length*: reads shorter than this are discarded from the analysis.
+- *fr_red_start* and *fr_red_end*: the start and end positions of the flanking region 1.
+- *fr_green_start* and *fr_green_end*: the start and end positions of the flanking region 2.
+- *ru_start* and *ru_end*: the start and end positions of the repeat unit (IS element).
+- *bla_start* and *bla_end*: the start and end positions of the blaSHV gene.
+- *format*: blast output format.
+- *n_fr_aligns*: the number of flanking region alignments to consider.
+- *n_bla_aligns*: the number of blaSHV gene alignments to consider.
+- *min_fr_len*: the minimum length of the flanking region to consider.
+- *min_identity*: the minimum identity BLAST hits to consider.
+- *max_e_value*: the maximum E-value of BLAST hits to consider.
+- *min_ru_len*: the minimum length of the repeat unit to consider.
+- *max_dist*: the maximum distance between the BLAST hits to consider.
+- *dist_to_end*: the distance from the end of the read to the end of the repeat unit to consider.
+- *max_cn*: the maximum copy number of the repeat unit to consider.
+- *increment*: increase in length of the DNA segment with each new blaSHV copy.
+- *base_len*: length of a blaSHV gene for expected  copy number calculation.
+- *dist*: the distance between BLAST hits to use in `bedtools merge`.
 
 
 
