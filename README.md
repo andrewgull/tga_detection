@@ -46,7 +46,7 @@ If you choose to use conda environments, Snakemake will take care of installing 
 
 ## Quick run on the test data
 
-### Using `Apptainer`:
+### Using `Apptainer`
 
 ```bash
 snakemake --use-singularity --configfile config/config.yaml --cores <number_of_cores> --singularity-args "--bind /path/to/data"
@@ -60,7 +60,7 @@ snakemake --configfile config/config.yaml --profile profiles/apptainer
 
 in this case you may want to edit the `profiles/apptainer/config.yaml` file to include the path to the data directory in the `singularity-args` field as well as the paths to the cache and tmp directories in the `envvars` section.
 
-### Using `conda`:
+### Using `conda`
 
 ```bash
 snakemake --use-conda --cores <number_of_cores> --configfile config/config.yaml
@@ -135,7 +135,7 @@ Parameters for the analysis and their values are specified in the `config/params
 
 ![DAG](images/rulegraph_snakevision.svg)
 
-# Dependencies
+# Software used for the analysis
 
 OS: Ubuntu 22.04.5 LTS
 
@@ -158,5 +158,3 @@ Software:
  - [bedtools](https://bedtools.readthedocs.io/en/latest/) v2.30.0
  - [gzip](https://www.gzip.org/) v1.10
  - [pigz](https://zlib.net/pigz/) v2.6
-
-**NB:** Given that you have Snakemake installed, all other dependencies will be installed and deployed automatically when you run the pipeline (see below).
