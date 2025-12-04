@@ -35,10 +35,10 @@ To use containers you need to have both `Apptainer` and `Docker` installed. To u
 If you choose to use containers, you need to build the containers first by running:
 
 ```bash
-bash workflow/scripts/build_sif.sh
+bash workflow/docker/build_sif.sh
 ```
 
-This script will use Dockerfiles in the `workflow/docker/` directory to build the containers and place them in `resources/apptainer/` directory.
+This script will use Dockerfiles located under this directory to build the containers and place them in `resources/apptainer/` directory where `snakemake` will look for them.
 
 ## Conda environments
 
