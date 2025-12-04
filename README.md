@@ -5,35 +5,9 @@
 # Description
 
 This is the code for detecting tandem gene amplifications in ultra-deep Nanopore long read sequencing data at frequencies as low as $10^{-5}$.
-The full study and method description will be available soon.
+The full study and method description will be available soon. Reproducibility of the results is guaranteed by the use of Snakemake, Conda environments and Apptainer containers.
 
-# Dependencies
-
-OS: Ubuntu 22.04.5 LTS
-
-Software:
-
- - [Snakemake](https://snakemake.readthedocs.io/en/stable/) v8.23.1
- - [Apptainer](https://apptainer.org) v1.3.4
- - [R](https://www.r-project.org/) v4.4.3
- - [dplyr](https://dplyr.tidyverse.org/) v1.1.4
- - [readr](https://readr.tidyverse.org/) v2.1.5
- - [purrr](https://purrr.tidyverse.org/) v1.0.2
- - [tidyr](https://tidyr.tidyverse.org/) v1.3.1
- - [Biostrings](https://bioconductor.org/packages/release/bioc/html/Biostrings.html) v2.70.1
- - [Python](https://www.python.org/) v3.12.10
- - [pandas](https://pandas.pydata.org/) v1.5.3 
- - [OpenPyXL](https://openpyxl.readthedocs.io/en/stable/) v3.1.5
- - [BLAST](https://www.ncbi.nlm.nih.gov/books/NBK52640/) v2.12.0
- - [SeqKit](https://bioinf.shenwei.me/seqkit/) v2.0.0
- - [Filtlong](https://github.com/rrwick/Filtlong) v0.2.1
- - [bedtools](https://bedtools.readthedocs.io/en/latest/) v2.30.0
- - [gzip](https://www.gzip.org/) v1.10
- - [pigz](https://zlib.net/pigz/) v2.6
-
-**NB:** Given that you have Snakemake installed, all other dependencies will be installed and deployed automatically when you run the pipeline (see below).
-
-# Input & output
+## Input
 
 All the input files are described in `config/config.yaml`:
 
@@ -43,48 +17,88 @@ All the input files are described in `config/config.yaml`:
 - path to the FASTA file with the blaSHV gene sequence;
 - path to the output file name (without extension);
 
-The output is a TSV text file with observed, expected (theoretical) and corrected gene counts, observed, expected and corrected gene frequency, as well as detection limit for each sample and copy number variant of the gene.
+## Output
+
+The output is a TSV text file with 
+- observed, expected (theoretical) and corrected gene counts, 
+- observed, expected and corrected gene frequency, 
+- detection limit for each sample and 
+- copy number variant of the gene.
 
 # Usage
 
-## Test run
+You can run the analysis using containers (recommended) or conda environments.
+To use containers you need to have both `Apptainer` and `Docker` installed. To use conda environments you need to have `conda` installed.
 
-This repo contains a small dataset which you can use for testing purposes.
+## Preparing containers
 
-To run the pipeline on this dataset using `Apptainer`:
+If you choose to use containers, you need to build the containers first by running:
+
+```bash
+bash workflow/scripts/build_sif.sh
+```
+
+This script will use Dockerfiles in the `workflow/docker/` directory to build the containers and place them in `resources/apptainer/` directory.
+
+## Conda environments
+
+If you choose to use conda environments, Snakemake will take care of installing all the dependencies automatically.
+
+## Quick run on the test data
+
+### Using `Apptainer`:
+
+```bash
+snakemake --use-singularity --configfile config/config.yaml --cores <number_of_cores> --singularity-args "--bind /path/to/data"
+```
+
+or simply
 
 ```bash
 snakemake --configfile config/config.yaml --profile profiles/apptainer
 ```
 
+in this case you may want to edit the `profiles/apptainer/config.yaml` file to include the path to the data directory in the `singularity-args` field as well as the paths to the cache and tmp directories in the `envvars` section.
 
-To run the pipeline on this dataset using `conda`:
+### Using `conda`:
 
 ```bash
 snakemake --use-conda --cores <number_of_cores> --configfile config/config.yaml
 ```
 
-On a moderately powerful desktop computer, this process take a few minutes.
+On a moderately powerful desktop computer, this process takes a couple of minutes to finish.
 
 The results of this run will be saved in two files under `results/tables/` directory: `frequencies_all_test.tsv` and `frequencies_all_test.xlsx`. You can compare them to the expected results in `results/test_dataset/` directory available in this repository.
 
 ## Full run
 
-The Nanopore long sequencing data can be found in the NCBI SRA database under the accession number PRJNA1299340.
+The Nanopore long sequencing data can be found in the NCBI SRA database under the accession number **PRJNA1299340**.
 
-To run the pipeline on these samples, edit `config/samples.tsv` to include absolute paths to the FASTQ files on your computer, then edit `config/config.yaml` file to include (relative) path to `config/samples.tsv` (line `samples_table`):
+To run the pipeline on these samples, edit `config/samples.tsv` to include absolute paths to the FASTQ files on your computer, then replace
 
-with `Apptainer` run:
-
-```bash
-snakemake --configfile config/config.yaml --profile profiles/apptainer
+```yaml
+sample_table: "config/samples_test.tsv"
 ```
 
-or with `conda` run:
+with
 
-```bash
-snakemake --use-conda --cores <number_of_cores> --configfile config/config.yaml
+```yaml
+sample_table: "config/samples.tsv"
 ```
+
+and replace
+
+```yaml
+output_name: "results/tables/frequencies_test"
+```
+
+with
+
+```yaml
+output_name: "results/tables/frequencies"
+```
+
+Commands to run the pipeline with `Apptainer` and `conda` are the same as for the quick run.
 
 # Parameters
 
@@ -117,6 +131,32 @@ Parameters for the analysis and their values are specified in the `config/params
 
 ![DAG](images/rulegraph_graphviz.png)
 
-## snakevision variant
+## [snakevision](https://github.com/OpenOmics/snakevision) variant
 
 ![DAG](images/rulegraph_snakevision.svg)
+
+# Dependencies
+
+OS: Ubuntu 22.04.5 LTS
+
+Software:
+
+ - [Snakemake](https://snakemake.readthedocs.io/en/stable/) v8.23.1
+ - [Apptainer](https://apptainer.org) v1.3.4
+ - [R](https://www.r-project.org/) v4.4.3
+ - [dplyr](https://dplyr.tidyverse.org/) v1.1.4
+ - [readr](https://readr.tidyverse.org/) v2.1.5
+ - [purrr](https://purrr.tidyverse.org/) v1.0.2
+ - [tidyr](https://tidyr.tidyverse.org/) v1.3.1
+ - [Biostrings](https://bioconductor.org/packages/release/bioc/html/Biostrings.html) v2.70.1
+ - [Python](https://www.python.org/) v3.12.10
+ - [pandas](https://pandas.pydata.org/) v1.5.3 
+ - [OpenPyXL](https://openpyxl.readthedocs.io/en/stable/) v3.1.5
+ - [BLAST](https://www.ncbi.nlm.nih.gov/books/NBK52640/) v2.12.0
+ - [SeqKit](https://bioinf.shenwei.me/seqkit/) v2.0.0
+ - [Filtlong](https://github.com/rrwick/Filtlong) v0.2.1
+ - [bedtools](https://bedtools.readthedocs.io/en/latest/) v2.30.0
+ - [gzip](https://www.gzip.org/) v1.10
+ - [pigz](https://zlib.net/pigz/) v2.6
+
+**NB:** Given that you have Snakemake installed, all other dependencies will be installed and deployed automatically when you run the pipeline (see below).
