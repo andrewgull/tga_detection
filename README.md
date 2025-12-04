@@ -27,29 +27,26 @@ The output is a TSV text file with
 
 # Usage
 
+If you don't have `Snakemake` installed, [install it](https://snakemake.readthedocs.io/en/stable/getting_started/installation.html).
+
 You can run the analysis using containers (recommended) or conda environments.
-To use containers you need to have both `Apptainer` and `Docker` installed. To use conda environments you need to have `conda` installed.
+
+To use containers you need to have both `Apptainer` and `Docker` installed.
 
 ## Preparing containers
 
-If you choose to use containers, you need to build the containers first by running:
-
-```bash
-bash workflow/docker/build_sif.sh
-```
-
-This script will use Dockerfiles located under this directory to build the containers and place them in `resources/apptainer/` directory where `snakemake` will look for them.
+If you want to use containers, read [here](workflow/docker/README.md) how to build them.
 
 ## Conda environments
 
-If you choose to use conda environments, Snakemake will take care of installing all the dependencies automatically.
+If you want to use conda environments, Snakemake will take care of installing all the dependencies automatically.
 
 ## Quick run on the test data
 
 ### Using `Apptainer`
 
 ```bash
-snakemake --use-singularity --configfile config/config.yaml --cores <number_of_cores> --singularity-args "--bind /path/to/data"
+snakemake --use-singularity --configfile config/config.yaml --cores 2 --singularity-args "--bind ${PWD}/config/,${PWD}/results/"
 ```
 
 or simply
@@ -58,12 +55,12 @@ or simply
 snakemake --configfile config/config.yaml --profile profiles/apptainer
 ```
 
-in this case you may want to edit the `profiles/apptainer/config.yaml` file to include the path to the data directory in the `singularity-args` field as well as the paths to the cache and tmp directories in the `envvars` section.
+in this case you may want to edit the `profiles/apptainer/config.yaml` file to include the paths to the test dataset and apptainer's cache and tmp directories.
 
 ### Using `conda`
 
 ```bash
-snakemake --use-conda --cores <number_of_cores> --configfile config/config.yaml
+snakemake --use-conda --cores 2 --configfile config/config.yaml
 ```
 
 On a moderately powerful desktop computer, this process takes a couple of minutes to finish.
@@ -98,7 +95,7 @@ with
 output_name: "results/tables/frequencies"
 ```
 
-Commands to run the pipeline with `Apptainer` and `conda` are the same as for the quick run.
+Commands to run the pipeline with `Apptainer` and `conda` are the same as for the quick run, except for the `--singularity-args` option: you might need to bind directory with the actual data to the container.
 
 # Parameters
 
