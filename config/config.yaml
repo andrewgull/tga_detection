@@ -11,7 +11,7 @@ plasmid: "resources/plasmid/CP061207.1.fasta"
 blaSHV: "resources/genes/blaSHV.fa"
 
 # name for the frequencies table without extension
-output_name: "results/tables/frequencies_test_apptainer"
+output_name: "results/tables/frequencies_test"
 
 # paths to SIF files
 default_container: "resources/apptainer/default.sif"
