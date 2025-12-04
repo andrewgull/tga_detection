@@ -4,19 +4,14 @@ __email__ = "andrei.guliaev@scilifelab.uu.se"
 __license__ = "GPL-3"
 
 from snakemake.io import expand, directory, touch, temp
-from scripts.utils import get_sample_path, tsv2dict
 import pandas as pd
 
+include: "rules/common.smk"
 
-# read strain names
 sample_table = pd.read_csv(config["sample_table"], sep="\t", dtype={"sample": str, "path": str})
-
-# read parameters into a dictionary
 parameters = tsv2dict(config["parameters"])
 
 #### Rules ####
-
-
 rule all:
     input:
         expand("results/final/{sample}_all.done", sample=sample_table["sample"]),
