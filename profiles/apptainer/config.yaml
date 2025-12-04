@@ -1,7 +1,6 @@
-cores: 8
 rerun-incomplete: True
 software-deployment-method: apptainer
-singularity-args: "--cleanenv --bind /home/andrei/Data/nano-cnv"
+singularity-args: "--cleanenv --bind /path/to/bind"
 envvars:
-  APPTAINER_CACHEDIR: /home/andrei/Data/singularity/cache
-  APPTAINER_TMPDIR: /home/andrei/Data/singularity/tm
+  APPTAINER_CACHEDIR: /path/to/cache
+  APPTAINER_TMPDIR: /path/to/tmp
