@@ -1,9 +1,13 @@
 #!/usr/bin/bash
 
 CONTAINERS=( "default" "rscripts" "biostrings" )
+OUTPUT_DIR="resources/apptainer"
 
-export APPTAINER_TMPDIR=/home/andrei/Data/singularity/tmp
-export APPTAINER_CACHEDIR=/home/andrei/Data/singularity/cache
+# Check if the output directory exists, if not, create it
+if [ ! -d "$OUTPUT_DIR" ]; then
+    echo "Directory '$OUTPUT_DIR' does not exist. Creating it now..."
+    mkdir -p "$OUTPUT_DIR"
+fi
 
 for C in "${CONTAINERS[@]}"; do
     echo "Building SIF for container: $C"
@@ -15,12 +19,12 @@ for C in "${CONTAINERS[@]}"; do
     docker save -o workflow/docker/${C}.tar ${C}
     
     # Build Apptainer/Singularity image from Docker archive
-    singularity build resources/apptainer/${C}.sif docker-archive://workflow/docker/${C}.tar
+    singularity build ${OUTPUT_DIR}/${C}.sif docker-archive://workflow/docker/${C}.tar
     
     # Clean up tar file after successful build
     rm -f workflow/docker/${C}.tar
     
-    echo "Successfully built resources/apptainer/${C}.sif"
+    echo "Successfully built ${OUTPUT_DIR}/${C}.sif"
 done
 
 echo "All containers built successfully."
