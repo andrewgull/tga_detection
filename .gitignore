@@ -16,6 +16,7 @@ examples/**
 workflow/notebooks/fasta/
 workflow/notebooks/tables/
 *.sif
+*.tar
 samples_list.txt
 copy_reads_multiple_source_paths.py
 
@@ -26,6 +27,9 @@ copy_reads_multiple_source_paths.py
 
 # PyCharm
 .idea
+
+# pixi
+.pixi/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
