@@ -37,7 +37,7 @@ To use containers you need to have both [`Apptainer`](https://apptainer.org/docs
 
 ## Preparing containers
 
-If you want to use containers, read [here](workflow/docker/README.md) how to build them.
+If you want to use containers, read [here](resources/containers/README.md) how to build them.
 
 ## Conda environments
 
