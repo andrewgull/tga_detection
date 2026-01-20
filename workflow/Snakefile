@@ -35,7 +35,7 @@ rule filter_reads:
     conda:
         "envs/filtlong.yaml"
     container:
-        config.get("containers", "").get("default", "")
+        config["containers"]["default"]
     params:
         min_len=parameters["min_read_len"],
     shell:
@@ -54,7 +54,7 @@ rule fq2fasta:
     conda:
         "envs/seqkit.yaml"
     container:
-        config.get("containers", "").get("default", "")
+        config["containers"]["default"]
     shell:
         "seqkit fq2fa -j {threads} {input} | pigz -c -p {threads} 1> {output} 2> {log}"
 
@@ -71,7 +71,7 @@ rule create_fr_red:
     conda:
         "envs/seqkit.yaml"
     container:
-        config.get("containers", "").get("default", "")
+        config["containers"]["default"]
     params:
         start=parameters["fr_red_start"],
         end=parameters["fr_red_end"],
@@ -91,7 +91,7 @@ rule create_fr_green:
     conda:
         "envs/seqkit.yaml"
     container:
-        config.get("containers", "").get("default", "")
+        config["containers"]["default"]
     params:
         start=parameters["fr_green_start"],
         end=parameters["fr_green_end"],
@@ -111,7 +111,7 @@ rule make_blast_db:
     conda:
         "envs/blast.yaml"
     container:
-        config.get("containers", "").get("default", "")
+        config["containers"]["default"]
     shell:
         "pigz -c -d -p {threads} {input} | makeblastdb -in - -dbtype nucl -title blastdb -out {output}/blastdb &> {log}"
 
@@ -132,7 +132,7 @@ rule blast_red:
     conda:
         "envs/blast.yaml"
     container:
-        config.get("containers", "").get("default", "")
+        config["containers"]["default"]
     shell:
         "blastn -query {input.query} -db {input.database}/blastdb -outfmt {params.fmt} "
         "-num_threads {threads} -num_alignments {params.n_alns} 1> {output} 2> {log}"
@@ -154,7 +154,7 @@ rule blast_green:
     conda:
         "envs/blast.yaml"
     container:
-        config.get("containers", "").get("default", "")
+        config["containers"]["default"]
     shell:
         "blastn -query {input.query} -db {input.database}/blastdb -outfmt {params.fmt} "
         "-num_threads {threads} -num_alignments {params.n_alns} 1> {output} 2> {log}"
@@ -174,7 +174,7 @@ rule create_repeat_unit:
     conda:
         "envs/seqkit.yaml"
     container:
-        config.get("containers", "").get("default", "")
+        config["containers"]["default"]
     shell:
         "seqkit subseq -r {params.start}:{params.end} {input} 1> {output} 2> {log}"
 
@@ -192,7 +192,7 @@ rule blast_repeat_unit:
     conda:
         "envs/blast.yaml"
     container:
-        config.get("containers", "").get("default", "")
+        config["containers"]["default"]
     params:
         fmt=parameters["format"],
         n_alns=parameters["n_bla_aligns"],
@@ -214,7 +214,7 @@ rule filter_rr_ru_blast:
     conda:
         "envs/rscripts.yaml"
     container:
-        config.get("containers", "").get("rscripts", "")
+        config["containers"]["rscripts"]
     params:
         identity=parameters["min_identity"],
         e_val=parameters["max_e_value"],
@@ -237,7 +237,7 @@ rule filter_min_orient_length:
     conda:
         "envs/rscripts.yaml"
     container:
-        config.get("containers", "").get("rscripts", "")
+        config["containers"]["rscripts"]
     params:
         dist_to_end=parameters["dist_to_end"],
     script:
@@ -256,7 +256,7 @@ rule cn_reads_bins:
     conda:
         "envs/biostrings.yaml"
     container:
-        config.get("containers", "").get("biostrings", "")
+        config["containers"]["biostrings"]
     params:
         max_cn=parameters["max_cn"],
         incr=parameters["increment"],
@@ -279,7 +279,7 @@ rule filter_flanking_regions:
     conda:
         "envs/rscripts.yaml"
     container:
-        config.get("containers", "").get("rscripts", "")
+        config["containers"]["rscripts"]
     params:
         identity=parameters["min_identity"],
         e_val=parameters["max_e_value"],
@@ -301,7 +301,7 @@ rule blast_blaSHV:
     conda:
         "envs/blast.yaml"
     container:
-        config.get("containers", "").get("default", "")
+        config["containers"]["default"]
     params:
         fmt=parameters["format"],
         n_alns=parameters["n_bla_aligns"],
@@ -324,7 +324,7 @@ rule filter_blaSHV_hits:
     conda:
         "envs/rscripts.yaml"
     container:
-        config.get("containers", "").get("rscripts", "")
+        config["containers"]["rscripts"]
     params:
         e_val=parameters["max_e_value"],
     script:
@@ -342,7 +342,7 @@ rule make_bed_blaSHV_filtered:
     conda:
         "envs/rscripts.yaml"
     container:
-        config.get("containers", "").get("rscripts", "")
+        config["containers"]["rscripts"]
     script:
         "scripts/make_bed.R"
 
@@ -359,7 +359,7 @@ rule merge_blaSHV_filtered:
     conda:
         "envs/bedtools.yaml"
     container:
-        config.get("containers", "").get("default", "")
+        config["containers"]["default"]
     params:
         dist=parameters["dist"],
     shell:
@@ -379,7 +379,7 @@ rule blaSHV_counts:
     conda:
         "envs/rscripts.yaml"
     container:
-        config.get("containers", "").get("rscripts", "")
+        config["containers"]["rscripts"]
     params:
         length=parameters["bla_len"],
     script:
@@ -398,7 +398,7 @@ rule filter_by_distance_between_FR:
     conda:
         "envs/rscripts.yaml"
     container:
-        config.get("containers", "").get("rscripts", "")
+        config["containers"]["rscripts"]
     params:
         base=parameters["base_len"],
         ru_len=parameters["increment"],
@@ -418,7 +418,7 @@ rule frequency_calculation:
     conda:
         "envs/rscripts.yaml"
     container:
-        config.get("containers", "").get("rscripts", "")
+        config["containers"]["rscripts"]
     script:
         "scripts/final_calculations.R"
 
@@ -435,7 +435,7 @@ rule aggregate_freq_tables:
     conda:
         "envs/pandas.yaml"
     container:
-        config.get("containers", "").get("default", "")
+        config["containers"]["default"]
     script:
         "scripts/aggregate_frequency_tables.py"
 
