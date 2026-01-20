@@ -6,10 +6,15 @@ __license__ = "GPL-3"
 from snakemake.io import expand, directory, touch, temp
 import pandas as pd
 
+
 include: "rules/common.smk"
 
-sample_table = pd.read_csv(config["sample_table"], sep="\t", dtype={"sample": str, "path": str})
+
+sample_table = pd.read_csv(
+    config["sample_table"], sep="\t", dtype={"sample": str, "path": str}
+)
 parameters = tsv2dict(config["parameters"])
+
 
 #### Rules ####
 rule all:
@@ -86,7 +91,7 @@ rule create_fr_green:
     conda:
         "envs/seqkit.yaml"
     container:
-        config.get("default_container", "")
+        config.get("containers", "").get("default", "")
     params:
         start=parameters["fr_green_start"],
         end=parameters["fr_green_end"],
@@ -169,7 +174,7 @@ rule create_repeat_unit:
     conda:
         "envs/seqkit.yaml"
     container:
-        config.get("default_container", "")
+        config.get("containers", "").get("default", "")
     shell:
         "seqkit subseq -r {params.start}:{params.end} {input} 1> {output} 2> {log}"
 
@@ -209,7 +214,7 @@ rule filter_rr_ru_blast:
     conda:
         "envs/rscripts.yaml"
     container:
-        config.get("rscripts_container", "")
+        config.get("containers", "").get("rscripts", "")
     params:
         identity=parameters["min_identity"],
         e_val=parameters["max_e_value"],
