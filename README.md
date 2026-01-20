@@ -1,7 +1,5 @@
 [![Snakemake](https://img.shields.io/badge/snakemake-8.23.1-blue.svg?style=flat-square)](https://snakemake.bitbucket.io) ![R](https://img.shields.io/badge/R-4.4.3-blue.svg?style=flat-square) ![Apptainer](https://img.shields.io/badge/Apptainer-1.3.4-blue)
 
-
-
 # Description
 
 This is the code for detecting tandem gene amplifications in ultra-deep Nanopore long read sequencing data at frequencies as low as $10^{-5}$.
@@ -37,13 +35,47 @@ To use containers you need to have both [`Apptainer`](https://apptainer.org/docs
 
 ## Preparing containers
 
-If you want to use containers, read [here](resources/containers/README.md) how to build them.
+If you want to use containers, read [our container build instructions](resources/containers/README.md) how to build them.
 
 ## Conda environments
 
 If you want to use conda environments, Snakemake will take care of installing all the dependencies automatically.
 
 ## Quick run on the test data
+
+### Using [`Pixi`](https://pixi.prefix.dev/latest/)
+
+To run the workflow using Pixi tasks, you can use the following commands:
+
+1. **Dry Run**: To see what will happen without executing the tasks, run:
+
+   ```bash
+   pixi dry-run
+   ```
+
+2. **Run with Conda**: To execute the workflow using Conda environments, use:
+
+   ```bash
+   pixi run-conda
+   ```
+
+3. **Run with Apptainer**: To execute the workflow using Apptainer containers, run:
+
+   ```bash
+   pixi run-apptainer
+   ```
+
+4. **Generate Rule Graph**: To visualize the workflow rules, execute:
+
+   ```bash
+   pixi rulegraph
+   ```
+
+5. **Generate DAG**: To create a Directed Acyclic Graph (DAG) of the workflow, use:
+
+   ```bash
+   pixi dag
+   ```
 
 ### Using `Apptainer`
 
