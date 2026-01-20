@@ -1,4 +1,5 @@
 #!/usr/bin/bash
+set -e
 
 CONTAINERS=( "default" "rscripts" "biostrings" )
 OUTPUT_DIR="resources/apptainer"
