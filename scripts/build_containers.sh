@@ -1,5 +1,13 @@
 #!/usr/bin/bash
-set -e
+set -euo pipefail
+
+cleanup_tar() {
+    for C in "${CONTAINERS[@]}"; do
+        rm -f resources/containers/${C}.tar
+    done
+}
+
+trap cleanup_tar EXIT
 
 CONTAINERS=( "default" "rscripts" "biostrings" )
 OUTPUT_DIR="resources/apptainer"
