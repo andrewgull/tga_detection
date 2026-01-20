@@ -28,6 +28,8 @@ copy_reads_multiple_source_paths.py
 # PyCharm
 .idea
 
+.vscode
+
 # pixi
 .pixi/
 
