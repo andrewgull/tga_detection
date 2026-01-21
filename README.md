@@ -1,6 +1,4 @@
-[![Snakemake](https://img.shields.io/badge/snakemake-8.23.1-blue.svg?style=flat-square)](https://snakemake.bitbucket.io) ![R](https://img.shields.io/badge/R-4.4.3-blue.svg?style=flat-square) ![Apptainer](https://img.shields.io/badge/Apptainer-1.3.4-blue)
-
-
+[![Snakemake](https://img.shields.io/badge/snakemake-8.23.1-blue.svg?style=flat-square)](https://snakemake.bitbucket.io) ![R](https://img.shields.io/badge/R-4.4.3-blue.svg?style=flat-square) ![Apptainer](https://img.shields.io/badge/Apptainer-1.3.4-blue)![CodeRabbit Pull Request Reviews](https://img.shields.io/coderabbit/prs/github/andrewgull/tga_detection?utm_source=oss&utm_medium=github&utm_campaign=andrewgull%2Ftga_detection&labelColor=171717&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews)
 
 # Description
 
@@ -37,7 +35,7 @@ To use containers you need to have both [`Apptainer`](https://apptainer.org/docs
 
 ## Preparing containers
 
-If you want to use containers, read [here](workflow/docker/README.md) how to build them.
+If you want to use containers, read [our container build instructions](resources/containers/README.md) how to build them.
 
 ## Conda environments
 
@@ -68,6 +66,41 @@ snakemake --sdm conda --cores 2 --configfile config/config.yaml
 On a moderately powerful desktop computer, this process takes a couple of minutes to finish.
 
 The results of this run will be saved in two files under `results/tables/` directory: `frequencies_all_test.tsv` and `frequencies_all_test.xlsx`. You can compare them to the expected results in `results/test_dataset/` directory available in this repository.
+
+### Using [`Pixi`](https://pixi.prefix.dev/latest/)
+
+To run the workflow using Pixi tasks, you can use the following commands:
+
+1. **Dry Run**: To see what will happen without executing the tasks, run:
+
+   ```bash
+   pixi run dry-run
+   ```
+
+2. **Run with Conda**: To execute the workflow using Conda environments, use:
+
+   ```bash
+   pixi run run-conda
+   ```
+
+3. **Run with Apptainer**: To execute the workflow using Apptainer containers, run:
+
+   ```bash
+   pixi run run-apptainer
+   ```
+
+4. **Generate Rule Graph**: To visualize the workflow rules, execute:
+
+   ```bash
+   pixi run rulegraph
+   ```
+
+5. **Generate DAG**: To create a Directed Acyclic Graph (DAG) of the workflow, use:
+
+   ```bash
+   pixi run dag
+   ```
+
 
 ## Full run
 

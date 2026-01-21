@@ -22,7 +22,7 @@ We provide a helper script to automate the build process.
 
 **1. Run from the Project Root:**
 ```bash
-bash workflow/docker/build_sif.sh
+bash scripts/build_containers.sh
 ```
 
 This script will use Dockerfiles located under this directory to build the containers and place them in `resources/apptainer/` directory where `snakemake` will look for them.

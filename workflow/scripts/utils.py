@@ -15,7 +15,9 @@ def get_sample_path(wildcards: Any, data_frame: pd.DataFrame) -> str:
     if not row.empty:
         return row["path"].values[0]
     else:
-        raise ValueError(f"Sample '{wildcards.sample}' not found in the provided DataFrame.")
+        raise ValueError(
+            f"Sample '{wildcards.sample}' not found in the provided DataFrame."
+        )
 
 
 def tsv2dict(file_path: str) -> dict:
@@ -26,10 +28,10 @@ def tsv2dict(file_path: str) -> dict:
     returns:
         dict: A dictionary with parameters as keys and their values.
     """
-    df = pd.read_csv(
-        file_path,
-        sep="\t",
-        dtype={"param": str, "value": str}
-    )
+    df = pd.read_csv(file_path, sep="\t", dtype={"param": str, "value": str})
     data_dict = df.set_index("param")["value"].to_dict()
     return data_dict
+
+
+if __name__ == "__main__":
+    print("hello, this is utils.py")

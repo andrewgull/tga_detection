@@ -14,6 +14,7 @@ blaSHV: "resources/genes/blaSHV.fa"
 output_name: "results/tables/frequencies_test"
 
 # paths to SIF files
-default_container: "resources/apptainer/default.sif"
-biostrings_container: "resources/apptainer/biostrings.sif"
-rscripts_container: "resources/apptainer/rscripts.sif"
+containers:
+  default: "resources/apptainer/default.sif"
+  biostrings: "resources/apptainer/biostrings.sif"
+  rscripts: "resources/apptainer/rscripts.sif"
