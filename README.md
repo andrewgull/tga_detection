@@ -1,4 +1,4 @@
-[![Snakemake](https://img.shields.io/badge/snakemake-8.23.1-blue.svg?style=flat-square)](https://snakemake.bitbucket.io) ![R](https://img.shields.io/badge/R-4.4.3-blue.svg?style=flat-square) ![Apptainer](https://img.shields.io/badge/Apptainer-1.3.4-blue)
+[![Snakemake](https://img.shields.io/badge/snakemake-8.23.1-blue.svg?style=flat-square)](https://snakemake.bitbucket.io) ![R](https://img.shields.io/badge/R-4.4.3-blue.svg?style=flat-square) ![Apptainer](https://img.shields.io/badge/Apptainer-1.3.4-blue)![CodeRabbit Pull Request Reviews](https://img.shields.io/coderabbit/prs/github/andrewgull/tga_detection?utm_source=oss&utm_medium=github&utm_campaign=andrewgull%2Ftga_detection&labelColor=171717&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews)
 
 # Description
 
