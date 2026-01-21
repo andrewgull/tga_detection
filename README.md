@@ -43,40 +43,6 @@ If you want to use conda environments, Snakemake will take care of installing al
 
 ## Quick run on the test data
 
-### Using [`Pixi`](https://pixi.prefix.dev/latest/)
-
-To run the workflow using Pixi tasks, you can use the following commands:
-
-1. **Dry Run**: To see what will happen without executing the tasks, run:
-
-   ```bash
-   pixi dry-run
-   ```
-
-2. **Run with Conda**: To execute the workflow using Conda environments, use:
-
-   ```bash
-   pixi run-conda
-   ```
-
-3. **Run with Apptainer**: To execute the workflow using Apptainer containers, run:
-
-   ```bash
-   pixi run-apptainer
-   ```
-
-4. **Generate Rule Graph**: To visualize the workflow rules, execute:
-
-   ```bash
-   pixi rulegraph
-   ```
-
-5. **Generate DAG**: To create a Directed Acyclic Graph (DAG) of the workflow, use:
-
-   ```bash
-   pixi dag
-   ```
-
 ### Using `Apptainer`
 
 ```bash
@@ -100,6 +66,41 @@ snakemake --sdm conda --cores 2 --configfile config/config.yaml
 On a moderately powerful desktop computer, this process takes a couple of minutes to finish.
 
 The results of this run will be saved in two files under `results/tables/` directory: `frequencies_all_test.tsv` and `frequencies_all_test.xlsx`. You can compare them to the expected results in `results/test_dataset/` directory available in this repository.
+
+### Using [`Pixi`](https://pixi.prefix.dev/latest/)
+
+To run the workflow using Pixi tasks, you can use the following commands:
+
+1. **Dry Run**: To see what will happen without executing the tasks, run:
+
+   ```bash
+   pixi run dry-run
+   ```
+
+2. **Run with Conda**: To execute the workflow using Conda environments, use:
+
+   ```bash
+   pixi run run-conda
+   ```
+
+3. **Run with Apptainer**: To execute the workflow using Apptainer containers, run:
+
+   ```bash
+   pixi run run-apptainer
+   ```
+
+4. **Generate Rule Graph**: To visualize the workflow rules, execute:
+
+   ```bash
+   pixi run rulegraph
+   ```
+
+5. **Generate DAG**: To create a Directed Acyclic Graph (DAG) of the workflow, use:
+
+   ```bash
+   pixi run dag
+   ```
+
 
 ## Full run
 
