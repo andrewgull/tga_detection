@@ -1,6 +1,8 @@
 #!/usr/bin/bash
 set -euo pipefail
 
+CONTAINERS=( "default" "rscripts" "biostrings" )
+
 cleanup_tar() {
     for C in "${CONTAINERS[@]}"; do
         rm -f resources/containers/${C}.tar
@@ -9,7 +11,6 @@ cleanup_tar() {
 
 trap cleanup_tar EXIT
 
-CONTAINERS=( "default" "rscripts" "biostrings" )
 OUTPUT_DIR="resources/apptainer"
 
 # Check if the output directory exists, if not, create it
