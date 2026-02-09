@@ -1,0 +1,20 @@
+Bootstrap: docker
+From: mambaorg/micromamba:1.5.8
+
+%post
+    # Create the environment
+    micromamba create -y -p /opt/conda/envs/biostrings -c bioconda -c conda-forge \
+        r-base=4.3 \
+        r-dplyr=1.1.4 \
+        r-readr=2.1.5 \
+        r-purrr=1.0.2 \
+        bioconductor-biostrings=2.70.1
+    micromamba clean --all --yes
+
+%environment
+    export PATH="/opt/conda/envs/biostrings/bin:$PATH"
+
+%labels
+    Maintainer andrei.guliaev@scilifelab.uu.se
+    Version 2.70.1
+    Env biostrings
