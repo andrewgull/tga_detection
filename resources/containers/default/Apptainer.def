@@ -1,0 +1,33 @@
+Bootstrap: docker
+From: mambaorg/micromamba:1.5.8
+
+%post
+    # Create the environment
+    micromamba create -y -p /opt/conda/envs/default -c bioconda -c conda-forge \
+        filtlong=0.2.1 \
+        seqkit=2.0.0 \
+        blast=2.12.0 \
+        bedtools=2.30.0 \
+        pandas=1.5.3 \
+        openpyxl=3.1.5 \
+        pigz=2.6
+    micromamba clean --all --yes
+
+%environment
+    export PATH="/opt/conda/envs/default/bin:$PATH"
+
+%labels
+    Maintainer andrei.guliaev@scilifelab.uu.se
+    Version 1.0
+    Env default
+
+%help
+    This container provides general purpose bioinformatic utilities.
+    Key software included:
+    - pigz 2.6
+    - seqkit 2.0.0
+    - filtlong 0.2.1
+    - bedtools 2.30.0
+    - blast 2.12.0
+    - pandas 1.5.3
+    - openpyxl 3.1.5
