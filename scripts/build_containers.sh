@@ -19,7 +19,10 @@ fi
 
 for C in "${CONTAINERS[@]}"; do
     echo "Building Apptainer image for container: $C"
-    # Build Apptainer/Singularity image from definition file
+    # Note: The 'singularity build' invocation below for "${OUTPUT_DIR}/${C}.sif" from
+    # "resources/containers/${C}/Apptainer.def" requires elevated privileges (either 
+    # sudo or --fakeroot when the system supports unprivileged builds). 
+    # --fakeroot is not universally available due to kernel/subordinate UID/GID mapping requirements.
     singularity build --force "${OUTPUT_DIR}/${C}.sif" "resources/containers/${C}/Apptainer.def"
     echo "Successfully built ${OUTPUT_DIR}/${C}.sif"
 done
