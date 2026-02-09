@@ -8,9 +8,7 @@ from scripts.utils import tsv2dict, get_sample_path
 import pandas as pd
 
 
-sample_table = pd.read_csv(
-    config["sample_table"], sep="\t", dtype={"sample": str, "path": str}
-)
+sample_table = pd.read_csv(config["sample_table"], sep="\t", dtype={"sample": str, "path": str})
 parameters = tsv2dict(config["parameters"])
 
 
