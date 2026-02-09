@@ -4,7 +4,7 @@ From: mambaorg/micromamba:1.5.8
 %post
     # Create the environment
     micromamba create -y -p /opt/conda/envs/biostrings -c bioconda -c conda-forge \
-        r-base=4.3 \
+        r-base=4.3.3 \
         r-dplyr=1.1.4 \
         r-readr=2.1.5 \
         r-purrr=1.0.2 \
@@ -18,3 +18,12 @@ From: mambaorg/micromamba:1.5.8
     Maintainer andrei.guliaev@scilifelab.uu.se
     Version 2.70.1
     Env biostrings
+
+%help
+    This container provides R with the Biostrings package for sequence manipulation.
+    Key software included:
+    - R 4.3.3
+    - Biostrings 2.70.1
+    - dplyr 1.1.4
+    - readr 2.1.5
+    - purrr 1.0.2
