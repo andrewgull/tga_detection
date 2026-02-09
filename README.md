@@ -31,7 +31,7 @@ If you don't have `Snakemake` installed, [install it](https://snakemake.readthed
 
 You can run the analysis using containers (recommended) or conda environments.
 
-To use containers you need to have both [`Apptainer`](https://apptainer.org/docs/user/main/quick_start.html#installation) and [`Docker`](https://docs.docker.com/engine/install/ubuntu/) installed.
+To use containers you need to have [`Apptainer`](https://apptainer.org/docs/user/main/quick_start.html#installation) installed.
 
 ## Preparing containers
 
