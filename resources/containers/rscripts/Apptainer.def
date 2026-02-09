@@ -20,7 +20,7 @@ From: mambaorg/micromamba:1.5.8
     Env rscripts
 
 %help
-    This container provides R and common tidyverse packages for data manupulation.
+    This container provides R and common tidyverse packages for data manipulation.
     Key software included:
     - R 4.4.3
     - dplyr 1.1.4
