@@ -11,6 +11,9 @@ run-conda = "snakemake --cores 2 --sdm conda --configfile config/config.yaml"
 run-apptainer = "snakemake --cores 2 --configfile config/config.yaml --profile profiles/apptainer_local"
 rulegraph = { cmd = "dot -c && snakemake --rulegraph --configfile config/config.yaml | dot -Tsvg > images/rulegraph.svg" }
 dag = { cmd = "dot -c && snakemake --dag --configfile config/config.yaml | dot -Tsvg > images/dag.svg" }
+test-r = "Rscript -e 'testthat::test_dir(\"tests\")'"
+style-r = "Rscript -e 'styler::style_dir(\"workflow/scripts\")'"
+lint-r = "Rscript -e 'lintr::lint_dir(\"workflow/scripts\")'"
 
 
 [dependencies]
@@ -23,3 +26,6 @@ pango = ">=1.56.4,<2"
 python = ">=3.12.12,<3.13"
 apptainer = ">=1.3.4"
 conda = ">=25.11.1,<26"
+r-styler = ">=1.11.0,<2"
+r-lintr = ">=3.3.0_1,<4"
+r-testthat = ">=3.3.2,<4"
