@@ -4,14 +4,21 @@
 # output: BED file
 ################################################
 
-#### OPEN LOG ####
-sink(snakemake@log[[1]])
 
 #### LIBRARIES ####
 suppressPackageStartupMessages(library(dplyr))
 library(readr)
 
 #### FUNCTIONS ####
+#' Check if a BLAST Table is a Filtered Version
+#'
+#' Determines whether a BLAST table is a "filtered" version based on its filename.
+#' Filtered versions are expected to contain headers, whereas non-filtered versions are not.
+#'
+#' @param filename Character. The path or name of the input BLAST table file.
+#'
+#' @return Logical. Returns `TRUE` if "filtered" is found in the filename, `FALSE` otherwise.
+#'
 is_filtered <- function(filename) {
   # if the blast table has headers it's been filtred
   # otherwise it's not
@@ -27,6 +34,18 @@ is_filtered <- function(filename) {
   }
 }
 
+#' Read a BLAST outfmt 6 Table
+#'
+#' Reads a BLAST output file in format 6 (tabular). It automatically detects if the table
+#' is a filtered version (with headers) or a standard version (without headers) using [is_filtered()]
+#' and ensures the resulting data frame has consistent, standard column names.
+#'
+#' @param input_blast Character. Path to the input BLAST table file.
+#'
+#' @return A tibble with standard BLAST outfmt 6 columns: `query`, `subject`, `identity`,
+#'   `length`, `mismatch`, `gaps`, `start.query`, `end.query`, `start.subject`,
+#'   `end.subject`, `e.value`, and `bit.score`.
+#'
 read_blast <- function(input_blast) {
   if (is_filtered(input_blast)) {
     blast_bla <- read_tsv(input_blast,
@@ -61,6 +80,17 @@ read_blast <- function(input_blast) {
   return(blast_bla)
 }
 
+#' Convert BLAST Results to BED Format
+#'
+#' Transforms a BLAST results data frame into a standard 6-column BED format.
+#' The function calculates 0-indexed coordinates, determines the strand based on 
+#' start/end positions, and ensures that the `start` coordinate is always less than 
+#' the `end` coordinate, as required by the BED specification.
+#'
+#' @param blast Data frame. A BLAST results table, typically the output of [read_blast()].
+#'
+#' @return A tibble in BED format with columns: `chrom`, `start`, `end`, `name`, `score`, and `strand`.
+#'
 blast2bed <- function(blast) {
   # convert to BED format
   bla_bed_mix <-
@@ -92,13 +122,18 @@ blast2bed <- function(blast) {
 }
 
 #### RUN ####
-# read
-blast_tab <- read_blast(snakemake@input[[1]])
-# convert
-bed_tab <- blast2bed(blast_tab)
-# save to file
-write_tsv(bed_tab, snakemake@output[[1]], col_names = FALSE)
-print("Finished. No errors.")
+if (exists("snakemake")) {
+  #### OPEN LOG ####
+  sink(snakemake@log[[1]])
 
-#### CLOSE LOG ####
-sink()
+  # read
+  blast_tab <- read_blast(snakemake@input[[1]])
+  # convert
+  bed_tab <- blast2bed(blast_tab)
+  # save to file
+  write_tsv(bed_tab, snakemake@output[[1]], col_names = FALSE)
+  print("Finished. No errors.")
+
+  #### CLOSE LOG ####
+  sink()
+}
