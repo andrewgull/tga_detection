@@ -83,8 +83,8 @@ read_blast <- function(input_blast) {
 #' Convert BLAST Results to BED Format
 #'
 #' Transforms a BLAST results data frame into a standard 6-column BED format.
-#' The function calculates 0-indexed coordinates, determines the strand based on 
-#' start/end positions, and ensures that the `start` coordinate is always less than 
+#' The function calculates 0-indexed coordinates, determines the strand based on
+#' start/end positions, and ensures that the `start` coordinate is always less than
 #' the `end` coordinate, as required by the BED specification.
 #'
 #' @param blast Data frame. A BLAST results table, typically the output of [read_blast()].
@@ -123,8 +123,9 @@ blast2bed <- function(blast) {
 
 #### RUN ####
 if (exists("snakemake")) {
-  #### OPEN LOG ####
+  #### LOG ####
   sink(snakemake@log[[1]])
+  on.exit(sink(), add = TRUE)
 
   # read
   blast_tab <- read_blast(snakemake@input[[1]])
@@ -133,7 +134,4 @@ if (exists("snakemake")) {
   # save to file
   write_tsv(bed_tab, snakemake@output[[1]], col_names = FALSE)
   print("Finished. No errors.")
-
-  #### CLOSE LOG ####
-  sink()
 }
