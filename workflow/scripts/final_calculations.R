@@ -46,6 +46,9 @@ freq_theor <- function(cn_bins) {
   if (length(total_n) == 0) {
     stop("No row with CN == 0 found in cn_bins. Cannot calculate theoretical frequencies.")
   }
+  if (length(total_n) > 1) {
+    stop("Multiple rows with CN == 0 found in cn_bins. Data integrity issue.")
+  }
   cn_bins_theor <- cn_bins |>
     filter(n_reads_theoretical != 0) |>
     mutate(freq_theoretical = n_reads_theoretical / total_n)
@@ -69,11 +72,15 @@ main <- function(cn_bins, bla_cn) {
     filter(!is.na(freq_theoretical)) |>
     mutate(
       counts_obs = replace_na(counts_obs, 0),
-      freq_obs = replace_na(freq_obs, 0)
-    ) |>
-    arrange(CN) |>
     mutate(
       counts_corrected = counts_obs / freq_theoretical,
+      freq_corrected = if (sum(counts_corrected) > 0) {
+        counts_corrected / sum(counts_corrected)
+      } else {
+        NA_real_
+      },
+      detection_limit = 1 / n_reads_theoretical
+    )
       freq_corrected = counts_corrected / sum(counts_corrected),
       detection_limit = 1 / n_reads_theoretical
     )
@@ -91,8 +98,8 @@ if (exists("snakemake")) {
     close(log_file)
   }, add = TRUE)
 
-  cn_bins <- read_delim(snakemake@input[[1]], show_col_types = FALSE)
-  bla_cn <- read_delim(snakemake@input[[2]], show_col_types = FALSE)
+  cn_bins <- read_delim(snakemake@input[[1]], delim = "\t", show_col_types = FALSE)
+  bla_cn <- read_delim(snakemake@input[[2]], delim = "\t", show_col_types = FALSE)
 
   output_table <- main(cn_bins, bla_cn)
 
