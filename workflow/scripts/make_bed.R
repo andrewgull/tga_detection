@@ -58,7 +58,7 @@ read_blast <- function(input_blast) {
     # check if the correct variant of the blast table was read
     # incorrect version of the table (without headers)
     # will have 'X1' as the first column name
-    stopifnot(grepl("query", names(blast_bla)[1]))
+    stopifnot(grepl("query", names(blast_bla)[1], fixed = TRUE))
   } else {
     blast_bla <- read_tsv(input_blast,
       show_col_types = FALSE,
@@ -101,8 +101,11 @@ blast2bed <- function(blast) {
     select(subject, start.subject, end.subject, query, e.value) |>
     mutate(
       strand = if_else(start.subject < end.subject, "+", "-"),
-      start = start.subject - 1,
-      end = end.subject - 1
+     mutate(
+       strand = if_else(start.subject < end.subject, "+", "-"),
+       start = start.subject - 1,
+       end = end.subject
+     ) |>
     ) |>
     rename(
       "chrom" = subject,
@@ -126,8 +129,14 @@ blast2bed <- function(blast) {
 
 # --- 3. Snakemake Execution Block ---
 if (exists("snakemake")) {
-  sink(snakemake@log[[1]])
-  on.exit(sink(), add = TRUE)
+  log_file <- file(snakemake@log[[1]], open = "wt")
+  sink(log_file, type = "output")
+  sink(log_file, type = "message")
+  on.exit({
+    sink(type = "message")
+    sink(type = "output")
+    close(log_file)
+  }, add = TRUE)
 
   # read
   blast_tab <- read_blast(snakemake@input[[1]])
