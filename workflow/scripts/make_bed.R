@@ -96,13 +96,13 @@ read_blast <- function(input_blast) {
 #'
 blast2bed <- function(blast) {
   # convert to BED format
-  bla_bed_mix <-
+  bla_bed <-
     blast |>
     select(subject, start.subject, end.subject, query, e.value) |>
     mutate(
       strand = if_else(start.subject < end.subject, "+", "-"),
-      start = start.subject - 1,
-      end = end.subject
+      start = pmin(start.subject, end.subject) - 1,
+      end = pmax(start.subject, end.subject)
     ) |>
     rename(
       "chrom" = subject,
@@ -110,16 +110,6 @@ blast2bed <- function(blast) {
       "score" = e.value
     ) |>
     select(chrom, start, end, name, score, strand)
-
-  # swap start and end on negative stands and join with positive strands
-  bla_bed <- bla_bed_mix |>
-    filter(strand == "-") |>
-    rename(
-      "start" = end,
-      "end" = start
-    ) |>
-    select(chrom, start, end, name, score, strand) |>
-    bind_rows(bla_bed_mix |> filter(strand == "+"))
 
   return(bla_bed)
 }
