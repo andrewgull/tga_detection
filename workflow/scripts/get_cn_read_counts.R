@@ -76,7 +76,8 @@ separate <- function(df, orientation, reads_len = NULL) {
     stopifnot(sum(grepl("subject", names(reads_len), fixed = TRUE)) == 1)
     df |>
       filter(orient == "reverse") |>
-      left_join(reads_len, by = "subject")
+      left_join(reads_len, by = "subject") |>
+      {\(x) { stopifnot(all(!is.na(x$read.len))); x }}()
   }
 }
 
