@@ -19,15 +19,15 @@ library(tidyr)
 # including zeroes
 counts_freq_obs <- function(bla_cn) {
   # return bla_cn_freq
-  bla_cn %>%
-    filter(!is.na(n.blaSHV.merged)) %>%
-    group_by(n.blaSHV.merged) %>%
-    count(name = "counts") %>%
-    ungroup() %>%
+  bla_cn |>
+    filter(!is.na(n.blaSHV.merged)) |>
+    group_by(n.blaSHV.merged) |>
+    count(name = "counts") |>
+    ungroup() |>
     rename(
       "CN" = n.blaSHV.merged,
       "counts_obs" = counts
-    ) %>%
+    ) |>
     # find observed CN frequency
     mutate(freq_obs = counts_obs / sum(counts_obs))
 }
@@ -35,12 +35,12 @@ counts_freq_obs <- function(bla_cn) {
 # find frequency of reads that might contain certain CN
 freq_theor <- function(cn_bins) {
   # total - n reads with 0 CN from the cn_bins table
-  total_n <- cn_bins %>%
-    filter(CN == 0) %>%
+  total_n <- cn_bins |>
+    filter(CN == 0) |>
     pull(n_reads_theoretical)
-  cn_bins_theor <- cn_bins %>%
+  cn_bins_theor <- cn_bins |>
     # remove those that are theoretically impossible (no such long reads)
-    filter(n_reads_theoretical != 0) %>%
+    filter(n_reads_theoretical != 0) |>
     mutate(freq_theoretical = n_reads_theoretical / total_n)
   cn_bins_theor
 }
@@ -52,14 +52,14 @@ main <- function(cn_bins, bla_cn) {
   # correct CN frequency
   # add detection limit
   bla_cn_full <-
-    bla_cn_freq %>%
-    full_join(bins_theor, by = "CN") %>%
+    bla_cn_freq |>
+    full_join(bins_theor, by = "CN") |>
     # replace NA with 0
     mutate(
       counts_obs = replace_na(counts_obs, 0),
       freq_obs = replace_na(freq_obs, 0)
-    ) %>%
-    arrange(CN) %>%
+    ) |>
+    arrange(CN) |>
     # do the rest of the calculations
     mutate(
       counts_corrected = counts_obs / freq_theoretical,

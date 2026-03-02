@@ -68,15 +68,15 @@ filter_ru_fr <-
     # filters red blast and rep unit blast by orientation and max
     # distance btw the red region and the rep.unit
     # return: filtered tibble
-    left_join(fr_df, ru_df, by = "subject") %>%
-      filter(orientation.x == orientation.y) %>%
+    left_join(fr_df, ru_df, by = "subject") |>
+      filter(orientation.x == orientation.y) |>
       mutate(
         distance = if_else(
           orientation.x == "reverse",
           end.subject.y - start.subject.x + 1,
           start.subject.x - end.subject.y + 1
         )
-      ) %>%
+      ) |>
       filter(abs(distance) <= max_distance)
   }
 
@@ -100,13 +100,13 @@ main <- function(red, rep, ru_len, fr_len, e, identity, maxd) {
   maxd <- as.integer(maxd)
   stopifnot(!is.na(maxd))
 
-  blast_red <- parse_blast(red, "FR_red") %>%
+  blast_red <- parse_blast(red, "FR_red") |>
     filter_blast(
       min_len = fr_len,
       max_e_value = e,
       min_identity = identity
     )
-  blast_rep <- parse_blast(rep, "Rep_unit") %>%
+  blast_rep <- parse_blast(rep, "Rep_unit") |>
     filter_blast(
       min_len = ru_len,
       max_e_value = e,
@@ -116,7 +116,7 @@ main <- function(red, rep, ru_len, fr_len, e, identity, maxd) {
   # 1st: same orientation
   # 2nd: close to each other
   blast_joined <-
-    filter_ru_fr(blast_red, blast_rep, max_distance = maxd) %>%
+    filter_ru_fr(blast_red, blast_rep, max_distance = maxd) |>
     # keep some columns
     select(
       subject, start.subject.x, end.subject.x,

@@ -17,13 +17,13 @@ library(readr)
 filter_by_distance <- function(df, dist = 1320) {
   # df: a table with 7 columns
   # colnames must be as follows
-  df %>%
+  df |>
     mutate(keep = if_else(
       orient == "direct",
       end.red > dist,
       start.rep.unit > dist
-    )) %>%
-    filter(keep) %>%
+    )) |>
+    filter(keep) |>
     select(-keep)
 }
 

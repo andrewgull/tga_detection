@@ -52,10 +52,10 @@ filter_blast_p1 <- function(blast_df, min_len, max_e_value, min_identity) {
 get_multihits_ids <- function(df) {
   # df: filtered blast table
   # return: subject (read ids) containing multiple query hits
-  df %>%
-    group_by(subject) %>%
-    count() %>%
-    filter(n > 1) %>%
+  df |>
+    group_by(subject) |>
+    count() |>
+    filter(n > 1) |>
     pull(subject)
 }
 
@@ -67,14 +67,14 @@ filter_red_green <- function(df_red_ru, df_green) {
   )
   # filter out reads with multiple query hits
   # df_red_ru have differen column names!
-  df_red_ru_filt <- df_red_ru %>%
+  df_red_ru_filt <- df_red_ru |>
     filter(!subject %in% reads_multiple_hits)
-  df_green_filt <- df_green %>%
+  df_green_filt <- df_green |>
     filter(!subject %in% reads_multiple_hits)
   # Filter by orientation
   # Add distance between FRs
-  df_joined <- full_join(df_red_ru_filt, df_green_filt, by = "subject") %>%
-    filter(!is.na(query.x), !is.na(query.y), orient == orientation) %>%
+  df_joined <- full_join(df_red_ru_filt, df_green_filt, by = "subject") |>
+    filter(!is.na(query.x), !is.na(query.y), orient == orientation) |>
     mutate(
       green.red.distance = end.red - start.subject,
       distance.btw.FR = if_else(green.red.distance < 0,
@@ -86,7 +86,6 @@ filter_red_green <- function(df_red_ru, df_green) {
 }
 
 main <- function(red, green, len, evalue, identity) {
-
   # convert/check int and numeric args
   len <- as.integer(len)
   stopifnot(!is.na(len))
@@ -101,7 +100,7 @@ main <- function(red, green, len, evalue, identity) {
 
   # add readable query name
   red$query <- "FR_RU_filt"
-  green_filt <- green %>%
+  green_filt <- green |>
     # apply basic filtering of blast results
     filter_blast_p1(
       min_len = len,

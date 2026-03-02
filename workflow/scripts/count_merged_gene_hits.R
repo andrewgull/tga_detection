@@ -24,13 +24,13 @@ main <- function(df_merge, df_filt, len) {
   len <- as.integer(len)
   stopifnot(!is.na(len))
 
-  df_merge %>%
-    group_by(X1) %>%
-    summarise(sum.merged.hits = sum(X3 - X2 + 1)) %>%
-    mutate(n.blaSHV.merged = round(sum.merged.hits / len, 0)) %>%
-    rename("subject" = X1) %>%
+  df_merge |>
+    group_by(X1) |>
+    summarise(sum.merged.hits = sum(X3 - X2 + 1)) |>
+    mutate(n.blaSHV.merged = round(sum.merged.hits / len, 0)) |>
+    rename("subject" = X1) |>
     # filter out the reads the 'bad reads' from previous filtering rounds
-    right_join(df_filt, by = "subject") %>%
+    right_join(df_filt, by = "subject") |>
     select(subject, n.blaSHV.merged)
 }
 

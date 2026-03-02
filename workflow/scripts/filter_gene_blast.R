@@ -40,10 +40,10 @@ is_within <- function(bla_start, bla_end, fr_start, fr_end) {
 # Returns FALSE if no bla hit is located outside FRs,
 # TRUE if at least one hit is outside FRs
 genes_within_flanks <- function(read_id, fr_df, bla_df) {
-  fr_bla_df <- fr_df %>%
-    filter(subject == read_id) %>%
-    left_join(bla_df, by = "subject") %>%
-    drop_na(start.subject.y) %>%
+  fr_bla_df <- fr_df |>
+    filter(subject == read_id) |>
+    left_join(bla_df, by = "subject") |>
+    drop_na(start.subject.y) |>
     select(
       subject, start.subject.x, end.subject.x,
       end.red, start.subject.y, end.subject.y, orientation
@@ -74,8 +74,8 @@ main <- function(bla, fr, evalue) {
   fr <- filter(fr, !aberrant)
 
   # Filter bla hits keeping only those present in FR table
-  bla_filt <- bla %>%
-    filter(subject %in% unique(fr$subject)) %>%
+  bla_filt <- bla |>
+    filter(subject %in% unique(fr$subject)) |>
     filter(e.value <= evalue)
 
   names(bla_filt) <- c(

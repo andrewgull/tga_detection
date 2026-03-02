@@ -35,16 +35,16 @@ count_reads_cn <-
     # check headers
     stopifnot(sum(grepl("end.red", names(df))) == 1)
     if (direct) {
-      df %>%
-        mutate(keep = end.red > (b + i * cn)) %>%
-        filter(keep) %>%
+      df |>
+        mutate(keep = end.red > (b + i * cn)) |>
+        filter(keep) |>
         nrow()
     } else {
       # reverse: read length must be present!
       stopifnot(sum(grepl("read.len", names(df))) == 1)
-      df %>%
-        mutate(keep = (read.len - end.red) > (b + i * cn)) %>%
-        filter(keep) %>%
+      df |>
+        mutate(keep = (read.len - end.red) > (b + i * cn)) |>
+        filter(keep) |>
         nrow()
     }
   }
@@ -75,14 +75,14 @@ separate <- function(df, orientation, reads_len = NULL) {
   stopifnot(sum(grepl("orient", names(df))) == 1)
   stopifnot(sum(grepl("subject", names(df))) == 1)
   if (orientation == "direct") {
-    df %>% filter(orient == "direct")
+    df |> filter(orient == "direct")
   } else {
     # reads len must be provided
     stopifnot(!is.null(reads_len))
     # subject column must be there
     stopifnot(sum(grepl("subject", names(reads_len))) == 1)
-    df %>%
-      filter(orient == "reverse") %>%
+    df |>
+      filter(orient == "reverse") |>
       left_join(reads_len, by = "subject")
   }
 }
