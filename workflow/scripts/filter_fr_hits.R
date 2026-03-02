@@ -23,7 +23,7 @@ library(readr)
 #' @return A tibble with standard BLAST columns and orientation.
 #'
 parse_blast <- function(file_path, region_name) {
-  df <- read_delim(file_path, col_names = FALSE, show_col_types = FALSE)
+  df <- read_delim(file_path, delim = "\t", col_names = FALSE, show_col_types = FALSE)
   stopifnot(nrow(df) > 0)
   stopifnot(ncol(df) == 12)
 
