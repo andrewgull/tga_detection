@@ -67,23 +67,25 @@ main <- function(cn_bins, bla_cn) {
   bins_theor <- freq_theor(cn_bins)
 
   bla_cn_full <-
-    bla_cn_freq |>
-    full_join(bins_theor, by = "CN") |>
-    filter(!is.na(freq_theoretical)) |>
+    bla_cn_freq %>%
+    full_join(bins_theor, by = "CN") %>%
+    # replace NA with 0
     mutate(
       counts_obs = replace_na(counts_obs, 0),
+      freq_obs = replace_na(freq_obs, 0)
+    ) %>%
+    arrange(CN) %>%
+    # do the rest of the calculations
     mutate(
       counts_corrected = counts_obs / freq_theoretical,
-      freq_corrected = if (sum(counts_corrected) > 0) {
-        counts_corrected / sum(counts_corrected)
+      freq_corrected = if (sum(counts_corrected, na.rm = TRUE) > 0) {
+        counts_corrected / sum(counts_corrected, na.rm = TRUE)
       } else {
         NA_real_
       },
       detection_limit = 1 / n_reads_theoretical
     )
-      freq_corrected = counts_corrected / sum(counts_corrected),
-      detection_limit = 1 / n_reads_theoretical
-    )
+
   return(bla_cn_full)
 }
 
