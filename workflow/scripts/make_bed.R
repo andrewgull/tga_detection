@@ -1,6 +1,6 @@
 #' @title Make BED file from BLAST outfmt 6
 #' @description This script converts a BLAST output table (tabular format 6) into
-#' a standard 6-column BED file. it handles both filtered (with headers) and
+#' a standard 6-column BED file. It handles both filtered (with headers) and
 #' non-filtered (without headers) BLAST tables.
 #' @section Input:
 #' BLAST output table in format 6 (tabular).
