@@ -27,7 +27,7 @@ library(readr)
 main <- function(df_merge, df_filt, len) {
   # convert/check len
   len <- as.integer(len)
-  stopifnot(!is.na(len))
+  stopifnot(!is.na(len), len > 0)
 
   df_merge |>
     group_by(X1) |>
