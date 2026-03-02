@@ -55,8 +55,14 @@ filter_by_distance <- function(fr_ru_filt, bla_counts,
 
 # --- 3. Snakemake Execution Block ---
 if (exists("snakemake")) {
-  sink(snakemake@log[[1]])
-  on.exit(sink(), add = TRUE)
+  log_file <- file(snakemake@log[[1]], open = "wt")
+  sink(log_file, type = "output")
+  sink(log_file, type = "message")
+  on.exit({
+    sink(type = "message")
+    sink(type = "output")
+    close(log_file)
+  }, add = TRUE)
 
   # read the input tables
   # this FR table contains distance between FRs

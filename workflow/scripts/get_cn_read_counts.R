@@ -28,14 +28,14 @@ library(tibble)
 #' @return Integer count of reads.
 #'
 count_reads_cn <- function(df, cn = 0, b = 1320, i = 3450, direct = TRUE) {
-  stopifnot(sum(grepl("end.red", names(df))) == 1)
+  stopifnot(sum(grepl("end.red", names(df), fixed = TRUE)) == 1)
   if (direct) {
     df |>
       mutate(keep = end.red > (b + i * cn)) |>
       filter(keep) |>
       nrow()
   } else {
-    stopifnot(sum(grepl("read.len", names(df))) == 1)
+    stopifnot(sum(grepl("read.len", names(df), fixed = TRUE)) == 1)
     df |>
       mutate(keep = (read.len - end.red) > (b + i * cn)) |>
       filter(keep) |>
@@ -67,13 +67,13 @@ read_length <- function(fasta) {
 #' @return A separated tibble.
 #'
 separate <- function(df, orientation, reads_len = NULL) {
-  stopifnot(sum(grepl("orient", names(df))) == 1)
-  stopifnot(sum(grepl("subject", names(df))) == 1)
+  stopifnot(sum(grepl("orient", names(df), fixed = TRUE)) == 1)
+  stopifnot(sum(grepl("subject", names(df), fixed = TRUE)) == 1)
   if (orientation == "direct") {
     df |> filter(orient == "direct")
   } else {
     stopifnot(!is.null(reads_len))
-    stopifnot(sum(grepl("subject", names(reads_len))) == 1)
+    stopifnot(sum(grepl("subject", names(reads_len), fixed = TRUE)) == 1)
     df |>
       filter(orient == "reverse") |>
       left_join(reads_len, by = "subject")
@@ -152,8 +152,14 @@ main <- function(in_table, reads, max_cn, min_len, increment) {
 
 # --- 3. Snakemake Execution Block ---
 if (exists("snakemake")) {
-  sink(snakemake@log[[1]])
-  on.exit(sink(), add = TRUE)
+  log_file <- file(snakemake@log[[1]], open = "wt")
+  sink(log_file, type = "output")
+  sink(log_file, type = "message")
+  on.exit({
+    sink(type = "message")
+    sink(type = "output")
+    close(log_file)
+  }, add = TRUE)
 
   cnv_theoretical <- main(
     in_table = snakemake@input[[1]],

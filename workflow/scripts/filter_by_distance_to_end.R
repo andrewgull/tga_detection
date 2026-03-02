@@ -58,8 +58,14 @@ main <- function(df, dist) {
 
 # --- 3. Snakemake Execution Block ---
 if (exists("snakemake")) {
-  sink(snakemake@log[[1]])
-  on.exit(sink(), add = TRUE)
+  log_file <- file(snakemake@log[[1]], open = "wt")
+  sink(log_file, type = "output")
+  sink(log_file, type = "message")
+  on.exit({
+    sink(type = "message")
+    sink(type = "output")
+    close(log_file)
+  }, add = TRUE)
 
   output_table <- main(
     df = snakemake@input[[1]],

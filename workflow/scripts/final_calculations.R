@@ -43,6 +43,9 @@ freq_theor <- function(cn_bins) {
   total_n <- cn_bins |>
     filter(CN == 0) |>
     pull(n_reads_theoretical)
+  if (length(total_n) == 0) {
+    stop("No row with CN == 0 found in cn_bins. Cannot calculate theoretical frequencies.")
+  }
   cn_bins_theor <- cn_bins |>
     filter(n_reads_theoretical != 0) |>
     mutate(freq_theoretical = n_reads_theoretical / total_n)
@@ -78,8 +81,14 @@ main <- function(cn_bins, bla_cn) {
 
 # --- 3. Snakemake Execution Block ---
 if (exists("snakemake")) {
-  sink(snakemake@log[[1]])
-  on.exit(sink(), add = TRUE)
+  log_file <- file(snakemake@log[[1]], open = "wt")
+  sink(log_file, type = "output")
+  sink(log_file, type = "message")
+  on.exit({
+    sink(type = "message")
+    sink(type = "output")
+    close(log_file)
+  }, add = TRUE)
 
   cn_bins <- read_delim(snakemake@input[[1]], show_col_types = FALSE)
   bla_cn <- read_delim(snakemake@input[[2]], show_col_types = FALSE)

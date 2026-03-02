@@ -88,8 +88,9 @@ filter_red_green <- function(df_red_ru, df_green) {
   df_green_filt <- df_green |>
     filter(!subject %in% reads_multiple_hits)
 
-  df_joined <- full_join(df_red_ru_filt, df_green_filt, by = "subject") |>
-    filter(!is.na(query.x), !is.na(query.y), orient == orientation) |>
+  # Note: Using inner_join since we only want subjects present in both tables
+  df_joined <- inner_join(df_red_ru_filt, df_green_filt, by = "subject") |>
+    filter(orient == orientation) |>  # orient from red, orientation from green
     mutate(
       green.red.distance = end.red - start.subject,
       distance.btw.FR = abs(green.red.distance)
@@ -134,8 +135,14 @@ main <- function(red, green, len, evalue, identity) {
 
 # --- 3. Snakemake Execution Block ---
 if (exists("snakemake")) {
-  sink(snakemake@log[[1]])
-  on.exit(sink(), add = TRUE)
+  log_file <- file(snakemake@log[[1]], open = "wt")
+  sink(log_file, type = "output")
+  sink(log_file, type = "message")
+  on.exit({
+    sink(type = "message")
+    sink(type = "output")
+    close(log_file)
+  }, add = TRUE)
 
   blast_red <- read_tsv(snakemake@input[[1]], show_col_types = FALSE)
   blast_green <- parse_blast(snakemake@input[[2]], "FR_green")
