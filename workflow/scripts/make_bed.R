@@ -101,11 +101,8 @@ blast2bed <- function(blast) {
     select(subject, start.subject, end.subject, query, e.value) |>
     mutate(
       strand = if_else(start.subject < end.subject, "+", "-"),
-     mutate(
-       strand = if_else(start.subject < end.subject, "+", "-"),
-       start = start.subject - 1,
-       end = end.subject
-     ) |>
+      start = start.subject - 1,
+      end = end.subject
     ) |>
     rename(
       "chrom" = subject,
