@@ -1,85 +1,78 @@
-#############################################################
-# script to add read lengths to the reads filtered by
-# the FR+RU orientation and distance (1320 bp)
-# For each possible blaSHV copy-number, we calculate
-# number of reads that can contain them, i.e.:
-#  N reads able to contain 0 blaSHV copies (all reads)
-#  N reads able to contain 1 blaSHV copy
-# (reads with min len of 5270 nt from the beginning of RED towards RU)
-#  N reads able to contain 2 bla SHV copies (min len 8720 nt)
-# input 1: table with blast results filtered by FR+RU orientation and distance
-# input 2: reads filtered by FR+RU orientation and distance
-# input 3: maximum CN you are interested in
-# (if output table contains NAs, increase this umber)
-# input 4: min length of reads possibly containing 0 blaSHV copies
-# input 5: length incrementation with each new blaSHV copy (3450 nt)
-# result: a table with CNs and number of reads possibly containing this CN
-# requires dlyr, purrr, tibble & Biostrings
-# to count reads with reverse hits, read lengths are required
-#############################################################
+#' @title Calculate theoretical read counts per copy number (CN)
+#' @description This script calculates the number of reads that are theoretically
+#' long enough to contain each possible gene copy number, based on flanking
+#' region (FR) and repeat unit (RU) positions and read lengths.
+#' @section Input:
+#' 1. Table with BLAST results filtered by FR+RU orientation and distance.
+#' 2. Filtered FASTA reads (to get lengths).
+#' 3. Snakemake parameters: maximum CN, length increment, and base length.
+#' @section Output:
+#' Table with CNs and theoretical read counts.
+#' @md
 
-#### OPEN LOG ####
-sink(snakemake@log[[1]])
-
-#### LIBRARIES ####
+# --- 1. Load Libraries ---
 suppressPackageStartupMessages(library(dplyr))
 library(readr)
 library(purrr)
 library(tibble)
-# Do not load Biostrings
 
-#### FUNCTIONS ####
-# count reads for each CNV
-count_reads_cn <-
-  function(df, cn = 0, b = 1320, i = 3450, direct = TRUE) {
-    # check headers
-    stopifnot(sum(grepl("end.red", names(df))) == 1)
-    if (direct) {
-      df |>
-        mutate(keep = end.red > (b + i * cn)) |>
-        filter(keep) |>
-        nrow()
-    } else {
-      # reverse: read length must be present!
-      stopifnot(sum(grepl("read.len", names(df))) == 1)
-      df |>
-        mutate(keep = (read.len - end.red) > (b + i * cn)) |>
-        filter(keep) |>
-        nrow()
-    }
+# --- 2. Define Functions ---
+#' Count reads capable of containing a specific CN
+#'
+#' @param df Data frame/tibble. BLAST results with end.red and optionally read.len.
+#' @param cn Integer. Gene copy number.
+#' @param b Integer. Base length (min distance for CN 0).
+#' @param i Integer. Length increment per copy.
+#' @param direct Logical. TRUE if hits are in direct orientation.
+#'
+#' @return Integer count of reads.
+#'
+count_reads_cn <- function(df, cn = 0, b = 1320, i = 3450, direct = TRUE) {
+  stopifnot(sum(grepl("end.red", names(df))) == 1)
+  if (direct) {
+    df |>
+      mutate(keep = end.red > (b + i * cn)) |>
+      filter(keep) |>
+      nrow()
+  } else {
+    stopifnot(sum(grepl("read.len", names(df))) == 1)
+    df |>
+      mutate(keep = (read.len - end.red) > (b + i * cn)) |>
+      filter(keep) |>
+      nrow()
   }
-
-# read fasta file and return a table with read ID and length
-# requires Biostrings
-read_length <- function(fasta) {
-  # fasta: file name, fasta format
-  # use memory efficient way of retrieving lengths
-  lengths <-
-    Biostrings::fasta.seqlengths(fasta)
-  # read IDs are inside the name attributes of each length
-  len_df <-
-    tibble(
-      "subject" = sub(
-        "^(.*?) runid=.*",
-        "\\1",
-        names(lengths)
-      ),
-      "read.len" = lengths
-    )
-  len_df
 }
 
-# separate direct from reverse hits
+#' Get read lengths from FASTA
+#'
+#' @param fasta Character. Path to the FASTA file.
+#'
+#' @return A tibble with `subject` and `read.len`.
+#'
+read_length <- function(fasta) {
+  lengths <- Biostrings::fasta.seqlengths(fasta)
+  len_df <- tibble(
+    "subject" = sub("^(.*?) runid=.*", "\\1", names(lengths)),
+    "read.len" = lengths
+  )
+  return(len_df)
+}
+
+#' Separate direct from reverse hits
+#'
+#' @param df Data frame/tibble. Filtered hits.
+#' @param orientation Character. "direct" or "reverse".
+#' @param reads_len Data frame/tibble. Read lengths (required for reverse).
+#'
+#' @return A separated tibble.
+#'
 separate <- function(df, orientation, reads_len = NULL) {
-  # check headers
   stopifnot(sum(grepl("orient", names(df))) == 1)
   stopifnot(sum(grepl("subject", names(df))) == 1)
   if (orientation == "direct") {
     df |> filter(orient == "direct")
   } else {
-    # reads len must be provided
     stopifnot(!is.null(reads_len))
-    # subject column must be there
     stopifnot(sum(grepl("subject", names(reads_len))) == 1)
     df |>
       filter(orient == "reverse") |>
@@ -87,14 +80,17 @@ separate <- function(df, orientation, reads_len = NULL) {
   }
 }
 
-# count the reads for each CNV (direct/reverse)
+#' Count reads for each CN variant
+#'
+#' @param cn_array Integer vector. Array of CN values.
+#' @param hits_orient Data frame/tibble. Hits separated by orientation.
+#' @param min_len Integer. Base minimal length.
+#' @param increment Integer. Length increment per copy.
+#' @param direct Logical. Orientation.
+#'
+#' @return Integer vector of counts.
+#'
 count_reads <- function(cn_array, hits_orient, min_len, increment, direct) {
-  # cn_array: array of copy number variants
-  # hits_orient: df of hits separated by orientation
-  # min_len: min length of reads possibly containing 0 blaSHV copies
-  # increment: length increment
-  # direct: logical, TRUE if separated hits are direct, FALSE if reverse
-  # return: read counts per each CN variant
   map_int(cn_array, ~ count_reads_cn(
     hits_orient,
     cn = .,
@@ -104,21 +100,18 @@ count_reads <- function(cn_array, hits_orient, min_len, increment, direct) {
   ))
 }
 
-# all functions put together
+#' Main execution function for theoretical CN counts
+#'
+#' @param in_table Character. Path to hits table.
+#' @param reads Character. Path to FASTA reads.
+#' @param max_cn Integer. Maximum CN variant.
+#' @param min_len Integer. Base length.
+#' @param increment Integer. RU increment.
+#'
+#' @return A tibble with CN and counts.
+#'
 main <- function(in_table, reads, max_cn, min_len, increment) {
-  # in_table: df with blast hits filtered by FR+RU orientation and distance
-  # reads: fasta w reads filtered by FR+RU orientation and distance
-  # max_cn: maximum CN you are interested in (int)
-  # min_len: min length of reads possibly containing 0 blaSHV copies (int)
-  # increment: length incrementation with each new blaSHV copy (int)
-  # return: table with read counts for each CNV
-
-  # These parameters must be integers
   max_cn <- as.integer(max_cn)
-  # if max_cn is a character string that cannot be transformed to integer,
-  # as.integer() will return NA
-  # NA is integer
-  # therefore max_cn must be 'not NA'
   stopifnot(!is.na(max_cn))
 
   min_len <- as.integer(min_len)
@@ -127,60 +120,52 @@ main <- function(in_table, reads, max_cn, min_len, increment) {
   increment <- as.integer(increment)
   stopifnot(!is.na(increment))
 
-  # read input table
   fr_repunit <- read.table(in_table, sep = "\t", header = TRUE)
-
-  # make table size checks
   stopifnot(ncol(fr_repunit) == 7)
   stopifnot(nrow(fr_repunit) != 0)
 
-  # read input reads to get their lengths
   reads_len_df <- read_length(reads)
 
   hits_direct <- separate(fr_repunit, "direct")
   hits_reverse <- separate(fr_repunit, "reverse", reads_len = reads_len_df)
 
-  # create array of copy numbers
   cnv_variants <- seq(0, max_cn, 1)
 
-  # count reads direct
   counts_direct <- count_reads(cnv_variants, hits_direct,
     min_len = min_len, increment = increment,
     direct = TRUE
   )
 
-  # count reads reverse
   counts_reverse <- count_reads(cnv_variants, hits_reverse,
     min_len = min_len, increment = increment,
     direct = FALSE
   )
 
-  # sum the read counts
   n_reads_cn_tot <- counts_direct + counts_reverse
 
-  # compile output table
   output_table <- data.frame(
     "CN" = cnv_variants,
     "n_reads_theoretical" = n_reads_cn_tot
   )
-
-  output_table
+  return(output_table)
 }
 
-#### RUN ####
-cnv_theoretical <- main(
-  in_table = snakemake@input[[1]],
-  reads = snakemake@input[[2]],
-  max_cn = snakemake@params[[1]],
-  increment = snakemake@params[[2]],
-  min_len = snakemake@params[[3]]
-)
-# save to file
-write.table(cnv_theoretical,
-  file = snakemake@output[[1]],
-  sep = "\t", row.names = FALSE, quote = FALSE
-)
-print("Finished. No erorrs.")
+# --- 3. Snakemake Execution Block ---
+if (exists("snakemake")) {
+  sink(snakemake@log[[1]])
+  on.exit(sink(), add = TRUE)
 
-#### CLOSE LOG ####
-sink()
+  cnv_theoretical <- main(
+    in_table = snakemake@input[[1]],
+    reads = snakemake@input[[2]],
+    max_cn = snakemake@params[[1]],
+    increment = snakemake@params[[2]],
+    min_len = snakemake@params[[3]]
+  )
+
+  write.table(cnv_theoretical,
+    file = snakemake@output[[1]],
+    sep = "\t", row.names = FALSE, quote = FALSE
+  )
+  print("Finished. No errors.")
+}

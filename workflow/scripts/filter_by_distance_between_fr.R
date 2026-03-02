@@ -1,34 +1,37 @@
-#######################################################
-# script for calculating n.bla.exp using
-# the formula N = ((D_fr - L_fr) / L_ru) + 1
-# where N is the expected number of bla copies in the read
-# D_fr is the distance between FRs
-# B_fr is the base length
-# L_ru is the length of RU
-# the script will compare n.bla.exp with n.blaSHV.merged
-# and remove reads with > abs(1) difference
-# input: table with distance between FRs
-# input: table with bla counts via blast/merging BED coords
-# output: table with table with bla counts via blast/merging BED coords
-# but filtered by the difference between n.bla.exp and n.blaSHV.merged
-########################################################
+#' @title Filter reads by distance between flanking regions (FR)
+#' @description This script calculates the expected number of gene copies (e.g., blaSHV)
+#' based on the distance between flanking regions using the formula:
+#' N = ((D_fr - L_fr) / L_ru) + 1, where:
+#' - N: expected number of copies
+#' - D_fr: distance between FRs
+#' - L_fr: base length (distance with 1 copy)
+#' - L_ru: length of the repeat unit (RU)
+#' Reads are filtered if the difference between expected and observed (blast/merged)
+#' counts is greater than 1.
+#' @section Input:
+#' 1. Table with distance between FRs
+#' 2. Table with bla counts via merging BED coordinates
+#' @section Output:
+#' Filtered table with subject and n.blaSHV.merged
+#' @md
 
-#### OPEN LOG ####
-sink(snakemake@log[[1]])
-
-#### LIBRARIES ####
+# --- 1. Load Libraries ---
 suppressPackageStartupMessages(library(dplyr))
 library(readr)
 
-#### FUNCTIONS ####
-# the following function produces a table
-# with read ID and different in counts
+# --- 2. Define Functions ---
+#' Filter reads by distance between FRs
+#'
+#' @param fr_ru_filt Data frame/tibble. Table with distance between flanking regions.
+#' @param bla_counts Data frame/tibble. Table with observed gene counts (merged BED).
+#' @param base_len Numeric/Integer. Base length (expected distance for 1 copy). Default 4299.
+#' @param ru_len Numeric/Integer. Length of the repeat unit. Default 3450.
+#'
+#' @return A tibble with `subject` and `n.blaSHV.merged` for reads passing the filter.
+#' @export
+#'
 filter_by_distance <- function(fr_ru_filt, bla_counts,
-                               base_len = 4299, ru_len = 3450) {
-  # fr_ru_fil: a table with distance between FRs
-  # bla_counts: a table with bla counts via merging BED coords
-  # calculate the distance
-
+                              base_len = 4299, ru_len = 3450) {
   # convert/check the base_len and ru_len
   base_len <- as.integer(base_len)
   stopifnot(!is.na(base_len))
@@ -45,59 +48,33 @@ filter_by_distance <- function(fr_ru_filt, bla_counts,
     ) |>
     # filter out abs(diff) > 1
     filter(abs(difference) <= 1) |>
-    # the output table should contain
-    # columns subject and n.blaSHV.merged
-    # same as the putut of the previous rule
-    select(c("subject", "n.blaSHV.merged"))
+    select(subject, n.blaSHV.merged)
+
   return(diff_per_read)
 }
 
-# read the input tables
-tryCatch(
-  {
-    # this FR table contains distance between FRs
-    fr_ru_filt <- read_delim(snakemake@input[[1]],
-      show_col_types = FALSE, progress = FALSE
-    )
-    # this one contains bla counts via merging BED coords
-    bla_counts <- read_delim(snakemake@input[[2]],
-      show_col_types = FALSE, progress = FALSE
-    )
-  },
-  error = function(e) {
-    cat("Error reading input files: ", e$message, "\n")
-    sink()
-    stop("Script terminated due to input file read error.")
-  }
-)
+# --- 3. Snakemake Execution Block ---
+if (exists("snakemake")) {
+  sink(snakemake@log[[1]])
+  on.exit(sink(), add = TRUE)
 
-# filter
-filtered_df <- tryCatch(
-  {
-    filter_by_distance(fr_ru_filt, bla_counts,
-      base_len = snakemake@params[[1]],
-      ru_len = snakemake@params[[2]]
-    )
-  },
-  error = function(e) {
-    cat("Error during filtering: ", e$message, "\n")
-    sink()
-    stop("Script terminated due to filtering error.")
-  }
-)
+  # read the input tables
+  # this FR table contains distance between FRs
+  fr_ru_filt <- read_delim(snakemake@input[[1]],
+    show_col_types = FALSE, progress = FALSE
+  )
+  # this one contains bla counts via merging BED coords
+  bla_counts <- read_delim(snakemake@input[[2]],
+    show_col_types = FALSE, progress = FALSE
+  )
 
-# write the output
-tryCatch(
-  {
-    write_delim(filtered_df, snakemake@output[[1]], delim = "\t")
-    print("Finished. No errors.")
-  },
-  error = function(e) {
-    cat("Error writing output file: ", e$message, "\n")
-    sink()
-    stop("Script terminated due to output file write error.")
-  }
-)
+  # filter
+  filtered_df <- filter_by_distance(fr_ru_filt, bla_counts,
+    base_len = snakemake@params[[1]],
+    ru_len = snakemake@params[[2]]
+  )
 
-#### CLOSE LOG ####
-sink()
+  # write the output
+  write_delim(filtered_df, snakemake@output[[1]], delim = "\t")
+  print("Finished. No errors.")
+}

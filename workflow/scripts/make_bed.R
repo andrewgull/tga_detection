@@ -1,15 +1,18 @@
-################################################
-# script to make BED file from blast outfmt 6
-# input: filtered table of blaSHV blast hits
-# output: BED file
-################################################
+#' @title Make BED file from BLAST outfmt 6
+#' @description This script converts a BLAST output table (tabular format 6) into
+#' a standard 6-column BED file. it handles both filtered (with headers) and
+#' non-filtered (without headers) BLAST tables.
+#' @section Input:
+#' BLAST output table in format 6 (tabular).
+#' @section Output:
+#' BED file with columns: chrom, start, end, name, score, strand.
+#' @md
 
-
-#### LIBRARIES ####
+# --- 1. Load Libraries ---
 suppressPackageStartupMessages(library(dplyr))
 library(readr)
 
-#### FUNCTIONS ####
+# --- 2. Define Functions ---
 #' Check if a BLAST Table is a Filtered Version
 #'
 #' Determines whether a BLAST table is a "filtered" version based on its filename.
@@ -121,9 +124,8 @@ blast2bed <- function(blast) {
   return(bla_bed)
 }
 
-#### RUN ####
+# --- 3. Snakemake Execution Block ---
 if (exists("snakemake")) {
-  #### LOG ####
   sink(snakemake@log[[1]])
   on.exit(sink(), add = TRUE)
 
