@@ -66,6 +66,7 @@ main <- function(cn_bins, bla_cn) {
   bla_cn_full <-
     bla_cn_freq |>
     full_join(bins_theor, by = "CN") |>
+    filter(!is.na(freq_theoretical)) |>
     mutate(
       counts_obs = replace_na(counts_obs, 0),
       freq_obs = replace_na(freq_obs, 0)
