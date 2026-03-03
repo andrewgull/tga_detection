@@ -25,7 +25,7 @@ library(readr)
 is_filtered <- function(filename) {
   # if the blast table has headers it's been filtred
   # otherwise it's not
-  filtered <- grepl("filtered", filename, fixed = TRUE)
+  filtered <- grepl("(?<![a-zA-Z])filtered", filename, perl = TRUE)
   if (filtered) {
     # message to log file
     print("filtred version of the blast table is detected")
