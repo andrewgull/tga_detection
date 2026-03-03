@@ -55,10 +55,14 @@ genes_within_flanks <- function(read_id, fr_df, bla_df) {
     )
 
   answer <- any(
-    !map2_lgl(
-      fr_bla_df$start.subject.y,
-      fr_bla_df$end.subject.y,
-      ~ is_within(.x, .y, fr_bla_df$end.red[1], fr_bla_df$end.subject.x[1])
+    !pmap_lgl(
+      list(
+        fr_bla_df$start.subject.y,
+        fr_bla_df$end.subject.y,
+        fr_bla_df$end.red,
+        fr_bla_df$end.subject.x
+      ),
+      ~ is_within(..1, ..2, ..3, ..4)
     )
   )
   return(answer)
