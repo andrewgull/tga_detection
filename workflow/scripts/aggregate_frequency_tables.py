@@ -19,6 +19,10 @@ def main(
 ) -> None:
     samples = pd.read_csv(sample_table, sep="\t", dtype={"sample": str, "path": str})
 
+    dupes = samples["sample"][samples["sample"].duplicated()].tolist()
+    if dupes:
+        raise ValueError(f"Duplicate sample IDs in sample table: {dupes}")
+
     # Match each input file to its sample by the parent-directory component of the
     # path (pipeline convention: results/tables/{sample}/frequencies.tsv).
     # This avoids silent misalignment from relying on CLI argument order.
