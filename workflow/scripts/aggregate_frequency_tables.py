@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Aggregate per-sample frequency tables into a single TSV and XLSX."""
 import argparse
+import pathlib
 import sys
 
 import openpyxl
@@ -18,9 +19,28 @@ def main(
 ) -> None:
     samples = pd.read_csv(sample_table, sep="\t", dtype={"sample": str, "path": str})
 
+    # Match each input file to its sample by the parent-directory component of the
+    # path (pipeline convention: results/tables/{sample}/frequencies.tsv).
+    # This avoids silent misalignment from relying on CLI argument order.
+    sample_to_file: dict[str, str] = {}
+    for file in input_files:
+        name = pathlib.Path(file).parent.name
+        if name not in samples["sample"].values:
+            raise ValueError(
+                f"Input file {file!r}: parent directory {name!r} does not match "
+                "any sample in the sample table."
+            )
+        if name in sample_to_file:
+            raise ValueError(f"Duplicate input file for sample {name!r}.")
+        sample_to_file[name] = file
+
+    missing = [s for s in samples["sample"] if s not in sample_to_file]
+    if missing:
+        raise ValueError(f"No input file found for samples: {missing}")
+
     dfs = []
-    for sample, file in zip(samples["sample"], input_files):
-        df = pd.read_csv(file, sep="\t")
+    for sample in samples["sample"]:
+        df = pd.read_csv(sample_to_file[sample], sep="\t")
         df["sample"] = sample
         dfs.append(df)
 
