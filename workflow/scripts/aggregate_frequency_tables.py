@@ -76,10 +76,11 @@ try:
             output_xlsx=snakemake.output["xlsx"],  # noqa: F821
         )
 except NameError:
-    args = parse_args()
-    main(
-        sample_table=args.sample_table,
-        input_files=args.input_files,
-        output_tsv=args.output_tsv,
-        output_xlsx=args.output_xlsx,
-    )
+    if __name__ == "__main__":
+        args = parse_args()
+        main(
+            sample_table=args.sample_table,
+            input_files=args.input_files,
+            output_tsv=args.output_tsv,
+            output_xlsx=args.output_xlsx,
+        )
