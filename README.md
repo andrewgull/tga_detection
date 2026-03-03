@@ -3,37 +3,24 @@
 # Description
 
 This is the code for detecting tandem gene amplifications in ultra-deep Nanopore long read sequencing data at frequencies as low as $10^{-5}$.
-The full study and method description will be available soon. Reproducibility of the results is guaranteed by the use of Snakemake, Conda environments and Apptainer containers.
-
-## Input
-
-All the input files are described in `config/config.yaml`:
-
-- path to the TSV file with sample names and corresponding FASTQ files;
-- path to the TSV file with the analysis' parameters (see the section below)
-- path to the FASTA file with the plasmid sequence;
-- path to the FASTA file with the blaSHV gene sequence;
-- path to the output file name (without extension);
-
-## Output
-
-The output is a TSV text file with 
-- observed, expected (theoretical) and corrected gene counts, 
-- observed, expected and corrected gene frequency, 
-- detection limit for each sample and 
-- copy number variant of the gene.
-
-# Usage
+The full study and method description [are available here](https://www.nature.com/articles/s41467-026-70044-8?utm_source=researchgate.net&utm_medium=article). Reproducibility of the results is guaranteed by the use of [Snakemake](https://snakemake.readthedocs.io/en/stable/getting_started/installation.html), Conda environments and [Apptainer](https://apptainer.org/docs/user/main/quick_start.html#installation) containers.
 
 *This pipeline was developed and tested on Ubuntu 22.04 LTS*.
 
-If you don't have `Snakemake` installed, [install it](https://snakemake.readthedocs.io/en/stable/getting_started/installation.html).
+## External dependencies
 
-You can run the analysis using containers (recommended) or conda environments.
+To install all external dependencies (including Snakemake and Apptainer) use [Pixi](https://pixi.prefix.dev/latest/).
 
-To use containers you need to have [`Apptainer`](https://apptainer.org/docs/user/main/quick_start.html#installation) installed.
+```bash
+# clone the repository
+git clone https://github.com/andrewgull/tga_detection.git
+cd tga_detection
 
-## Preparing containers
+# install all external dependencies
+pixi install
+```
+
+## Preparing containers (recommended)
 
 If you want to use containers, read [our container build instructions](resources/containers/README.md) how to build them.
 
@@ -41,7 +28,7 @@ If you want to use containers, read [our container build instructions](resources
 
 If you want to use conda environments, Snakemake will take care of installing all the dependencies automatically.
 
-## Quick run on the test data
+## Quick run on the test dataset
 
 ### Using `Apptainer`
 
@@ -65,9 +52,27 @@ snakemake --sdm conda --cores 2 --configfile config/config.yaml
 
 On a moderately powerful desktop computer, this process takes a couple of minutes to finish.
 
-The results of this run will be saved in two files under `results/tables/` directory: `frequencies_all_test.tsv` and `frequencies_all_test.xlsx`. You can compare them to the expected results in `results/test_dataset/` directory available in this repository.
+Results of this run will be saved in two files under `results/tables/` directory: `frequencies_all_test.tsv` and `frequencies_all_test.xlsx`. You can compare them to the expected results in `results/test_dataset/` directory available in this repository.
 
-### Using [`Pixi`](https://pixi.prefix.dev/latest/)
+## Input files
+
+All the input files are described in `config/config.yaml`:
+
+- path to the TSV file with sample names and corresponding FASTQ files;
+- path to the TSV file with the analysis' parameters (see the section below)
+- path to the FASTA file with the plasmid sequence;
+- path to the FASTA file with the blaSHV gene sequence;
+- path to the output file name (without extension);
+
+## Output files
+
+The output is a TSV text file with 
+- observed, expected (theoretical) and corrected gene counts, 
+- observed, expected and corrected gene frequency, 
+- detection limit for each sample and 
+- copy number variant of the gene.
+
+## Pixi tasks
 
 To run the workflow using Pixi tasks, you can use the following commands:
 
@@ -102,7 +107,7 @@ To run the workflow using Pixi tasks, you can use the following commands:
    ```
 
 
-## Full run
+## Run on the full dataset
 
 The Nanopore long sequencing data can be found in the NCBI SRA database under the accession number **PRJNA1299340**.
 
@@ -132,7 +137,7 @@ output_name: "results/tables/frequencies"
 
 Commands to run the pipeline with `Apptainer` and `conda` are the same as for the quick run, except for the `--singularity-args` option: you might need to bind directory with the actual data to the container.
 
-# Parameters
+# Parameters description
 
 Parameters for the analysis and their values are specified in the `config/params.tsv` file. These parameters are:
 
@@ -156,37 +161,6 @@ Parameters for the analysis and their values are specified in the `config/params
 - *dist*: the distance between BLAST hits to use in `bedtools merge`.
 
 
-
 # Rule graph
 
-## graphviz variant
-
 ![DAG](images/rulegraph_graphviz.png)
-
-## [snakevision](https://github.com/OpenOmics/snakevision) variant
-
-![DAG](images/rulegraph_snakevision.svg)
-
-# Software used for the analysis
-
-OS: Ubuntu 22.04.5 LTS
-
-Software:
-
- - [Snakemake](https://snakemake.readthedocs.io/en/stable/) v8.23.1
- - [Apptainer](https://apptainer.org) v1.3.4
- - [R](https://www.r-project.org/) v4.4.3
- - [dplyr](https://dplyr.tidyverse.org/) v1.1.4
- - [readr](https://readr.tidyverse.org/) v2.1.5
- - [purrr](https://purrr.tidyverse.org/) v1.0.2
- - [tidyr](https://tidyr.tidyverse.org/) v1.3.1
- - [Biostrings](https://bioconductor.org/packages/release/bioc/html/Biostrings.html) v2.70.1
- - [Python](https://www.python.org/) v3.12.10
- - [pandas](https://pandas.pydata.org/) v1.5.3 
- - [OpenPyXL](https://openpyxl.readthedocs.io/en/stable/) v3.1.5
- - [BLAST](https://www.ncbi.nlm.nih.gov/books/NBK52640/) v2.12.0
- - [SeqKit](https://bioinf.shenwei.me/seqkit/) v2.0.0
- - [Filtlong](https://github.com/rrwick/Filtlong) v0.2.1
- - [bedtools](https://bedtools.readthedocs.io/en/latest/) v2.30.0
- - [gzip](https://www.gzip.org/) v1.10
- - [pigz](https://zlib.net/pigz/) v2.6
