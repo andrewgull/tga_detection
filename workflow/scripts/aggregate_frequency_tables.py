@@ -84,23 +84,26 @@ def parse_args(argv=None) -> argparse.Namespace:
 
 # --- Execution ---
 
-try:
-    snakemake  # noqa: F821 — injected by Snakemake at runtime
-    with open(snakemake.log[0], "w") as _log:  # noqa: F821
-        sys.stdout = _log
-        sys.stderr = _log
-        main(
-            sample_table=snakemake.config["sample_table"],  # noqa: F821
-            input_files=list(snakemake.input),  # noqa: F821
-            output_tsv=snakemake.output["tsv"],  # noqa: F821
-            output_xlsx=snakemake.output["xlsx"],  # noqa: F821
-        )
-except NameError:
-    if __name__ == "__main__":
-        args = parse_args()
-        main(
-            sample_table=args.sample_table,
-            input_files=args.input_files,
-            output_tsv=args.output_tsv,
-            output_xlsx=args.output_xlsx,
-        )
+if "snakemake" in globals():
+    _stdout, _stderr = sys.stdout, sys.stderr
+    try:
+        with open(snakemake.log[0], "w") as _log:  # noqa: F821
+            sys.stdout = _log
+            sys.stderr = _log
+            main(
+                sample_table=snakemake.config["sample_table"],  # noqa: F821
+                input_files=list(snakemake.input),  # noqa: F821
+                output_tsv=snakemake.output["tsv"],  # noqa: F821
+                output_xlsx=snakemake.output["xlsx"],  # noqa: F821
+            )
+    finally:
+        sys.stdout = _stdout
+        sys.stderr = _stderr
+elif __name__ == "__main__":
+    args = parse_args()
+    main(
+        sample_table=args.sample_table,
+        input_files=args.input_files,
+        output_tsv=args.output_tsv,
+        output_xlsx=args.output_xlsx,
+    )
