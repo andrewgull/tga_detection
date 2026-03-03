@@ -67,27 +67,88 @@ test_that("blast2bed converts coordinates and handles strands correctly", {
   expect_equal(nrow(bed), 2)
   expect_equal(colnames(bed), c("chrom", "start", "end", "name", "score", "strand"))
 
-  # Positive strand check (s1: 100-200)
-  # BED is 0-indexed, [start, end)
-  # Script logic: start = start.subject - 1, end = end.subject - 1
-  # For q1: start.subject=100, end.subject=200 -> start=99, end=199
-  # Wait, standard BED transformation usually means:
-  # if start < end: start = start-1, end = end
-  # Let's check script's logic:
-  # mutate(strand = if_else(start.subject < end.subject, "+", "-"),
-  #        start = start.subject - 1,
-  #        end = end.subject - 1)
-  # If q1 (pos): start=99, end=199.
-  # If q2 (neg): start.subject=200, end.subject=100 -> strand="-", start=199, end=99.
-  # Then it swaps for neg: rename("start" = end, "end" = start) -> start=99, end=199.
-
   q1_bed <- bed %>% filter(name == "q1")
   expect_equal(q1_bed$strand, "+")
+  # BED is 0-indexed half-open: start = pmin - 1, end = pmax (not pmax - 1)
+  # q1: start.subject=100, end.subject=200 -> start=99, end=200
   expect_equal(q1_bed$start, 99)
-  expect_equal(q1_bed$end, 199)
+  expect_equal(q1_bed$end, 200)
 
   q2_bed <- bed %>% filter(name == "q2")
   expect_equal(q2_bed$strand, "-")
+  # q2: start.subject=200, end.subject=100 -> start=pmin(200,100)-1=99, end=pmax(200,100)=200
   expect_equal(q2_bed$start, 99)
-  expect_equal(q2_bed$end, 199)
+  expect_equal(q2_bed$end, 200)
+})
+
+test_that("is_filtered is case-sensitive", {
+  expect_false(is_filtered("blast_FILTERED.tsv"))
+  expect_false(is_filtered("blast_Filtered.tsv"))
+})
+
+test_that("is_filtered handles edge cases", {
+  expect_false(is_filtered(""))
+  expect_false(is_filtered("filter.tsv"))
+  expect_true(is_filtered("filteredfiltered.tsv"))
+})
+
+test_that("read_blast errors on empty non-filtered table", {
+  empty_file <- tempfile(fileext = ".tsv")
+  withr::defer(unlink(empty_file))
+  write_tsv(tibble(), empty_file, col_names = FALSE)
+  # tibble warns about the missing X1 column before stopifnot fires
+  expect_error(suppressWarnings(read_blast(empty_file)))
+})
+
+test_that("read_blast errors when non-filtered table has multiple unique X1 values", {
+  bad_file <- tempfile(fileext = ".tsv")
+  withr::defer(unlink(bad_file))
+  mock_bad <- tibble(
+    X1 = c("query1", "query2"), X2 = "s1", X3 = 99.0, X4 = 100,
+    X5 = 0, X6 = 0, X7 = 1, X8 = 100, X9 = 500, X10 = 600,
+    X11 = 1e-10, X12 = 200.0
+  )
+  write_tsv(mock_bad, bad_file, col_names = FALSE)
+  expect_error(read_blast(bad_file))
+})
+
+test_that("read_blast errors when filtered table first column is not 'query'", {
+  bad_filtered <- tempfile(pattern = "filtered", fileext = ".tsv")
+  withr::defer(unlink(bad_filtered))
+  mock_bad <- tibble(wrong_col = "oops", subject = "s1")
+  write_tsv(mock_bad, bad_filtered, col_names = TRUE)
+  expect_error(read_blast(bad_filtered))
+})
+
+test_that("read_blast errors when non-filtered table has wrong number of columns", {
+  bad_file <- tempfile(fileext = ".tsv")
+  withr::defer(unlink(bad_file))
+  mock_bad <- tibble(X1 = "query1", X2 = "s1", X3 = 99.0)
+  write_tsv(mock_bad, bad_file, col_names = FALSE)
+  expect_error(read_blast(bad_file))
+})
+
+test_that("blast2bed assigns '-' strand when start.subject equals end.subject", {
+  mock <- tibble(
+    query = "q1", subject = "s1", identity = 100, length = 1,
+    mismatch = 0, gaps = 0, start.query = 1, end.query = 1,
+    start.subject = 100, end.subject = 100,
+    e.value = 0, bit.score = 50
+  )
+  bed <- blast2bed(mock)
+  # start.subject < end.subject is FALSE when equal, so strand = "-"
+  expect_equal(bed$strand, "-")
+  expect_equal(bed$start, 99)  # pmin(100, 100) - 1
+  expect_equal(bed$end, 100)   # pmax(100, 100)
+})
+
+test_that("blast2bed always returns exactly 6 named columns", {
+  mock <- tibble(
+    query = "q1", subject = "s1", identity = 100, length = 100,
+    mismatch = 0, gaps = 0, start.query = 1, end.query = 100,
+    start.subject = 1, end.subject = 100, e.value = 0, bit.score = 100
+  )
+  bed <- blast2bed(mock)
+  expect_equal(ncol(bed), 6)
+  expect_named(bed, c("chrom", "start", "end", "name", "score", "strand"))
 })
