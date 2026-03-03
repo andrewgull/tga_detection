@@ -178,15 +178,13 @@ test_that("filter_by_distance returns zero rows when fr_ru_filt is empty", {
 # filter_by_distance() — edge: ru_len = 0
 # ---------------------------------------------------------------------------
 
-test_that("filter_by_distance silently drops all rows when ru_len is zero", {
-  # as.integer(0) passes stopifnot(!is.na); division by zero produces NaN;
-  # round(NaN) = NaN; abs(NaN) <= 1 is NA -> dplyr::filter() drops all rows
+test_that("filter_by_distance errors when ru_len is zero", {
+  # ru_len = 0 is rejected explicitly to prevent silent division by zero
+  # (which would otherwise produce NaN and silently drop all rows)
   fr_ru <- make_fr_ru("read1", 4000)
   bla_counts <- make_bla_counts("read1", 1)
 
-  result <- suppressWarnings(
+  expect_error(
     filter_by_distance(fr_ru, bla_counts, base_len = 4000, ru_len = 0)
   )
-
-  expect_equal(nrow(result), 0)
 })
