@@ -69,7 +69,8 @@ def parse_args(argv=None) -> argparse.Namespace:
         required=True,
         dest="input_files",
         metavar="TSV",
-        help="Per-sample frequency TSVs in the same order as rows in --sample-table.",
+        help="Per-sample frequency TSVs (any order). Each file is matched to its sample "
+        "via the parent directory name (layout: results/tables/{sample}/frequencies.tsv).",
     )
     parser.add_argument(
         "--output-tsv",
