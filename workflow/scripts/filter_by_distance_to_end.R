@@ -49,7 +49,7 @@ main <- function(df, dist) {
 
   # convert/check dist
   dist <- as.integer(dist)
-  stopifnot(!is.na(dist))
+  stopifnot(!is.na(dist), dist > 0)
 
   # filter
   filtered_df <- filter_by_distance(input_table, dist = dist)
