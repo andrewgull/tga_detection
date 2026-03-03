@@ -113,6 +113,16 @@ test_that("main returns zero rows when df_filt is empty", {
   expect_equal(nrow(result), 0)
 })
 
+test_that("main returns NA for all subjects when df_merge is empty", {
+  bed <- tibble(X1 = character(0), X2 = numeric(0), X3 = numeric(0))
+  filt <- make_filt(c("read1", "read2"))
+
+  result <- main(bed, filt, 100)
+
+  expect_equal(nrow(result), 2)
+  expect_true(all(is.na(result$n.blaSHV.merged)))
+})
+
 # ---------------------------------------------------------------------------
 # main() — rounding (R uses banker's rounding for round())
 # ---------------------------------------------------------------------------
