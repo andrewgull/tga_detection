@@ -11,7 +11,8 @@ run-conda = "snakemake --cores 2 --sdm conda --configfile config/config.yaml"
 run-apptainer = "snakemake --cores 2 --configfile config/config.yaml --profile profiles/apptainer_local"
 rulegraph = { cmd = "dot -c && snakemake --rulegraph --configfile config/config.yaml | dot -Tsvg > images/rulegraph.svg" }
 dag = { cmd = "dot -c && snakemake --dag --configfile config/config.yaml | dot -Tsvg > images/dag.svg" }
-test-r = "Rscript -e 'testthat::test_dir(\"tests\")'"
+test-r = "Rscript -e 'testthat::test_dir(\"tests/testthat\")'"
+test-py = "python -m pytest tests/pytest -v"
 style-r = "Rscript -e 'styler::style_dir(\"workflow/scripts\")'"
 lint-r = "Rscript -e 'lintr::lint_dir(\"workflow/scripts\")'"
 
@@ -31,3 +32,7 @@ r-lintr = ">=3.3.0_1,<4"
 r-testthat = ">=3.3.2,<4"
 r-here = ">=1.0.2,<2"
 r-withr = ">=3.0.2,<4"
+r-readr = ">=2.1.5,<3"
+r-dplyr = ">=1.1.4,<2"
+r-tidyr = ">=1.3.1,<2"
+openpyxl = ">=3.1.5,<4"
