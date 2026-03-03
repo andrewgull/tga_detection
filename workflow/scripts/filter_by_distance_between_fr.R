@@ -34,9 +34,9 @@ filter_by_distance <- function(fr_ru_filt, bla_counts,
                               base_len = 4299, ru_len = 3450) {
   # convert/check the base_len and ru_len
   base_len <- as.integer(base_len)
-  stopifnot(!is.na(base_len))
+  stopifnot(!is.na(base_len), base_len > 0)
   ru_len <- as.integer(ru_len)
-  stopifnot(!is.na(ru_len))
+  stopifnot(!is.na(ru_len), ru_len > 0)
 
   diff_per_read <- fr_ru_filt |>
     select(subject, distance.btw.FR) |>
