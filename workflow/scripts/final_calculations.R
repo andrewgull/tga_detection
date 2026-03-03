@@ -49,6 +49,11 @@ freq_theor <- function(cn_bins) {
   if (length(total_n) > 1) {
     stop("Multiple rows with CN == 0 found in cn_bins. Data integrity issue.")
   }
+  if (is.na(total_n) || total_n <= 0) {
+    stop(paste0(
+      "n_reads_theoretical for CN == 0 must be a positive number, got: ", total_n
+    ))
+  }
   cn_bins_theor <- cn_bins |>
     filter(n_reads_theoretical != 0) |>
     mutate(freq_theoretical = n_reads_theoretical / total_n)
