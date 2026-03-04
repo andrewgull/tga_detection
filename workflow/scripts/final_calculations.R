@@ -1,56 +1,76 @@
-#########################################################################
-# script to make final calculations of counts, observed &
-# corrected frequencies and detection limts
-# input: cn_bins - number of reads capable of carrying each CN variant;
-# bla counts - blaSHV CN on each read i.e. reads that passed all filterings
-# reads passed filtering step #3 i.e. red+repunit+orientation
-# output: table with frequencies etc.
-#########################################################################
+#' @title Final calculations of gene frequencies
+#' @description This script performs final calculations of gene counts,
+#' observed/corrected frequencies, and detection limits.
+#' @section Input:
+#' 1. cn_bins: table with number of reads capable of carrying each CN variant.
+#' 2. bla_cn: table with gene counts for reads that passed filters.
+#' @section Output:
+#' Table with frequencies and detection limits.
+#' @md
 
-#### OPEN LOG ####
-sink(snakemake@log[[1]])
-
-#### LIBRARIES ####
+# --- 1. Load Libraries ---
 suppressPackageStartupMessages(library(dplyr))
 library(readr)
 library(tidyr)
 
-# find number of reads capable of containing each bla CN variant
-# including zeroes
+# --- 2. Define Functions ---
+#' Calculate observed frequency of gene counts
+#'
+#' @param bla_cn Data frame/tibble. Observed gene counts.
+#'
+#' @return A tibble with observed frequencies.
+#'
 counts_freq_obs <- function(bla_cn) {
-  # return bla_cn_freq
-  bla_cn %>%
-    filter(!is.na(n.blaSHV.merged)) %>%
-    group_by(n.blaSHV.merged) %>%
-    count(name = "counts") %>%
-    ungroup() %>%
+  bla_cn |>
+    filter(!is.na(n.blaSHV.merged)) |>
+    group_by(n.blaSHV.merged) |>
+    count(name = "counts") |>
+    ungroup() |>
     rename(
       "CN" = n.blaSHV.merged,
       "counts_obs" = counts
-    ) %>%
-    # find observed CN frequency
+    ) |>
     mutate(freq_obs = counts_obs / sum(counts_obs))
 }
 
-# find frequency of reads that might contain certain CN
+#' Calculate theoretical frequency from bins
+#'
+#' @param cn_bins Data frame/tibble. Theoretical bins.
+#'
+#' @return A tibble with theoretical frequencies.
+#'
 freq_theor <- function(cn_bins) {
-  # total - n reads with 0 CN from the cn_bins table
-  total_n <- cn_bins %>%
-    filter(CN == 0) %>%
+  total_n <- cn_bins |>
+    filter(CN == 0) |>
     pull(n_reads_theoretical)
-  cn_bins_theor <- cn_bins %>%
-    # remove those that are theoretically impossible (no such long reads)
-    filter(n_reads_theoretical != 0) %>%
+  if (length(total_n) == 0) {
+    stop("No row with CN == 0 found in cn_bins. Cannot calculate theoretical frequencies.")
+  }
+  if (length(total_n) > 1) {
+    stop("Multiple rows with CN == 0 found in cn_bins. Data integrity issue.")
+  }
+  if (is.na(total_n) || total_n <= 0) {
+    stop(paste0(
+      "n_reads_theoretical for CN == 0 must be a positive number, got: ", total_n
+    ))
+  }
+  cn_bins_theor <- cn_bins |>
+    filter(n_reads_theoretical != 0) |>
     mutate(freq_theoretical = n_reads_theoretical / total_n)
-  cn_bins_theor
+  return(cn_bins_theor)
 }
 
-# put everything together
+#' Main execution function for frequency calculations
+#'
+#' @param cn_bins Data frame. Theoretical bins table.
+#' @param bla_cn Data frame. Observed gene counts table.
+#'
+#' @return A combined tibble with all calculations.
+#'
 main <- function(cn_bins, bla_cn) {
   bla_cn_freq <- counts_freq_obs(bla_cn)
   bins_theor <- freq_theor(cn_bins)
-  # correct CN frequency
-  # add detection limit
+
   bla_cn_full <-
     bla_cn_freq %>%
     full_join(bins_theor, by = "CN") %>%
@@ -63,21 +83,33 @@ main <- function(cn_bins, bla_cn) {
     # do the rest of the calculations
     mutate(
       counts_corrected = counts_obs / freq_theoretical,
-      freq_corrected = counts_corrected / sum(counts_corrected),
+      freq_corrected = if (sum(counts_corrected, na.rm = TRUE) > 0) {
+        counts_corrected / sum(counts_corrected, na.rm = TRUE)
+      } else {
+        NA_real_
+      },
       detection_limit = 1 / n_reads_theoretical
     )
-  bla_cn_full
+
+  return(bla_cn_full)
 }
 
-#### RUN ####
-cn_bins <- read_delim(snakemake@input[[1]], show_col_types = FALSE)
-bla_cn <- read_delim(snakemake@input[[2]], show_col_types = FALSE)
+# --- 3. Snakemake Execution Block ---
+if (exists("snakemake")) {
+  log_file <- file(snakemake@log[[1]], open = "wt")
+  sink(log_file, type = "output")
+  sink(log_file, type = "message")
+  on.exit({
+    sink(type = "message")
+    sink(type = "output")
+    close(log_file)
+  }, add = TRUE)
 
-output_table <- main(cn_bins, bla_cn)
+  cn_bins <- read_delim(snakemake@input[[1]], delim = "\t", show_col_types = FALSE)
+  bla_cn <- read_delim(snakemake@input[[2]], delim = "\t", show_col_types = FALSE)
 
-# write to file
-write_delim(output_table, file = snakemake@output[[1]], delim = "\t")
-print("Finished. No erorrs.")
+  output_table <- main(cn_bins, bla_cn)
 
-#### CLOSE LOG ####f
-sink()
+  write_delim(output_table, file = snakemake@output[[1]], delim = "\t")
+  print("Finished. No errors.")
+}

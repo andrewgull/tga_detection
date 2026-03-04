@@ -1,90 +1,95 @@
-#############################################################
-# script to filter reads containing correct combination of
-# the red flanking region and the repeat unit
-# the 'correct combination' that is
-# 'a red FR first and a repeat unit right next to it'
-# input: blast hits table for RR;
-# blast hits table for RU/IS
-# max evalue for blast hits
-# minimal length for RR blast hits
-# minimal length for RU/IS hits
-# minimal identity
-# max allowed distance between FR and RU/IS
-# output: filtered table of hits
-#############################################################
+#' @title Filter reads by RED flanking region and repeat unit (RU)
+#' @description This script filters reads containing the correct combination of
+#' a RED flanking region followed by a repeat unit. It checks orientation,
+#' distance, and basic BLAST metrics.
+#' @section Input:
+#' 1. BLAST table for RED FR.
+#' 2. BLAST table for Rep_unit (RU/IS).
+#' 3. Snakemake parameters: identity, e-value, FR min length, RU min length, max distance.
+#' @section Output:
+#' Filtered table with joined RED and RU coordinates.
+#' @md
 
-#### OPEN LOG ####
-sink(snakemake@log[[1]])
-
-#### LIBRARIES ####
+# --- 1. Load Libraries ---
 suppressPackageStartupMessages(library(dplyr))
 library(readr)
 
-#### FUNCTIONS ####
+# --- 2. Define Functions ---
+#' Parse BLAST outfmt 6 table
+#'
+#' @param file_path Character. Path to the BLAST output file.
+#' @param region_name Character. Name to assign to the query column.
+#'
+#' @return A tibble with standard BLAST columns and orientation.
+#'
 parse_blast <- function(file_path, region_name) {
-  # read blast table
-  df <-
-    read_delim(file_path, col_names = FALSE, show_col_types = FALSE)
-  # check if the table is empty
+  df <- read_delim(file_path, delim = "\t", col_names = FALSE, show_col_types = FALSE)
   stopifnot(nrow(df) > 0)
-  # check if nrow is wrong
   stopifnot(ncol(df) == 12)
-  # assign names
+
   names(df) <- c(
-    "query",
-    "subject",
-    "identity",
-    "length",
-    "mismatch",
-    "gaps",
-    "start.query",
-    "end.query",
-    "start.subject",
-    "end.subject",
-    "e.value",
-    "bit.score"
+    "query", "subject", "identity", "length", "mismatch",
+    "gaps", "start.query", "end.query", "start.subject",
+    "end.subject", "e.value", "bit.score"
   )
-  # create orientation column
-  df$orientation <-
-    ifelse(df$start.subject < df$end.subject, "direct", "reverse")
-  # rename query
+  df$orientation <- ifelse(df$start.subject < df$end.subject, "direct", "reverse")
   df$query <- region_name
-  df
+  return(df)
 }
 
+#' Filter BLAST results by basic metrics
+#'
+#' @param blast_df Data frame/tibble. BLAST results.
+#' @param min_len Integer. Minimal hit length.
+#' @param max_e_value Numeric. Maximum e-value.
+#' @param min_identity Integer. Minimal identity percentage.
+#'
+#' @return A filtered tibble.
+#'
 filter_blast <- function(blast_df, min_len, max_e_value, min_identity) {
-  # return: a blast table filtered by minimal length, evalue and hit identity
   filt_df <- filter(
     blast_df,
     length >= min_len,
     e.value <= max_e_value,
     identity >= min_identity
   )
-  filt_df
+  return(filt_df)
 }
 
-filter_ru_fr <-
-  function(fr_df, ru_df, max_distance) {
-    # filters red blast and rep unit blast by orientation and max
-    # distance btw the red region and the rep.unit
-    # return: filtered tibble
-    left_join(fr_df, ru_df, by = "subject") %>%
-      filter(orientation.x == orientation.y) %>%
-      mutate(
-        distance = if_else(
-          orientation.x == "reverse",
-          end.subject.y - start.subject.x + 1,
-          start.subject.x - end.subject.y + 1
-        )
-      ) %>%
-      filter(abs(distance) <= max_distance)
-  }
+#' Filter joined FR and RU by orientation and distance
+#'
+#' @param fr_df Data frame/tibble. RED FR table.
+#' @param ru_df Data frame/tibble. RU/IS table.
+#' @param max_distance Integer. Maximum distance between FR and RU.
+#'
+#' @return A joined and filtered tibble.
+#'
+filter_ru_fr <- function(fr_df, ru_df, max_distance) {
+  left_join(fr_df, ru_df, by = "subject") |>
+    filter(orientation.x == orientation.y) |>
+    mutate(
+      distance = if_else(
+        orientation.x == "reverse",
+        end.subject.y - start.subject.x + 1,
+        start.subject.x - end.subject.y + 1
+      )
+    ) |>
+    filter(abs(distance) <= max_distance)
+}
 
+#' Main execution function for filtering RED+RU
+#'
+#' @param red Character. Path to RED BLAST file.
+#' @param rep Character. Path to RU BLAST file.
+#' @param ru_len Integer. RU min length.
+#' @param fr_len Integer. FR min length.
+#' @param e Numeric. Max e-value.
+#' @param identity Integer. Min identity.
+#' @param maxd Integer. Max distance.
+#'
+#' @return A tibble with filtered and renamed columns.
+#'
 main <- function(red, rep, ru_len, fr_len, e, identity, maxd) {
-  # filter rep unite table
-  # NB: min length is different from FR's min length
-
-  # convert/check numeric and integer args
   ru_len <- as.integer(ru_len)
   stopifnot(!is.na(ru_len))
 
@@ -100,50 +105,53 @@ main <- function(red, rep, ru_len, fr_len, e, identity, maxd) {
   maxd <- as.integer(maxd)
   stopifnot(!is.na(maxd))
 
-  blast_red <- parse_blast(red, "FR_red") %>%
+  blast_red <- parse_blast(red, "FR_red") |>
     filter_blast(
       min_len = fr_len,
       max_e_value = e,
       min_identity = identity
     )
-  blast_rep <- parse_blast(rep, "Rep_unit") %>%
+  blast_rep <- parse_blast(rep, "Rep_unit") |>
     filter_blast(
       min_len = ru_len,
       max_e_value = e,
       min_identity = identity
     )
-  # filter combination of both FR and rep unit
-  # 1st: same orientation
-  # 2nd: close to each other
-  blast_joined <-
-    filter_ru_fr(blast_red, blast_rep, max_distance = maxd) %>%
-    # keep some columns
+
+  blast_joined <- filter_ru_fr(blast_red, blast_rep, max_distance = maxd) |>
     select(
       subject, start.subject.x, end.subject.x,
       start.subject.y, end.subject.y, distance, orientation.x
     )
-  # give them better names
+
   names(blast_joined) <- c(
     "subject", "start.red", "end.red",
     "start.rep.unit", "end.rep.unit", "dist", "orient"
   )
-  blast_joined
+  return(blast_joined)
 }
 
-#### RUN ####
-output_table <- main(
-  red = snakemake@input[[1]],
-  rep = snakemake@input[[2]],
-  identity = snakemake@params[[1]],
-  e = snakemake@params[[2]],
-  fr_len = snakemake@params[[3]],
-  ru_len = snakemake@params[[4]],
-  maxd = snakemake@params[[5]]
-)
+# --- 3. Snakemake Execution Block ---
+if (exists("snakemake")) {
+  log_file <- file(snakemake@log[[1]], open = "wt")
+  sink(log_file, type = "output")
+  sink(log_file, type = "message")
+  on.exit({
+    sink(type = "message")
+    sink(type = "output")
+    close(log_file)
+  }, add = TRUE)
 
-# Save to file
-write_delim(output_table, file = snakemake@output[[1]], delim = "\t")
-print("Finished. No erorrs.")
+  output_table <- main(
+    red = snakemake@input[[1]],
+    rep = snakemake@input[[2]],
+    identity = snakemake@params[[1]],
+    e = snakemake@params[[2]],
+    fr_len = snakemake@params[[3]],
+    ru_len = snakemake@params[[4]],
+    maxd = snakemake@params[[5]]
+  )
 
-#### CLOSE LOG ####
-sink()
+  write_delim(output_table, file = snakemake@output[[1]], delim = "\t")
+  print("Finished. No errors.")
+}

@@ -1,53 +1,66 @@
-###############################################
-# script to count merged blaSHV hits in
-# filtered reads
-# the last step before frequency calculations
-# input1: bed file with merged intervals
-# input2: filtered table of FR blast hits
-# output: tsv file with blaSHV countss
-###############################################
+#' @title Count merged blaSHV hits in filtered reads
+#' @description This script processes merged intervals from a BED file and counts
+#' hits against a filtered BLAST table. It calculates the number of gene hits based
+#' on a provided gene length and joins this with the filtered results.
+#' @section Input:
+#' 1. BED file with merged intervals
+#' 2. Filtered table of FR blast hits
+#' 3. Path to snakemake params (gene length)
+#' @section Output:
+#' TSV file with blaSHV counts per subject
+#' @md
 
-#### OPEN LOG ####
-sink(snakemake@log[[1]])
-
-#### LIBRARIES ####
+# --- 1. Load Libraries ---
 suppressPackageStartupMessages(library(dplyr))
 library(readr)
 
-#### FUNCTIONS ####
+# --- 2. Define Main Function ---
+#' Count merged blaSHV hits in filtered reads
+#'
+#' @param df_merge Data frame/tibble. Table with merged intervals (typically from BED).
+#' @param df_filt Data frame/tibble. Filtered table with flanking region (FR) blast hits.
+#' @param len Numeric/Integer. Length of the target gene (e.g., blaSHV) used for normalization.
+#'
+#' @return A tibble with `subject` and `n.blaSHV.merged` columns.
+#' @export
+#'
 main <- function(df_merge, df_filt, len) {
-  # df_merge: table with merged intervals
-  # df_filt: filtered table of FR blast hits
-  # len: bla gene length (int)
-
   # convert/check len
   len <- as.integer(len)
-  stopifnot(!is.na(len))
+  stopifnot(!is.na(len), len > 0)
 
-  df_merge %>%
-    group_by(X1) %>%
-    summarise(sum.merged.hits = sum(X3 - X2 + 1)) %>%
-    mutate(n.blaSHV.merged = round(sum.merged.hits / len, 0)) %>%
-    rename("subject" = X1) %>%
+  df_merge |>
+    group_by(X1) |>
+    summarise(sum.merged.hits = sum(X3 - X2 + 1)) |>
+    mutate(n.blaSHV.merged = round(sum.merged.hits / len, 0)) |>
+    rename("subject" = X1) |>
     # filter out the reads the 'bad reads' from previous filtering rounds
-    right_join(df_filt, by = "subject") %>%
+    right_join(df_filt, by = "subject") |>
     select(subject, n.blaSHV.merged)
 }
 
-#### RUN ####
-bla_merge <- read_tsv(snakemake@input[[1]],
-  col_names = FALSE,
-  show_col_types = FALSE
-)
-blast_filt <- read_tsv(snakemake@input[[2]],
-  show_col_types = FALSE
-)
+# --- 3. Snakemake Execution Block ---
+if (exists("snakemake")) {
+  log_file <- file(snakemake@log[[1]], open = "wt")
+  sink(log_file, type = "output")
+  sink(log_file, type = "message")
+  on.exit({
+    sink(type = "message")
+    sink(type = "output")
+    close(log_file)
+  }, add = TRUE)
 
-bla_merged_df <- main(bla_merge, blast_filt, snakemake@params[[1]])
+  bla_merge <- read_tsv(snakemake@input[[1]],
+    col_names = FALSE,
+    show_col_types = FALSE
+  )
+  blast_filt <- read_tsv(snakemake@input[[2]],
+    show_col_types = FALSE
+  )
 
-# save results to file
-write_tsv(x = bla_merged_df, file = snakemake@output[[1]])
-print("Finished. No errors.")
+  bla_merged_df <- main(bla_merge, blast_filt, snakemake@params[[1]])
 
-#### CLOSE LOG ####
-sink()
+  # save results to file
+  write_tsv(x = bla_merged_df, file = snakemake@output[[1]])
+  print("Finished. No errors.")
+}
